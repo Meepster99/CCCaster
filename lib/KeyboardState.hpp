@@ -3,7 +3,7 @@
 #include "TimerManager.hpp"
 
 #include <unordered_map>
-
+#include <stdint.h>
 
 #define DEFAULT_HELD_DURATION ( 300 )
 

@@ -1,15 +1,19 @@
 #!/bin/sh
 
 CODE=$1
-CLEAN=`git status | grep "^nothing to commit, working tree clean$" | sed -r s/.+clean$/clean/g`
-COMMIT_ID=`git rev-parse --short HEAD`
+CLEAN=0
+COMMIT_ID=0
+#CLEAN=`git status | grep "^nothing to commit, working tree clean$" | sed -r s/.+clean$/clean/g`
+#COMMIT_ID=`git rev-parse --short HEAD`
 
 printf "const Version LocalVersion (\n"
 printf "    \"$CODE\",\n"
 if [ "$CLEAN" = "" ]; then
-printf "    \"$COMMIT_ID-custom\",\n"
+#printf "    \"$COMMIT_ID-custom\",\n"
+printf "    \"7878966\",\n"
 else
-printf "    \"$COMMIT_ID\",\n"
+#printf "    \"$COMMIT_ID\",\n"
+printf "    \"7878966\",\n"
 fi
 printf "    \"`date`\"\n"
 printf ");\n"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <unordered_set>
-
+#include <stdint.h>
 
 class Socket;
 

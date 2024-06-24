@@ -6,7 +6,7 @@
 #include "DllNetplayManager.hpp"
 #include "ProcessManager.hpp"
 #include "StringUtils.hpp"
-#include "Shlwapi.h"
+// #include "Shlwapi.h"
 #include "Sequences.hpp"
 
 #include <fstream>

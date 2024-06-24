@@ -1,3 +1,12 @@
+Build:
+
+	On linux, install mingw, zip, and wine32 
+	
+	run the Makefile
+
+	make main-build release
+
+
 Netplay tool for Melty Blood Actress Again Current Code
 
     Public domain, no license, no warranty. Here be dragons.

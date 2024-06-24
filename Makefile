@@ -94,6 +94,8 @@ CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 
 # Linker flags
 LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32
+#LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 -lshlwapi
+
 
 # Build options
 # DEFINES += -DDISABLE_LOGGING
@@ -124,6 +126,8 @@ else
 	DEFAULT_TARGET = logging
 endif
 
+
+#DEFAULT_TARGET = release
 
 all: $(DEFAULT_TARGET)
 
@@ -205,7 +209,8 @@ res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
 else ifeq ($(UNAME),Linux)
-	wine tools/$(GENERATOR) $@
+	#wine tools/$(GENERATOR) $@ WHATTHEFUCL
+	tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@
 endif
