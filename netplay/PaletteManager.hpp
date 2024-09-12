@@ -10,6 +10,7 @@
 #include <array>
 #include <string>
 
+/*
 
 #define COLOR_RGB(R, G, B) \
     ( 0xFFFFFF & ( ( ( 0xFF & ( R ) ) << 16 ) | ( ( 0xFF & ( G ) ) << 8 ) | ( 0xFF & ( B ) ) ) )
@@ -60,3 +61,6 @@ private:
 
     void optimize();
 };
+
+*/
+

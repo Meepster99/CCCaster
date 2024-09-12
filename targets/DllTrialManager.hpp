@@ -142,9 +142,9 @@ public:
     void render();
     void drawButton( int buttonId, int screenX, int screenY, int width=25, int height=25, int layer=0x2cc );
     void drawArrow( int buttonId, int screenX, int screenY, int width=25, int height=25, int layer=0x2cc );
-    void drawText( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
-    void drawTextBorder( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
-    void drawTextWithBorder( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
+    static void drawText( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
+    static void drawTextBorder( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
+    static void drawTextWithBorder( string text, int screenX, int screenY, int width=24, int height=24, int layer=0xff );
     void drawShadowButton( int buttonId, int screenX, int screenY, int width=25, int height=25 );
     void drawShadowArrow( int buttonId, int screenX, int screenY, int width=25, int height=25 );
     void drawInputs();

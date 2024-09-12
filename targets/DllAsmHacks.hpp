@@ -3,9 +3,14 @@
 #include "Constants.hpp"
 #include "Exceptions.hpp"
 #include "DllNetplayManager.hpp"
+#include <windows.h>
+#include <string.h>
 
 #include <vector>
 #include <array>
+
+#include <ws2tcpip.h>
+#include <winsock2.h>
 
 
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
@@ -39,6 +44,99 @@
 
 #define INLINE_NOP_SEVEN_TIMES { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }
 
+// i wish i could include the raw string in here, but i cant
+// unbalanced quotes arent allowed in defines
+// and believe me, short of forking gcc or moving to clang, it isnt happening
+#define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
+
+#define __asmEnd ); __asm__ __volatile__ (".att_syntax;");
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))
+
+#define PUSH_ALL \
+    __asm__ __volatile__( \
+        "push %esp;"  \
+        "push %ebp;"  \
+        "push %edi;"  \
+        "push %esi;"  \
+        "push %edx;"  \
+        "push %ecx;"  \
+        "push %ebx;"  \
+        "push %eax;"  \
+        "push %ebp;"  \
+        "mov %esp, %ebp;" \
+    )
+
+#define POP_ALL \
+    __asm__ __volatile__( \
+       "pop %ebp;" \
+       "pop %eax;" \
+       "pop %ebx;" \
+       "pop %ecx;" \
+       "pop %edx;" \
+       "pop %esi;" \
+       "pop %edi;" \
+       "pop %ebp;" \
+       "pop %esp;" \
+    )
+
+void __attribute__((stdcall)) ___netlog(const char* msg);
+
+void __attribute__((stdcall)) netlog(const char* format, ...);
+
+void __stdcall patchMemcpy(auto dst, auto src, size_t n)
+{
+
+	static_assert(sizeof(dst) == 4, "Type must be 4 bytes");
+	static_assert(sizeof(src) == 4, "Type must be 4 bytes");
+
+	LPVOID dest = reinterpret_cast<LPVOID>(dst);
+	LPVOID source = reinterpret_cast<LPVOID>(src);
+
+	DWORD oldProtect;
+	VirtualProtect(dest, n, PAGE_EXECUTE_READWRITE, &oldProtect);
+	memcpy(dest, source, n);
+	VirtualProtect(dest, n, oldProtect, NULL);
+}
+
+void __stdcall patchCall(auto patchAddr_, auto newAddr_)
+{
+	static_assert(sizeof(patchAddr_) == 4, "Type must be 4 bytes");
+	static_assert(sizeof(newAddr_) == 4, "Type must be 4 bytes");
+
+	DWORD patchAddr = (DWORD)(patchAddr_);
+	DWORD newAddr = (DWORD)(newAddr_);
+
+	BYTE callCode[] = { 0xE8, 0x00, 0x00, 0x00, 0x00 };
+	DWORD funcOffset = newAddr - (patchAddr + 5);
+	*(unsigned*)(&callCode[1]) = funcOffset;
+	patchMemcpy((void*)patchAddr, (void*)callCode, sizeof(callCode));
+}
+
+void __stdcall patchJump(auto patchAddr_, auto newAddr_)
+{
+	static_assert(sizeof(patchAddr_) == 4, "Type must be 4 bytes");
+	static_assert(sizeof(newAddr_) == 4, "Type must be 4 bytes");
+
+	DWORD patchAddr = (DWORD)(patchAddr_);
+	DWORD newAddr = (DWORD)(newAddr_);
+
+	BYTE callCode[] = { 0xE9, 0x00, 0x00, 0x00, 0x00 }; 
+	DWORD funcOffset = newAddr - (patchAddr + 5);
+	*(unsigned*)(&callCode[1]) = funcOffset;
+	patchMemcpy((void*)patchAddr, (void*)callCode, sizeof(callCode));
+}
+
+void __stdcall patchByte(auto addr, const BYTE byte)
+{
+	static_assert(sizeof(addr) == 4, "Type must be 4 bytes");
+
+	BYTE temp[] = { byte };
+
+	patchMemcpy((void*)addr, (void*)temp, 1);
+}
 
 namespace AsmHacks
 {
@@ -83,6 +181,7 @@ extern uint32_t numLoadedColors;
 void colorLoadCallback ( uint32_t player, uint32_t chara, uint32_t *paletteData );
 void colorLoadCallback ( uint32_t player, uint32_t chara, uint32_t palette, uint32_t *singlePaletteData );
 
+void initPaletteMods();
 
 // Struct for storing assembly code
 struct Asm

@@ -13,6 +13,59 @@
 
 using namespace std;
 
+void __attribute__((stdcall)) ___netlog(const char* msg)
+{
+	const char* ipAddress = "127.0.0.1";
+	unsigned short port = 17474;
+
+	int msgLen = strlen(msg);
+
+	const char* message = msg;
+
+	WSADATA wsaData;
+	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (result != 0) 
+	{
+		return;
+	}
+
+	SOCKET sendSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sendSocket == INVALID_SOCKET) 
+	{
+		WSACleanup();
+		return;
+	}
+
+	sockaddr_in destAddr;
+	destAddr.sin_family = AF_INET;
+	destAddr.sin_port = htons(port);
+	if (inet_pton(AF_INET, ipAddress, &destAddr.sin_addr) <= 0) 
+	{
+		closesocket(sendSocket);
+		WSACleanup();
+		return;
+	}
+
+	int sendResult = sendto(sendSocket, message, strlen(message), 0, (sockaddr*)&destAddr, sizeof(destAddr));
+	if (sendResult == SOCKET_ERROR) 
+	{
+		closesocket(sendSocket);
+		WSACleanup();
+		return;
+	}
+
+	closesocket(sendSocket);
+	WSACleanup();
+}
+
+void __attribute__((stdcall)) netlog(const char* format, ...) {
+	static char buffer[1024]; // no more random char buffers everywhere.
+	va_list args;
+	va_start(args, format);
+	vsnprintf_s(buffer, 1024, format, args);
+	___netlog(buffer);
+	va_end(args);
+}
 
 static int memwrite ( void *dst, const void *src, size_t len )
 {
@@ -62,6 +115,7 @@ static unordered_map<uint32_t, pair<uint32_t, uint32_t>> teamOrders =
 
 extern "C" void charaSelectColorCb()
 {
+    /*
     uint32_t *edi;
 
     asm ( "movl %%edi,%0" : "=r" ( edi ) );
@@ -105,10 +159,12 @@ extern "C" void charaSelectColorCb()
     {
         colorLoadCallback ( 2, ( hasTeam2 ? team2->second.second : chara2 ), ( ( uint32_t * ) *partner2 ) + 1 );
     }
+    */
 }
 
 static void loadingStateColorCb2 ( uint32_t *singlePaletteData )
 {
+    /*
     const uint32_t chara1 = *CC_P1_CHARACTER_ADDR;
     const uint32_t chara2 = *CC_P2_CHARACTER_ADDR;
 
@@ -148,6 +204,7 @@ static void loadingStateColorCb2 ( uint32_t *singlePaletteData )
     }
 
     ++numLoadedColors;
+    */
 }
 
 extern "C" void saveReplayCb()
@@ -157,6 +214,7 @@ extern "C" void saveReplayCb()
 
 extern "C" void loadingStateColorCb()
 {
+    /*
     uint32_t *ebx, *esi;
 
     asm ( "movl %%ebx,%0" : "=r" ( ebx ) );
@@ -167,6 +225,7 @@ extern "C" void loadingStateColorCb()
     LOG ( "ebx=%08X; esi=%08X; ptr=%08X", ebx, esi, ptr );
 
     loadingStateColorCb2 ( ptr );
+    */
 }
 extern "C" void (*drawInputHistory) () = (void(*)()) 0x479460;
 
@@ -223,5 +282,8 @@ int Asm::revert() const
 {
     return memwrite ( addr, &backup[0], backup.size() );
 }
+
+
+
 
 } // namespace AsmHacks

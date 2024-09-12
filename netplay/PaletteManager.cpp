@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 
+
+/*
 using namespace std;
 
 
@@ -277,3 +279,5 @@ bool PaletteManager::load ( const string& folder, const string& charaName )
     fin.close();
     return good;
 }
+
+*/

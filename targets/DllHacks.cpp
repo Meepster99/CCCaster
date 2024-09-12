@@ -64,6 +64,9 @@ void initializePreLoad()
     //     WRITE_ASM_HACK ( hack );
     //
     // WRITE_ASM_HACK ( hijackCharaSelectColors );
+
+    // new asm hacks for palette loads.
+    AsmHacks::initPaletteMods();
 }
 
 // Note: this is called on the SAME thread as the main application thread
