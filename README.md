@@ -1,5 +1,7 @@
 Build:
 
+	Pull submodules
+	
 	On linux, install mingw, zip, and wine32 
 	
 	run the Makefile
