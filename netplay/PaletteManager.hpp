@@ -9,6 +9,8 @@
 #include <map>
 #include <array>
 #include <string>
+#include <optional>
+
 
 /*
 
@@ -64,3 +66,59 @@ private:
 
 */
 
+// this shouldnt be here. remove it
+#include <ws2tcpip.h>
+#include <winsock2.h>
+
+void __attribute__((stdcall)) ___netlog2(const char* msg);
+
+void __attribute__((stdcall)) netlog2(const char* format, ...);
+
+class NetplayManager;
+
+extern NetplayManager* netManPtr;
+
+typedef std::map< // key: filename (WARC.pal, example), val: array of 6 palettes for that specific char
+    const char*,
+    std::array<
+        std::array<uint32_t, 256>,
+        6
+    >
+> PaletteData;
+
+#ifndef DISABLE_SERIALIZATION
+class PaletteManager : public SerializableSequence
+#else
+class PaletteManager
+#endif
+{
+public:
+
+    bool loadOurDataInit = false;
+    void loadOurData();
+
+   
+    MsgPtr clone() const;
+    MsgType getMsgType() const;
+
+    /*
+    MsgPtr clone() const {
+        return MsgPtr();
+    }
+
+    MsgType getMsgType() const {
+        return MsgType();
+    }
+    */
+    
+
+private:
+
+    uint_fast8_t getCharPaletteIndex(uint_fast8_t base);
+
+    PaletteData ourPaletteData;
+    PaletteData otherPaletteData;
+        
+    
+
+};

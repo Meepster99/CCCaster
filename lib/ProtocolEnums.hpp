@@ -32,3 +32,4 @@ VersionConfig,
 JoysticksChanged,
 TransitionIndex,
 PaletteManager,
+PaletteMessage, // Deleted message

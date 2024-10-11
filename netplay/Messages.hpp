@@ -7,6 +7,7 @@
 #include "Version.hpp"
 #include "Compression.hpp"
 #include "CharacterSelect.hpp"
+#include "PaletteManager.hpp"
 
 #include <cereal/types/array.hpp>
 #include <cereal/types/vector.hpp>
@@ -172,6 +173,8 @@ struct NetplayConfig : public SerializableSequence
     std::string trialAudioCue;
     uint32_t trialFlashColor;
 
+    PaletteManager paletteManager;
+
     // Offline only tournament mode flag (DO NOT SERIALIZE)
     bool tournament = false;
 
@@ -207,7 +210,7 @@ struct NetplayConfig : public SerializableSequence
     }
 
     PROTOCOL_MESSAGE_BOILERPLATE ( NetplayConfig, mode, delay, rollback, rollbackDelay,
-                                   winCount, hostPlayer, broadcastPort, names, sessionId, trialAudioCue, trialFlashColor )
+                                   winCount, hostPlayer, broadcastPort, names, sessionId, trialAudioCue, trialFlashColor, paletteManager )
 };
 
 
@@ -498,10 +501,11 @@ struct BothInputs : public SerializableSequence, public BaseInputs
 {
     // Represents the input range [frame - NUM_INPUTS + 1, frame + 1)
     std::array<std::array<uint16_t, NUM_INPUTS>, 2> inputs;
-
+ 
     BothInputs ( IndexedFrame indexedFrame ) { this->indexedFrame = indexedFrame; }
 
     std::string str() const override { return format ( "BothInputs[%s]", indexedFrame ); }
 
     PROTOCOL_MESSAGE_BOILERPLATE ( BothInputs, indexedFrame.value, inputs )
 };
+

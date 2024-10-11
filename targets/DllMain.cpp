@@ -17,6 +17,7 @@
 #include "ReplayManager.hpp"
 #include "DllRollbackManager.hpp"
 #include "DllTrialManager.hpp"
+#include "PaletteManager.hpp"
 
 #include <windows.h>
 
@@ -93,6 +94,7 @@ ENUM ( Variable, WorldTime, GameMode, GameState, RoundStart,
 bool stopping = false;
 
 NetplayManager* netManPtr = 0;
+//PaletteManager* palManPtr = NULL;
 
 struct DllMain
         : public Main
@@ -165,6 +167,9 @@ struct DllMain
 
     // The minimum number of frames that must run normally, before we're allowed to do another rollback
     uint8_t minRollbackSpacing = 2;
+
+    // palette manager instance
+    //PaletteManager palMan;
 
 #ifndef RELEASE
     // Local and remote SyncHashes
@@ -1480,7 +1485,6 @@ struct DllMain
 
                         delayedStop ( msg->getAs<ErrorMessage>().error );
                         return;
-
                     default:
                         break;
                 }
@@ -1995,6 +1999,7 @@ struct DllMain
         ChangeMonitor::get().addRef ( this, Variable ( Variable::RoundStart ), AsmHacks::roundStartCounter );
         ChangeMonitor::get().addRef ( this, Variable ( Variable::GameState ), *CC_GAME_STATE_ADDR );
         netManPtr = &netMan;
+        //palManPtr = &palMan;
 
 #ifndef RELEASE
         ChangeMonitor::get().addRef ( this, Variable ( Variable::MenuConfirmState ), AsmHacks::menuConfirmState );

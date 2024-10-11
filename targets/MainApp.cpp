@@ -674,6 +674,8 @@ struct MainApp
                 netplayConfig.sessionId = generateRandomId();
                 netplayConfig.invalidate();
 
+                netplayConfig.paletteManager.loadOurData();
+
                 ctrlSocket->send ( netplayConfig );
                 startGameIfReady();
                 break;
@@ -688,6 +690,8 @@ struct MainApp
                 netplayConfig.delay = ui.getNetplayConfig().delay;
                 netplayConfig.rollback = ui.getNetplayConfig().rollback;
                 netplayConfig.rollbackDelay = ui.getNetplayConfig().rollbackDelay;
+
+                netplayConfig.paletteManager.loadOurData();
 
                 startGameIfReady();
                 break;
