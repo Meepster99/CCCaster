@@ -122,11 +122,11 @@ void DllFrameRate::limitFPSAfterPresent() {
     largeMean *= (1.0 / (double)fpsLargeBufferLen);
 
     DWORD temp = 0;
-    temp += (DWORD)round(mean + 0.5);
+    temp += (DWORD)round(mean + 0.0);
     temp *= 1000;
-    temp += (DWORD)round(minFps + 0.5);
+    temp += (DWORD)round(minFps + 0.0);
     temp *= 1000;
-    temp += (DWORD)round(maxFps + 0.5);
+    temp += (DWORD)round(maxFps + 0.0);
 
     *CC_FPS_COUNTER_ADDR = temp;
 
@@ -135,6 +135,7 @@ void DllFrameRate::limitFPSAfterPresent() {
     DllFrameRate::frameStartTime = time;
     // 63 seemed ideal on my laptop, but more testing/dynamic value needed
     // this system self balances. is that ok? also, working in nanoseconds is becoming an issue due to precision.
+    // melty def runs a bit hot(over 60)
     static double goalDivisor = 60.0;
     
     //double goalDiff = largeMean - 60.0;
