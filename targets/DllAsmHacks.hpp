@@ -157,6 +157,12 @@ static const Asm disableFpsLimit = { CC_PERF_FREQ_ADDR, { INLINE_DWORD ( 1 ), IN
 // Disable the code that updates the FPS counter
 static const Asm disableFpsCounter = { ( void * ) 0x41FD43, INLINE_NOP_THREE_TIMES };
 
+// limits the number of hit effects that are checked
+static const Asm limitHiteffectLoop = { ( void * ) (0x0045ca0b + 1), { INLINE_DWORD(200) } };
+
+// limits the number of effects that are checked
+static const Asm limitEffectLoop = { ( void * ) (0x0045411b + 2), { INLINE_DWORD(0x67bdf8 + (0x33C * 200)) } };
+
 // Disable normal joystick and keyboard controls
 static const AsmList hijackControls =
 {
