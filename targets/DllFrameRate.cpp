@@ -23,7 +23,7 @@ constexpr int fpsBufferLen = 60;
 double fpsBuffer[fpsBufferLen];
 int fpsBufferIndex = 0;
 
-constexpr int fpsLargeBufferLen = 600;
+constexpr int fpsLargeBufferLen = 30;
 double fpsLargeBuffer[fpsLargeBufferLen];
 int fpsLargeBufferIndex = 0;
 
@@ -100,6 +100,10 @@ void DllFrameRate::limitFPSAfterPresent() {
     fpsLargeBuffer[fpsLargeBufferIndex] = fpsThisFrame;
     fpsLargeBufferIndex = (fpsLargeBufferIndex + 1) % fpsLargeBufferLen;
 
+    static double movingMean = 60.0f;
+    movingMean -= (movingMean / fpsLargeBufferLen);
+    movingMean += (fpsThisFrame / fpsLargeBufferLen);
+
     double minFps = fpsBuffer[0];
     double mean = fpsBuffer[0];
     double maxFps = fpsBuffer[0];
@@ -133,12 +137,13 @@ void DllFrameRate::limitFPSAfterPresent() {
     // this system self balances. is that ok? also, working in nanoseconds is becoming an issue due to precision.
     static double goalDivisor = 60.0;
     
-    double goalDiff = largeMean - 60.0;
+    //double goalDiff = largeMean - 60.0;
+    double goalDiff = movingMean - 60.0;
     double goalDiffSquare = goalDiff * goalDiff;
     if(goalDiff < 0.0) {
         goalDiffSquare *= -1;
     }
-    goalDivisor -= ( goalDiffSquare * 0.001);
+    goalDivisor -= ( goalDiffSquare * 0.025);
 
     //DllFrameRate::nextFrameTime = frameStartTime + ((long long)(((double)1000000000.0 / (double)63.0))); 
     DllFrameRate::nextFrameTime = frameStartTime + ((long long)(((double)1000000000.0 / goalDivisor))); 
