@@ -83,4 +83,7 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
         device->EndScene();
     }
 #endif
+
+    DllFrameRate::limitFPSBeforePresent();
+    
 }

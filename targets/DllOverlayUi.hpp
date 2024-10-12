@@ -3,7 +3,7 @@
 #include <string>
 #include <array>
 #include <d3dx9.h>
-
+#include "DllFrameRate.hpp"
 
 #define DEFAULT_MESSAGE_TIMEOUT ( 3000 )
 

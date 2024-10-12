@@ -19,11 +19,12 @@ double actualFps = 60.0;
 
 bool isEnabled = false;
 
-
 void enable()
 {
     if ( isEnabled )
         return;
+
+    timeBeginPeriod(1); // increase timer resolution
 
     // TODO find an alternative because this doesn't work on Wine
     WRITE_ASM_HACK ( AsmHacks::disableFpsLimit );
@@ -36,57 +37,78 @@ void enable()
 
 }
 
+long long DllFrameRate::frameStartTime = 0;
+long long DllFrameRate::nextFrameTime = 0;
 
-void PresentFrameEnd ( IDirect3DDevice9 *device )
-{
+void DllFrameRate::limitFPSBeforePresent() {
+
     if ( !isEnabled || *CC_SKIP_FRAMES_ADDR )
-        return;
+      return;
 
-    static uint64_t last1f = 0, last5f = 0, last30f = 0, last60f = 0;
-    static uint8_t counter = 0;
+    return;
 
-    ++counter;
+    constexpr long long limit = (1000000000.0f / 61.0f) * 0.7;
+    long long time;
+    long long delta;
+    do {
+		time = getNanoSec();
+        delta = time - DllFrameRate::frameStartTime;
+	} while (delta < limit);
+}
 
-    uint64_t now = TimerManager::get().getNow ( true );
+void DllFrameRate::limitFPSAfterPresent() {
 
-    /**
-     * The best timer resolution is only in milliseconds, and we need to make
-     * sure the spacing between frames is as close to even as possible.
-     *
-     * What this code does is check every 30f, 5f, and 1f how many milliseconds have
-     * passed since the last check and make sure we are close to or under the desired FPS.
-     */
-    if ( counter % 30 == 0 )
-    {
-        while ( now - last30f < ( 30 * 1000 ) / desiredFps )
-            now = TimerManager::get().getNow ( true );
+    if ( !isEnabled || *CC_SKIP_FRAMES_ADDR )
+      return;
 
-        last30f = now;
+	static long long prevTime = 0;
+	long long time ;
+	long long delta;
+
+    constexpr long long limit = (1000000000.0f / 61.0f) * 1.0f;
+    do {
+		time = getNanoSec();
+        //delta = time - prevTime;
+        delta = time - DllFrameRate::frameStartTime;
+	//} while (delta < limit);
+    } while(time < nextFrameTime);
+
+    constexpr int fpsBufferLen = 60;
+    static double fpsBuffer[fpsBufferLen];
+    static int fpsBufferIndex = 0;
+
+    double fpsThisFrame = (1000000000.0 / (double)delta); 
+    fpsBuffer[fpsBufferIndex] = fpsThisFrame;
+    fpsBufferIndex = (fpsBufferIndex + 1) % fpsBufferLen;
+    
+    double minFps = fpsBuffer[0];
+    double mean = fpsBuffer[0];
+    double maxFps = fpsBuffer[0];
+    for(int i=1; i<60; i++) {
+        minFps = MIN(minFps, fpsBuffer[i]);
+        mean += fpsBuffer[i];
+        maxFps = MAX(maxFps, fpsBuffer[i]);
     }
-    else if ( counter % 5 == 0 )
-    {
-        while ( now - last5f < ( 5 * 1000 ) / desiredFps )
-            now = TimerManager::get().getNow ( true );
 
-        last5f = now;
-    }
-    else
-    {
-        while ( now - last1f < 1000 / desiredFps )
-            now = TimerManager::get().getNow ( true );
-    }
+    mean *= (1.0 / (double)fpsBufferLen);
 
-    last1f = now;
+    DWORD temp = 0;
+    temp += (DWORD)round(mean);
+    temp *= 1000;
+    temp += (DWORD)round(minFps);
+    temp *= 1000;
+    temp += (DWORD)round(maxFps);
 
-    if ( counter >= 60 )
-    {
-        now = TimerManager::get().getNow ( true );
+    *CC_FPS_COUNTER_ADDR = temp;
 
-        actualFps = 1000.0 / ( ( now - last60f ) / 60.0 );
+    time = getNanoSec();
+    prevTime = time;
+    DllFrameRate::frameStartTime = time;
+    DllFrameRate::nextFrameTime = frameStartTime + ((long long)((1000000000.0f / 61.0f)));
 
-        *CC_FPS_COUNTER_ADDR = uint32_t ( actualFps + 0.5 );
+}
 
-        counter = 0;
-        last60f = now;
-    }
+void PresentFrameEnd ( IDirect3DDevice9 *device ) 
+{
+    DllFrameRate::limitFPSAfterPresent();
 }
