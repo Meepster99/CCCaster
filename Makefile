@@ -54,8 +54,8 @@ DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o
 
 # Tool chain
 PREFIX = i686-w64-mingw32-
-GCC = $(PREFIX)gcc
-CXX = $(PREFIX)g++
+GCC = $(PREFIX)gcc -g
+CXX = $(PREFIX)g++ -g
 WINDRES = windres
 STRIP = strip
 TOUCH = touch

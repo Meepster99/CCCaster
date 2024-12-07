@@ -735,7 +735,7 @@ uint16_t NetplayManager::getRawInput ( uint8_t player, uint32_t frame ) const
 
 void NetplayManager::setInput ( uint8_t player, uint16_t input )
 {
-    ASSERT ( player == 1 || player == 2 );
+    ASSERT ( player == 1 || player == 2 || player == 3 || player == 4 );
     ASSERT ( getIndex() >= _startIndex );
 
     if ( isInRollback() ) {

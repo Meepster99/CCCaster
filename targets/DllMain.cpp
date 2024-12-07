@@ -133,7 +133,7 @@ struct DllMain
     TimerPtr initialTimer;
 
     // Local player inputs
-    array<uint16_t, 2> localInputs = {{ 0, 0 }};
+    array<uint16_t, 4> localInputs = {{ 0, 0, 0, 0 }};
 
     // If we have sent our local retry menu index
     bool localRetryMenuIndexSent = false;
@@ -267,7 +267,7 @@ struct DllMain
 
                 if ( DllOverlayUi::isEnabled() )                                            // Overlay UI controls
                 {
-                    localInputs[0] = localInputs[1] = 0;
+                    localInputs[0] = localInputs[1] = localInputs[2] = localInputs[3] = 0;
                 }
                 else if ( clientMode.isNetplay() || clientMode.isLocal() )                  // Netplay + local controls
                 {
@@ -463,7 +463,7 @@ struct DllMain
 #endif // NOT RELEASE
 
                 // Assign local player input
-                if ( ! clientMode.isSpectate() )
+                if ( ! clientMode.isSpectate() ) // NOT spectator, this is what i need i think
                 {
 #ifndef RELEASE
                     if ( netMan.isInRollback() )
@@ -505,6 +505,8 @@ struct DllMain
                 else if ( clientMode.isLocal() )
                 {
                     netMan.setInput ( remotePlayer, localInputs[1] );
+                    netMan.setInput ( 3, localInputs[2] );
+                    netMan.setInput ( 4, localInputs[3] );
                 }
 
                 if ( shouldSyncRngState && ( clientMode.isHost() || clientMode.isBroadcast() ) )
@@ -983,6 +985,9 @@ struct DllMain
         // Write game inputs
         procMan.writeGameInput ( localPlayer, netMan.getInput ( localPlayer ) );
         procMan.writeGameInput ( remotePlayer, netMan.getInput ( remotePlayer ) );
+        // :3
+        procMan.writeGameInput ( 3, netMan.getInput ( 3 ) );
+        procMan.writeGameInput ( 4, netMan.getInput ( 4 ) );
 
 #ifndef RELEASE
         if ( replayInputs && ( replaySpeed == 1 || KeyboardState::isDown ( VK_SPACE ) ) )

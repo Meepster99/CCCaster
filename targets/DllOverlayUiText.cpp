@@ -63,27 +63,27 @@ static int height = 0, oldHeight = 0, newHeight = 0;
 
 static int initialTimeout = 0, messageTimeout = 0;
 
-static array<string, 3> text;
+static array<string, 5> text;
 
-static array<RECT, 2> selector;
+static array<RECT, 4> selector;
 
-static array<bool, 2> shouldDrawSelector { false, false };
+static array<bool, 4> shouldDrawSelector { false, false, false, false };
 
 static ID3DXFont *font = 0;
 
 static IDirect3DVertexBuffer9 *background = 0;
 
-static array<string, 2> selectorLine;
+static array<string, 4> selectorLine;
 
 namespace DllOverlayUi
 {
 
-array<string, 3> getText()
+array<string, 5> getText()
 {
     return text;
 }
 
-array<string, 2> getSelectorLine()
+array<string, 4> getSelectorLine()
 {
     return selectorLine;
 }
@@ -98,12 +98,12 @@ int getNewHeight()
     return newHeight;
 }
 
-array<RECT, 2> getSelector()
+array<RECT, 4> getSelector()
 {
     return selector;
 }
 
-array<bool, 2> getShouldDrawSelector()
+array<bool, 4> getShouldDrawSelector()
 {
     return shouldDrawSelector;
 }
@@ -130,7 +130,7 @@ void toggle()
         enable();
 }
 
-static inline int getTextHeight ( const array<string, 3>& newText )
+static inline int getTextHeight ( const array<string, 5>& newText )
 {
     int height = 0;
 
@@ -145,7 +145,7 @@ void updateText()
     updateText ( text );
 }
 
-void updateText ( const array<string, 3>& newText )
+void updateText ( const array<string, 5>& newText )
 {
     switch ( state.value )
     {
@@ -241,7 +241,7 @@ void showMessage ( const string& newText, int timeout )
 
     // Show the message in the middle
     text = { "", newText, "" };
-    shouldDrawSelector = { false, false };
+    shouldDrawSelector = { false, false, false, false };
 
     enable();
 }
@@ -273,7 +273,7 @@ void updateMessage()
 
 void updateSelector ( uint8_t index, int position, const string& line )
 {
-    if ( index > 1 )
+    if ( index >= shouldDrawSelector.size() )
         return;
 
     selectorLine[index] = line;
@@ -504,7 +504,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     if ( state != State::Enabled )
         return;
 
-    if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() ) )
+    if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() && text[3].empty() && text[4].empty() ) )
     {
         const int centerX = viewport.Width / 2;
 
@@ -514,22 +514,35 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         rect.top    = OVERLAY_TEXT_BORDER;
         rect.bottom = rect.top + height + OVERLAY_TEXT_BORDER;
 
-        if ( newHeight == height )
-        {
-            if ( shouldDrawSelector[0] )
-                DrawRectangle ( device, INLINE_RECT ( selector[0] ), OVERLAY_SELECTOR_L_COLOR );
+        for(size_t _i = 0; _i < text.size(); _i++) {
+            // -1s are here since text has size 5, selectors have size 4
+            if ( _i > 0 && newHeight == height && shouldDrawSelector[_i - 1] ) {
 
-            if ( shouldDrawSelector[1] )
-                DrawRectangle ( device, INLINE_RECT ( selector[1] ), OVERLAY_SELECTOR_R_COLOR );
+                RECT tempRect = selector[_i - 1];
+                tempRect.left = rect.left;
+                tempRect.right = rect.left + (viewport.Width / 5);
+                long tempRectHeight = tempRect.bottom - tempRect.top;
+                tempRect.top += (2 * tempRectHeight);
+                tempRect.bottom = tempRect.top + tempRectHeight;
+
+                DrawRectangle ( device, INLINE_RECT ( tempRect ), OVERLAY_SELECTOR_L_COLOR );
+            }
+
+            if ( ! text[_i].empty() ) {
+
+                std::string tempText = "";
+                //tempText += std::to_string(_i) + " ";
+                if(_i > 0) {
+                    tempText += std::to_string(shouldDrawSelector[_i - 1]);
+                }
+                tempText += text[_i];
+
+                DrawText ( font, tempText, rect, DT_WORDBREAK | DT_LEFT, OVERLAY_TEXT_COLOR );
+                // this shouldnt be needed? how did this system work previously?
+                rect.left += (viewport.Width / 5);
+                rect.right += (viewport.Width / 5);
+
+            }
         }
-
-        if ( ! text[0].empty() )
-            DrawText ( font, text[0], rect, DT_WORDBREAK | DT_LEFT, OVERLAY_TEXT_COLOR );
-
-        if ( ! text[1].empty() )
-            DrawText ( font, text[1], rect, DT_WORDBREAK | DT_CENTER, OVERLAY_TEXT_COLOR );
-
-        if ( ! text[2].empty() )
-            DrawText ( font, text[2], rect, DT_WORDBREAK | DT_RIGHT, OVERLAY_TEXT_COLOR );
     }
 }
