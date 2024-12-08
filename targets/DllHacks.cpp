@@ -58,6 +58,9 @@ void initializePreLoad()
     WRITE_ASM_HACK ( disableTrainingMusicReset );
     WRITE_ASM_HACK ( fixBossStageSuperFlashOverlay );
 
+    for ( const Asm& hack : initPatch2v2 )
+        WRITE_ASM_HACK ( hack );
+
     // TODO color hijack is temporary disabled due to some issues
     //
     // for ( const Asm& hack : hijackLoadingStateColors )

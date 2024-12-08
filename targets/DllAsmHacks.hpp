@@ -7,6 +7,38 @@
 #include <vector>
 #include <array>
 
+// i wish i ever got the raw strings thing to work
+#define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
+#define __asmEnd ); __asm__ __volatile__ (".att_syntax;");
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))
+#define PUSH_ALL \
+    __asm__ __volatile__( \
+        "push %esp;"  \
+        "push %ebp;"  \
+        "push %edi;"  \
+        "push %esi;"  \
+        "push %edx;"  \
+        "push %ecx;"  \
+        "push %ebx;"  \
+        "push %eax;"  \
+        "push %ebp;"  \
+        "mov %esp, %ebp;" \
+    )
+#define POP_ALL \
+    __asm__ __volatile__( \
+       "pop %ebp;" \
+       "pop %eax;" \
+       "pop %ebx;" \
+       "pop %ecx;" \
+       "pop %edx;" \
+       "pop %esi;" \
+       "pop %edi;" \
+       "pop %ebp;" \
+       "pop %esp;" \
+    )
 
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
     do {                                                                                                            \
@@ -39,6 +71,13 @@
 
 #define INLINE_NOP_SEVEN_TIMES { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }
 
+#define PATCHJUMP_HELPER(patchAddr, newAddr) { (void*) patchAddr, { 0xE9, INLINE_DWORD( (newAddr) - ((patchAddr) + 5)) } } 
+
+#define PATCHCALL_HELPER(patchAddr, newAddr) { (void*) patchAddr, { 0xE8, INLINE_DWORD( (newAddr) - ((patchAddr) + 5)) } } 
+
+#define PATCHJUMP(patchAddr, newAddr) PATCHJUMP_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
+
+#define PATCHCALL(patchAddr, newAddr) PATCHCALL_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
 
 namespace AsmHacks
 {
@@ -503,6 +542,47 @@ static const AsmList addExtraTextures =
          0xE8, INLINE_DWORD ( ( ( char * ) &addExtraTexturesCb ) - 0x41BE38 - 5 ),       // call addExtraTexturesCb
          0xC3
     } },
+};
+
+void battleResetCallback();
+
+__attribute__((naked)) void _naked_battleResetCallback();
+
+static const AsmList initPatch2v2 =
+{
+    { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
+
+    // i would patch character port and background state here, but that cant occur here
+    // instead, im hooking the reset func again.
+    
+    // it needs to occur when initially loading into a game
+    // i actually prefer this patch method(with a lil modification) tbh. its very well done
+
+    // battle reset patches:
+
+    // the reset func can ret early, patch that
+    PATCHJUMP(0x004234b9, 0x004234e1),
+
+    // patch the jump to our function
+    PATCHJUMP(0x004234e4, _naked_battleResetCallback) 
+
+};
+
+static const AsmList patch2v2 = 
+{
+
+    // patch all character port numbers
+    { ( void * ) (0x00555424 + (0 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x00555424 + (1 * 0xAFC)), { 0x01 }},
+    { ( void * ) (0x00555424 + (2 * 0xAFC)), { 0x02 }},
+    { ( void * ) (0x00555424 + (3 * 0xAFC)), { 0x03 }},
+
+    // patch all character background states
+    { ( void * ) (0x005552A8 + (0 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (1 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (2 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (3 * 0xAFC)), { 0x00 }}
+
 };
 
 

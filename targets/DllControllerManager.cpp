@@ -17,6 +17,17 @@ using namespace std;
 
 extern bool stopping;
 
+/*
+
+some notes:
+nopping the instr at 0x0042685a
+makes it so characters arent unloaded on reset.
+they are still set to background tho
+
+patch the compare at 0x00426810 to 4. is the previous patch required with that?
+doesnt seem to be
+
+*/
 
 void DllControllerManager::initControllers ( const ControllerMappings& mappings )
 {
@@ -264,8 +275,6 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
             localInputs[i] = input;
         }
 
-        #define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
-#define __asmEnd ); __asm__ __volatile__ (".att_syntax;");
  /*if(KeyboardState::isPressed ( VK_UP )) {
     __asmStart  R"(
 

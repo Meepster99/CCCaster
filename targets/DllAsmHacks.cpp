@@ -224,4 +224,23 @@ int Asm::revert() const
     return memwrite ( addr, &backup[0], backup.size() );
 }
 
+void battleResetCallback() {
+
+    for ( const Asm& hack : patch2v2 )
+        WRITE_ASM_HACK ( hack );
+
+}
+
+void _naked_battleResetCallback() {
+
+    PUSH_ALL;
+    battleResetCallback();
+    POP_ALL;
+
+    __asmStart R"(
+        ret 0x4;
+    )" __asmEnd
+
+}
+
 } // namespace AsmHacks
