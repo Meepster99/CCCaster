@@ -256,7 +256,7 @@ void _naked_charTurnAround() {
         xor al, byte ptr[ebp + 0x000002F0];
         and al, 0x01;
         test al, al;
-        
+
         // sync up al for the rest of this bs, if needed
         //mov al, byte ptr[ecx + 0x000001EC];
         //cmp byte ptr[ebp + 0x000002F0], al;
@@ -264,6 +264,67 @@ void _naked_charTurnAround() {
     )" __asmEnd
 
     emitJump(0x00475887);
+
+}
+
+void _naked_hitBoxConnect1() { 
+
+    // patch at 0046F20D
+
+    __asmStart R"(
+
+        mov al, [ebx + 0x000002F0];
+        xor al, [edi + 0x000002F0];
+        and al, 0x01;
+        test al, al;
+
+        // mov al, [ebx + 0x000002F0];
+        // cmp al, [edi + 0x000002F0];
+
+    )" __asmEnd
+    
+
+    emitJump(0x0046f213);
+}
+
+void _naked_hitBoxConnect2() { 
+
+    // patch at 00468127
+
+    __asmStart R"(
+
+        mov al, [ebx + 0x2F0];
+        xor al, [ebp - 0x02C];
+        and al, 0x01;
+        test al, al;
+
+        // mov al, byte ptr [ebx + 0x2F0];
+        // cmp al, byte ptr [ebp - 0x02C];
+
+    )" __asmEnd
+    
+
+    emitJump(0x00468130);
+}
+
+void _naked_hitBoxConnect3() {
+
+    // patch at 0x0046f67e
+
+    __asmStart R"(
+
+        mov dl, [ebx + 0x2F0];
+        xor dl, [ebp + 0x030];
+        and dl, 0x01;
+        test dl, dl;
+
+        // mov dl, byte ptr [ebx + 0x2F0];
+        // cmp dl, byte ptr [ebp + 0x030];
+
+    )" __asmEnd
+    
+
+    emitJump(0x0046f687);
 
 }
 
