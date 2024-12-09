@@ -40,6 +40,28 @@
        "pop %esp;" \
     )
 
+#define STRINGIFY(x) #x
+#define TO_STRING(x) STRINGIFY(x)
+#define LINE_STRING TO_STRING(__LINE__)
+
+#define CONCATENATE_DETAIL(x, y) x##y
+#define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
+#define LINE_NAME "LINE" LINE_STRING
+
+#define emitCall(addr) \
+    __asmStart \
+    "push " LINE_NAME ";" \
+	"push " #addr ";" \
+    "ret;" \
+    LINE_NAME ":" \
+    __asmEnd 
+
+#define emitJump(addr) \
+    __asmStart \
+	"push " #addr ";" \
+    "ret;" \
+    __asmEnd 
+
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
     do {                                                                                                            \
         const int error = ASM_HACK.write();                                                                         \
@@ -548,6 +570,8 @@ void battleResetCallback();
 
 __attribute__((naked)) void _naked_battleResetCallback();
 
+__attribute__((naked)) void _naked_charTurnAround();
+
 static const AsmList initPatch2v2 =
 {
     { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
@@ -564,7 +588,12 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x004234b9, 0x004234e1),
 
     // patch the jump to our function
-    PATCHJUMP(0x004234e4, _naked_battleResetCallback) 
+    PATCHJUMP(0x004234e4, _naked_battleResetCallback),
+
+    // i am unsure if this will work. 0047587b does a compare for if port numbers are equal
+    // i can instead compare the first bits, will have to patch my own func for that.
+
+    PATCHJUMP(0x0047587b, _naked_charTurnAround)
 
 };
 
@@ -581,7 +610,13 @@ static const AsmList patch2v2 =
     { ( void * ) (0x005552A8 + (0 * 0xAFC)), { 0x00 }},
     { ( void * ) (0x005552A8 + (1 * 0xAFC)), { 0x00 }},
     { ( void * ) (0x005552A8 + (2 * 0xAFC)), { 0x00 }},
-    { ( void * ) (0x005552A8 + (3 * 0xAFC)), { 0x00 }}
+    { ( void * ) (0x005552A8 + (3 * 0xAFC)), { 0x00 }},
+
+    // im not sure what this ref is to, but i think it has to do with duo characters?
+    { ( void * ) (0x0055545C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
 
 };
 

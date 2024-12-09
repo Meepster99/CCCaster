@@ -243,4 +243,28 @@ void _naked_battleResetCallback() {
 
 }
 
+void _naked_charTurnAround() {
+
+    // patched in at  0x0047587b
+    // need to ret to 0x00475887
+
+    __asmStart R"(
+
+        // unsure if this modifies flags in the same manner as cmp
+        // worst case tho, its inverted, so i can always just flip the z flag ig
+        mov al, byte ptr[ecx + 0x000001EC];
+        xor al, byte ptr[ebp + 0x000002F0];
+        and al, 0x01;
+        test al, al;
+        
+        // sync up al for the rest of this bs, if needed
+        //mov al, byte ptr[ecx + 0x000001EC];
+        //cmp byte ptr[ebp + 0x000002F0], al;
+    
+    )" __asmEnd
+
+    emitJump(0x00475887);
+
+}
+
 } // namespace AsmHacks
