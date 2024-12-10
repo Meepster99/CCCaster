@@ -328,4 +328,25 @@ void _naked_hitBoxConnect3() {
 
 }
 
+void _naked_throwConnect() {
+
+    // patch at 0x004641b2
+
+    __asmStart R"(
+
+        mov al, [esi + 0x2f0];
+        xor al, [edi + 0x2f0];
+        and al, 0x01;
+        test al, al;
+
+        // mov AL,byte ptr [ESI + 0x2f0]
+        // cmp byte ptr [EDI + 0x2f0]
+
+    )" __asmEnd
+    
+
+    emitJump(0x004641be);
+
+}
+
 } // namespace AsmHacks

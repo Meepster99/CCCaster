@@ -578,6 +578,8 @@ __attribute__((naked)) void _naked_hitBoxConnect2();
 
 __attribute__((naked)) void _naked_hitBoxConnect3();
 
+__attribute__((naked)) void _naked_throwConnect();
+
 static const AsmList initPatch2v2 =
 {
     { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
@@ -602,12 +604,14 @@ static const AsmList initPatch2v2 =
     // patch the port comparison for moves hitting?
     // i may have to patch FUN_0046f100 and FUN_00468060
     // 0046F20D, 0046812D, 0046F684
-    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1),
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed
 
-    PATCHJUMP(0x00468127, _naked_hitBoxConnect2),
+    PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
-    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3)
-    
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),
+
+    PATCHJUMP(0x004641b2, _naked_throwConnect)
+
 
 };
 

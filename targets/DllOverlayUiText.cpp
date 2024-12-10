@@ -385,6 +385,123 @@ void invalidateOverlayText()
     }
 }
 
+D3DXVECTOR2 scalePosTopLeft = { 0.0f, 0.0f };
+D3DXVECTOR2 scalePosRenderFactor = { 0.0f, 0.0f };
+
+void updateScaleParams(IDirect3DDevice9 *device) {
+
+    // this should only be called on resize.
+
+    float vWidth = 640;
+    float vHeight = 480;
+    float wWidth = 640;
+    float wHeight = 480;
+    bool isWide = false;
+
+    D3DVIEWPORT9 viewport;
+	device->GetViewport(&viewport);
+	vWidth = viewport.Width;
+	vHeight = viewport.Height;
+
+    HWND hwnd = (HWND) * (DWORD*)(0x0074dfac);
+
+	if (hwnd != NULL) {
+		RECT rect;
+		if (GetClientRect(hwnd, &rect)) {
+			wWidth = rect.right - rect.left;
+			wHeight = rect.bottom - rect.top;
+		}
+	}
+
+    const float ratio = 4.0f / 3.0f;
+
+	isWide = wWidth / wHeight > ratio;
+
+    D3DXVECTOR2 factor;
+	factor.x = 1.0f;
+	factor.y = 1.0f;
+
+	if (isWide) {
+		factor.x = (wHeight * ratio) / wWidth;
+	} else {
+		factor.y = (wWidth / ratio) / wHeight;
+	}
+
+	scalePosRenderFactor.x = 1.0f;
+	scalePosRenderFactor.y = 1.0f;
+
+	scalePosRenderFactor.x = (vHeight * (vWidth / vHeight)) / 640.0f;
+	scalePosRenderFactor.y = (vWidth / (vWidth / vHeight)) / 480.0f;
+
+	scalePosRenderFactor.x *= factor.x;
+	scalePosRenderFactor.y *= factor.y;
+
+	scalePosTopLeft.x = 0.0f;
+	scalePosTopLeft.y = 0.0f;
+
+	if (isWide) {
+		scalePosTopLeft.x = 640.0f / factor.x;
+		scalePosTopLeft.x *= (wWidth - (wHeight * ratio)) / (2.0f * wWidth);
+    } else {
+		scalePosTopLeft.y = 480.0f / factor.y;
+		scalePosTopLeft.y *= (wHeight - (wWidth / ratio)) / (2.0f * wHeight);
+	}
+
+}
+
+void scalePoint(float& x, float& y) {
+    x += scalePosTopLeft.x;
+    y += scalePosTopLeft.y;
+
+    x *= scalePosRenderFactor.x;
+    y *= scalePosRenderFactor.y;
+}
+
+void DrawRectScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, const DWORD ARGB, bool mirror) {
+
+    if(mirror) {
+        x1 = 640 - x1;
+        x2 = 640 - x2;
+    }
+    
+    if(x1 > x2) {
+        std::swap(x1, x2);
+    }
+
+    if(y1 > y2) {
+        std::swap(y1, y2);
+    }
+  
+    scalePoint(x1, y1);
+    scalePoint(x2, y2);
+
+    const D3DRECT rect = { (long)x1, (long)y1, (long)x2, (long)y2 };
+    device->Clear ( 1, &rect, D3DCLEAR_TARGET, ARGB, 0, 0 );
+}
+
+void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, float w, const DWORD ARGB, bool mirror) {
+
+    if(mirror) {
+        x1 = 640 - x1;
+        x2 = 640 - x2;
+    }
+
+    if(x1 > x2) {
+        std::swap(x1, x2);
+    }
+
+    if(y1 > y2) {
+        std::swap(y1, y2);
+    }
+
+    DrawRectScaled(device, x1, y1, x2, y1 + w, ARGB );
+    DrawRectScaled(device, x1, y2 - w, x2, y2, ARGB );
+    
+    DrawRectScaled(device, x1, y1, x1 + w, y2, ARGB );
+    DrawRectScaled(device, x2 - w, y1, x2, y2, ARGB );
+
+}
+
 void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
 {
 #ifndef RELEASE
@@ -402,6 +519,58 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     }
 
 #endif // RELEASE
+
+    
+    //if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
+    if(true) {
+
+        updateScaleParams(device);
+
+        // draw meter and health info for p2.
+        // and any other stuff like that
+        
+        // these draws are not ideal. in any way.
+
+        DWORD health[4]; // 11400 max
+        DWORD redHealth[4];
+        // should probs include guard guage here
+        DWORD meter[4];
+        DWORD heatTime[4];
+        DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
+
+        for(int i=0; i<4; i++) {
+            health[i] =       *(DWORD*)(0x005551EC + (i * 0xAFC));
+            redHealth[i] =    *(DWORD*)(0x005551F0 + (i * 0xAFC));
+            
+            meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
+            heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
+            circuitState[i] = *(DWORD*)(0x00555218 + (i * 0xAFC));
+        }
+
+        float x;
+        for(int i=2; i<4; i++) {
+
+            // draw meter bars
+            x = 30;
+            const int meterWidth = 200;
+            DrawBorderScaled(device, x, 428, x + meterWidth, 438, 2, 0xFFFFFFFF, i == 3);
+            int currentMeterWidth = (meterWidth * meter[i]) / 30000;
+            int meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+            DrawBorderScaled(device, x, 428, x + currentMeterWidth, 438, 2, meterCol, i == 3);
+
+            // draw health bars
+            x = 58;
+            const int healthWidth = 218;
+            int currentHealthWidth;
+            DrawBorderScaled(device, x, 30, x + 218, 40, 2, 0xFFFFFFFF, i == 3); // white bar
+            currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
+            DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFF0000, i == 3); // red health
+            currentHealthWidth = (healthWidth * health[i]) / 11400;
+            DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFFFF00, i == 3); // yellow health
+
+        }
+        
+    }
 
     if ( ! TrialManager::dtext.empty() && !TrialManager::hideText ) {
         int debugTextAlign = 1;

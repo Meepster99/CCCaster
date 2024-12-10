@@ -15,6 +15,12 @@
 #define COLOR_GREEN D3DCOLOR_XRGB ( 0, 255, 0 )
 #define COLOR_BLUE  D3DCOLOR_XRGB ( 0, 0, 255 )
 
+extern D3DXVECTOR2 scalePosTopLeft;
+extern D3DXVECTOR2 scalePosRenderFactor;
+void updateScaleParams(IDirect3DDevice9 *device);
+void scalePoint(float& x, float& y);
+void DrawRectScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, const DWORD ARGB, bool mirror = false);
+void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, float w, const DWORD ARGB, bool mirror = false);
 
 static inline void DrawRectangle ( IDirect3DDevice9 *device, int x1, int y1, int x2, int y2, const D3DCOLOR& color )
 {

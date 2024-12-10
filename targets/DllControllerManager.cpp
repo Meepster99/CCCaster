@@ -13,7 +13,7 @@ using namespace std;
 
 #define VK_TOGGLE_TRIAL_MENU ( VK_F3 )
 #define VK_TOGGLE_OVERLAY ( VK_F4 )
-#define VK_ENABLE_FRAMESTEP ( VK_F5 )
+#define VK_ENABLE_FRAMESTEP ( VK_F13 )
 
 extern bool stopping;
 
