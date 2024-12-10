@@ -566,7 +566,7 @@ static const AsmList addExtraTextures =
     } },
 };
 
-void battleResetCallback();
+void writePatch2v2();
 
 __attribute__((naked)) void _naked_battleResetCallback();
 
@@ -579,6 +579,8 @@ __attribute__((naked)) void _naked_hitBoxConnect2();
 __attribute__((naked)) void _naked_hitBoxConnect3();
 
 __attribute__((naked)) void _naked_throwConnect();
+
+__attribute__((naked)) void _naked_loadCSS();
 
 static const AsmList initPatch2v2 =
 {
@@ -610,32 +612,35 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
     
-    { ( void *) (0x004773ad + 2), { 0xCC }} // let p2/p3 do damage. dont ask me how i know  
+    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
 
     //PATCHJUMP(0x004641b2, _naked_throwConnect)
 
-    // todo, possibly fix throws
+    // todo:
+    // possibly fix throws
     // make teamates not collide
-    // fix p2/p3 not doing damage (set a write on the health var) 
-    //     
-    //     
     // when health hits 0, set the bg flag active 
 
+    // char select patches:
+
+    //  func at 004289D8 writes over the css -1 thingy when entering a fight
+    // func at 0048C9D1 writes -1 when leaving fight
+    PATCHJUMP(0x0042709a, _naked_loadCSS),
+
+    { (void*)(0x00428342 + 1), { 0x04 }}, // patched 00428342 from 2 to 4
+
+    { (void*)(0x00427b38 + 1), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
+
+    { (void*)(0x0048a6d0 + 1), { INLINE_DWORD(0x74d994) }}, // patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
+
+    { (void*)(0x0048bd5c + 4), { 0x04 }}, // patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON // find and patch csel_Cursor00.png texture, change it to 3/4, easy
+   
+    { (void*)(0x004a02cb + 2), { 0x04 }}, // patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
 
     /*
     
-    patched 00428342 from 2 to 4
-
-    patched compare at 00427b38 to 0x74d977
-
-    patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON 
-    // find and patch csel_Cursor00.png texture, change it to 3/4, easy
-
+    
     vibes tell me that 00428300 and 00427931 need major func patches
-
-    func at 004289D8 writes over the css -1 thingy when entering a fight
-    func at 0048C9D1 writes -1 when leaving fight
-
 
     current steps
     patch enables on p2 and p3 to -1
@@ -643,15 +648,13 @@ static const AsmList initPatch2v2 =
     patch p2 and p3 port ids
 
     patched 0048bd5c from 2 to 4, actually show shit
-    
-    patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
 
-    patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
+    
 
     patch 428342 to 4 maybe?
     patch 004274e7 to 4 maybe?
 
-    patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
+    
     this is,,, very confusing.
     now wait. 
     some of p2's css specific things had inline refs inside the code that p3 didnt. check that out (check 0074d938)
@@ -702,6 +705,7 @@ static const AsmList initPatch2v2 =
 
     and that worked.
     omfg
+    why are they using the controller 2 init var as the animation for the fucking rectangles???!
 
     */
 

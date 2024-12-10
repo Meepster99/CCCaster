@@ -224,7 +224,7 @@ int Asm::revert() const
     return memwrite ( addr, &backup[0], backup.size() );
 }
 
-void battleResetCallback() {
+void writePatch2v2() {
 
     for ( const Asm& hack : patch2v2 )
         WRITE_ASM_HACK ( hack );
@@ -234,7 +234,7 @@ void battleResetCallback() {
 void _naked_battleResetCallback() {
 
     PUSH_ALL;
-    battleResetCallback();
+    writePatch2v2();
     POP_ALL;
 
     __asmStart R"(
@@ -347,6 +347,22 @@ void _naked_throwConnect() {
 
     emitJump(0x004641be);
 
+}
+
+void _naked_loadCSS() {
+
+    // patched at 0x042709a
+
+    PUSH_ALL;
+    writePatch2v2();
+    POP_ALL;
+
+    __asmStart R"(
+        add esp, 0x10;
+        ret 0x4;
+    )" __asmEnd
+
+    
 }
 
 } // namespace AsmHacks
