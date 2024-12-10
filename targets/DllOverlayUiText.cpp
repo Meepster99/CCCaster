@@ -521,8 +521,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 #endif // RELEASE
 
     
-    //if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
-    if(true) {
+    if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
+    //if(true) {
 
         updateScaleParams(device);
 
@@ -545,6 +545,10 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
             meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
             heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
             circuitState[i] = *(DWORD*)(0x00555218 + (i * 0xAFC));
+
+            if(health[i] == 0) { // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
+                *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
+            }
         }
 
         float x;

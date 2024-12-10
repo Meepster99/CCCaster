@@ -608,9 +608,18 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
-    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
+    
+    { ( void *) (0x004773ad + 2), { 0xCC }} // let p2/p3 do damage. dont ask me how i know  
 
-    PATCHJUMP(0x004641b2, _naked_throwConnect)
+    //PATCHJUMP(0x004641b2, _naked_throwConnect)
+
+    // todo, possibly fix throws
+    // make teamates not collide
+    // fix p2/p3 not doing damage (set a write on the health var) 
+    //     
+    //     
+    // when health hits 0, set the bg flag active 
 
 
 };
