@@ -622,6 +622,89 @@ static const AsmList initPatch2v2 =
     // when health hits 0, set the bg flag active 
 
 
+    /*
+    
+    patched 00428342 from 2 to 4
+
+    patched compare at 00427b38 to 0x74d977
+
+    patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON 
+    // find and patch csel_Cursor00.png texture, change it to 3/4, easy
+
+    vibes tell me that 00428300 and 00427931 need major func patches
+
+    func at 004289D8 writes over the css -1 thingy when entering a fight
+    func at 0048C9D1 writes -1 when leaving fight
+
+
+    current steps
+    patch enables on p2 and p3 to -1
+    patch p2 and p3 grid pos and char id : // some good temp values: (0x0C, 0x00) and (0x15, 0x01)
+    patch p2 and p3 port ids
+
+    patched 0048bd5c from 2 to 4, actually show shit
+    
+    patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
+
+    patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
+
+    patch 428342 to 4 maybe?
+    patch 004274e7 to 4 maybe?
+
+    patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
+    this is,,, very confusing.
+    now wait. 
+    some of p2's css specific things had inline refs inside the code that p3 didnt. check that out (check 0074d938)
+
+    // it broke for some reason
+    the amount of patches im doing manually, is, excessive
+
+    00427952 
+    00427A30 // OK 00427A30 
+    0048A543 // OK 0048A543 
+    0048BD64 // OK 0048BD64 
+    0048BE30 // OK 0048BE30 
+
+
+    004A023B 004A023B 
+         0041F305 
+            004A02D0 // this fucker isnt reading p2/p3  
+
+
+    004A023B 
+    0041F305 
+
+    004A023B  // CLEAN
+
+    0041f305 is the only non compare read. it happens for all controllers
+    its taking the value somewhere, and fucking up with it
+    all 3 controllers work normally, ingame, so this MUST be something css specific
+
+    MAKE SURE TO DO TESTS WITH 0,1,2,3 PORT NUMBERS SET, NOT ALL ON 2
+
+    00427927 CLEAN
+    00427A30 
+    004284F5 
+    0048A543 
+    0048BD64 
+    0048BE30 
+
+    0042753f, gotten from checking writes on the data loaded at 00427d8a
+    p2 had an extra write. why. what the fuck
+
+    write FFFFFFFF to 
+    0077316C
+    0077317C
+    0077318C
+    0077318C
+
+    00427449 for some reason, writes to it and incs it??! kill it?
+
+    and that worked.
+    omfg
+
+    */
+
 };
 
 static const AsmList patch2v2 = 
@@ -649,3 +732,4 @@ static const AsmList patch2v2 =
 
 
 } // namespace AsmHacks
+
