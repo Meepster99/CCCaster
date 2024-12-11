@@ -627,34 +627,29 @@ static const AsmList initPatch2v2 =
     // func at 0048C9D1 writes -1 when leaving fight
     PATCHJUMP(0x0042709a, _naked_loadCSS),
 
-    { (void*)(0x00428342 + 1), { 0x04 }}, // patched 00428342 from 2 to 4
+   
+    { (void*)(0x00428342 + 1), { 0x04 }}, // patched 00428342 from 2 to 4 // patch 428342 to 4 maybe?
 
-    { (void*)(0x00427b38 + 1), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
 
-    { (void*)(0x0048a6d0 + 1), { INLINE_DWORD(0x74d994) }}, // patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
+    { (void*)(0x00427b38 + 2), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
 
+    { (void*)(0x0048a6d0 + 2), { INLINE_DWORD(0x74d994) }}, // patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
+  
     { (void*)(0x0048bd5c + 4), { 0x04 }}, // patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON // find and patch csel_Cursor00.png texture, change it to 3/4, easy
    
-    { (void*)(0x004a02cb + 2), { 0x04 }}, // patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
+    { (void*)(0x004a02cb + 2), { 0x04 }} // patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
+
+    // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
+    //{ (void*)(0x004274e7 + 4), { 0x04 }} // patched 004274e7 from 2 to 4 //  patch 004274e7 to 4 maybe?
 
     /*
+
+    some fuckery occurs in 00427f30 when moving. the compare maybe needs to be removed?
+    fucking remove 00427fd2 and 00427f72 ????? or overwrite them
     
     
     vibes tell me that 00428300 and 00427931 need major func patches
 
-    current steps
-    patch enables on p2 and p3 to -1
-    patch p2 and p3 grid pos and char id : // some good temp values: (0x0C, 0x00) and (0x15, 0x01)
-    patch p2 and p3 port ids
-
-    patched 0048bd5c from 2 to 4, actually show shit
-
-    
-
-    patch 428342 to 4 maybe?
-    patch 004274e7 to 4 maybe?
-
-    
     this is,,, very confusing.
     now wait. 
     some of p2's css specific things had inline refs inside the code that p3 didnt. check that out (check 0074d938)
@@ -695,13 +690,9 @@ static const AsmList initPatch2v2 =
     0042753f, gotten from checking writes on the data loaded at 00427d8a
     p2 had an extra write. why. what the fuck
 
-    write FFFFFFFF to 
-    0077316C
-    0077317C
-    0077318C
-    0077318C
+    
 
-    00427449 for some reason, writes to it and incs it??! kill it?
+   
 
     and that worked.
     omfg
@@ -713,6 +704,9 @@ static const AsmList initPatch2v2 =
 
 static const AsmList patch2v2 = 
 {
+
+    // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
+    { (void*)(0x004274e7 + 4), { 0x04 }}, // patched 004274e7 from 2 to 4 //  patch 004274e7 to 4 maybe?
 
     // patch all character port numbers
     { ( void * ) (0x00555424 + (0 * 0xAFC)), { 0x00 }},
@@ -730,7 +724,38 @@ static const AsmList patch2v2 =
     { ( void * ) (0x0055545C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x0055545C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x0055545C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
+    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } },
+
+    { (void*)(0x00427449), INLINE_NOP_THREE_TIMES }, //  00427449 for some reason, writes to it and incs it??! kill it? by it, i mean it interferes with P2 controller enable
+ 
+    // enable P2 and P3 CSS bs
+    { ( void * ) (0x0074D8F4 + (2 * 0x24) - 4), { INLINE_DWORD(0x02) } },
+    { ( void * ) (0x0074D8F4 + (2 * 0x24) + 0), { INLINE_DWORD(0xFFFFFFFF) } }, // p2 enable
+    { ( void * ) (0x0074D8F4 + (2 * 0x24) + 4), { INLINE_DWORD(0x15) } }, // grid pos
+    { ( void * ) (0x0074D8F4 + (2 * 0x24) + 8), { INLINE_DWORD(0x01) } }, // char id
+
+    { ( void * ) (0x0074D8F4 + (3 * 0x24) - 4), { INLINE_DWORD(0x03) } },
+    { ( void * ) (0x0074D8F4 + (3 * 0x24) + 0), { INLINE_DWORD(0xFFFFFFFF) } }, // p3 enable
+    { ( void * ) (0x0074D8F4 + (3 * 0x24) + 4), { INLINE_DWORD(0x17) } }, // grid pos
+    { ( void * ) (0x0074D8F4 + (3 * 0x24) + 8), { INLINE_DWORD(0x0C) } } // char id
+
+    // enable mystery flags. im not sure if these will,,, work
+
+    /*
+   
+    current steps
+    patch enables on p2 and p3 to -1
+    patch p2 and p3 grid pos and char id : // some good temp values: (0x0C, 0x00) and (0x15, 0x01)
+    patch p2 and p3 port ids
+
+    write FFFFFFFF to 
+    0077316C
+    0077317C
+    0077318C
+    0077318C
+
+    */
+
 
 };
 

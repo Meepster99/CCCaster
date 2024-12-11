@@ -46,7 +46,7 @@ void initializePreLoad()
     for ( const Asm& hack : filterRepeatedSfx )
         WRITE_ASM_HACK ( hack );
 
-    for ( const Asm& hack : muteSpecificSfx )
+    for ( const Asm& hack : muteSpecificSfx ) 
         WRITE_ASM_HACK ( hack );
 
     for ( const Asm& hack : addExtraTextures )
@@ -58,7 +58,7 @@ void initializePreLoad()
     WRITE_ASM_HACK ( disableTrainingMusicReset );
     WRITE_ASM_HACK ( fixBossStageSuperFlashOverlay );
 
-    for ( const Asm& hack : initPatch2v2 )
+    for ( const Asm& hack : initPatch2v2 ) 
         WRITE_ASM_HACK ( hack );
 
     // TODO color hijack is temporary disabled due to some issues
