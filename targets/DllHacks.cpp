@@ -31,6 +31,11 @@ namespace DllHacks
 
 void initializePreLoad()
 {
+    // i assume these patches occur in a thread. if my things working is thread dependent, i will scream
+    // i really should have these asm hacks occur inside the main melty thread to avoid this bs
+    for ( const Asm& hack : initPatch2v2 ) 
+        WRITE_ASM_HACK ( hack );
+
     for ( const Asm& hack : hookMainLoop )
         WRITE_ASM_HACK ( hack );
 
@@ -57,9 +62,6 @@ void initializePreLoad()
     WRITE_ASM_HACK ( hijackEscapeKey );
     WRITE_ASM_HACK ( disableTrainingMusicReset );
     WRITE_ASM_HACK ( fixBossStageSuperFlashOverlay );
-
-    for ( const Asm& hack : initPatch2v2 ) 
-        WRITE_ASM_HACK ( hack );
 
     // TODO color hijack is temporary disabled due to some issues
     //

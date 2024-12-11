@@ -11,6 +11,8 @@
 #define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
 #define __asmEnd ); __asm__ __volatile__ (".att_syntax;");
 
+#define INT3 __asmStart "int3;" __asmEnd
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))
@@ -566,24 +568,36 @@ static const AsmList addExtraTextures =
     } },
 };
 
-void writePatch2v2();
+// as much as i shit talked msvc for its lack of optimization, gcc is harder to work with
+// gcc is inlining these guys, and causing a ton of issues
 
-__attribute__((naked)) void _naked_battleResetCallback();
+__attribute__((noinline)) void writePatch2v2();
 
-__attribute__((naked)) void _naked_charTurnAround();
+__attribute__((noinline)) void writePatch2v2CSS();
 
-__attribute__((naked)) void _naked_hitBoxConnect1();
+__attribute__((noinline)) void writePatch2v2Inputs();
 
-__attribute__((naked)) void _naked_hitBoxConnect2();
+__attribute__((naked, noinline)) void _naked_battleResetCallback();
 
-__attribute__((naked)) void _naked_hitBoxConnect3();
+__attribute__((naked, noinline)) void _naked_charTurnAround();
 
-__attribute__((naked)) void _naked_throwConnect();
+__attribute__((naked, noinline)) void _naked_hitBoxConnect1();
 
-__attribute__((naked)) void _naked_loadCSS();
+__attribute__((naked, noinline)) void _naked_hitBoxConnect2();
+
+__attribute__((naked, noinline)) void _naked_hitBoxConnect3();
+
+__attribute__((naked, noinline)) void _naked_throwConnect();
+
+__attribute__((naked, noinline)) void _naked_loadCSS();
+
+__attribute__((naked, noinline)) void _naked_processInputsCSS();
 
 static const AsmList initPatch2v2 =
 {
+
+    // touch targets/DllHacks.cpp; touch targets/DllAsmHacks.cpp; touch targets/DllAsmHacks.hpp; make main-build release -j10
+
     { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
 
     // i would patch character port and background state here, but that cant occur here
@@ -626,27 +640,13 @@ static const AsmList initPatch2v2 =
     //  func at 004289D8 writes over the css -1 thingy when entering a fight
     // func at 0048C9D1 writes -1 when leaving fight
     PATCHJUMP(0x0042709a, _naked_loadCSS),
+    PATCHJUMP(0x0042706e, _naked_loadCSS), // patch early return
 
-   
-    { (void*)(0x00428342 + 1), { 0x04 }}, // patched 00428342 from 2 to 4 // patch 428342 to 4 maybe?
-
-
-    { (void*)(0x00427b38 + 2), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
-
-    { (void*)(0x0048a6d0 + 2), { INLINE_DWORD(0x74d994) }}, // patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
-  
-    { (void*)(0x0048bd5c + 4), { 0x04 }}, // patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON // find and patch csel_Cursor00.png texture, change it to 3/4, easy
-   
-    { (void*)(0x004a02cb + 2), { 0x04 }} // patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
-
-    // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
-    //{ (void*)(0x004274e7 + 4), { 0x04 }} // patched 004274e7 from 2 to 4 //  patch 004274e7 to 4 maybe?
+    PATCHJUMP(0x00427589, _naked_processInputsCSS) // hopefully, this is only called after animation finishes
 
     /*
 
     some fuckery occurs in 00427f30 when moving. the compare maybe needs to be removed?
-    fucking remove 00427fd2 and 00427f72 ????? or overwrite them
-    
     
     vibes tell me that 00428300 and 00427931 need major func patches
 
@@ -706,7 +706,7 @@ static const AsmList patch2v2 =
 {
 
     // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
-    { (void*)(0x004274e7 + 4), { 0x04 }}, // patched 004274e7 from 2 to 4 //  patch 004274e7 to 4 maybe?
+    //{ (void*)(0x004274e7 + 4), { 0x04 }}, // patched 004274e7 from 2 to 4 //  patch 004274e7 to 4 maybe?
 
     // patch all character port numbers
     { ( void * ) (0x00555424 + (0 * 0xAFC)), { 0x00 }},
@@ -724,11 +724,37 @@ static const AsmList patch2v2 =
     { ( void * ) (0x0055545C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x0055545C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x0055545C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
+
+};
+
+static const AsmList patch2v2CSS = {
+
+    { (void*)(0x00428342 + 1), { 0x04 }}, // patched 00428342 from 2 to 4 // patch 428342 to 4 maybe?
+
+    // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
+    //{ (void*)(0x004274e7 + 4), { 0x04 }}, // patched 004274e7 from 2 to 4 // patch 004274e7 to 4 maybe?
+
+    
+    { (void*)(0x00427b38 + 2), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
+
+    // this is the fucker that causes ciel and vsion to fly accross the screen?
+    //{ (void*)(0x0048a6d0 + 2), { INLINE_DWORD(0x74d994) }}, // patch 0048a6d0 to 0x0074d94c + 0x48 = 0x74d994
+    
+    
+    { (void*)(0x0048bd5c + 4), { 0x04 }}, // patched 0048bd5c from 2 to 4 // THIS IS WHAT GIVES THE CPU ICON // find and patch csel_Cursor00.png texture, change it to 3/4, easy
+   
+    { (void*)(0x004a02cb + 2), { 0x04 }}, // patch 004a02cb to 4,,, maybe? // THIS ONE WORKED,, sorta?? only for p3 and not p2???
+    
 
     { (void*)(0x00427449), INLINE_NOP_THREE_TIMES }, //  00427449 for some reason, writes to it and incs it??! kill it? by it, i mean it interferes with P2 controller enable
  
     // enable P2 and P3 CSS bs
+
+    //{ (void*)(0x00427fd2), INLINE_NOP_TWO_TIMES }, // fucking remove 00427fd2 and 00427f72 ????? or overwrite them
+    //{ (void*)(0x00427f72), INLINE_NOP_TWO_TIMES }, 
+
+    
     { ( void * ) (0x0074D8F4 + (2 * 0x24) - 4), { INLINE_DWORD(0x02) } },
     { ( void * ) (0x0074D8F4 + (2 * 0x24) + 0), { INLINE_DWORD(0xFFFFFFFF) } }, // p2 enable
     { ( void * ) (0x0074D8F4 + (2 * 0x24) + 4), { INLINE_DWORD(0x15) } }, // grid pos
@@ -737,7 +763,17 @@ static const AsmList patch2v2 =
     { ( void * ) (0x0074D8F4 + (3 * 0x24) - 4), { INLINE_DWORD(0x03) } },
     { ( void * ) (0x0074D8F4 + (3 * 0x24) + 0), { INLINE_DWORD(0xFFFFFFFF) } }, // p3 enable
     { ( void * ) (0x0074D8F4 + (3 * 0x24) + 4), { INLINE_DWORD(0x17) } }, // grid pos
-    { ( void * ) (0x0074D8F4 + (3 * 0x24) + 8), { INLINE_DWORD(0x0C) } } // char id
+    { ( void * ) (0x0074D8F4 + (3 * 0x24) + 8), { INLINE_DWORD(0x0C) } }, // char id
+    
+
+    // these are the weird stupid controller enable bs things
+    
+    
+    { (void*)(0x0077316C), { INLINE_DWORD(0xFFFFFFFF) }},
+    { (void*)(0x0077317C), { INLINE_DWORD(0xFFFFFFFF) }},
+    { (void*)(0x0077318C), { INLINE_DWORD(0xFFFFFFFF) }},
+    { (void*)(0x0077319C), { INLINE_DWORD(0xFFFFFFFF) }}
+    
 
     // enable mystery flags. im not sure if these will,,, work
 

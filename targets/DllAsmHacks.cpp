@@ -243,6 +243,74 @@ void _naked_battleResetCallback() {
 
 }
 
+void writePatch2v2CSS() {
+
+    for ( const Asm& hack : patch2v2CSS )
+        WRITE_ASM_HACK ( hack );
+
+}
+
+void _naked_loadCSS() {
+
+    // patched at 0x042709a
+
+    PUSH_ALL;
+    //writePatch2v2CSS();
+    POP_ALL;
+
+    __asmStart R"(
+        add esp, 0x10;
+        ret 0x4;
+    )" __asmEnd
+    
+}
+
+void writePatch2v2Inputs() {
+
+    static int init = 0;
+
+    if(init == -1) {
+        return;
+    }
+    
+    //const Asm omfg = { (void*)(0x004274e7 + 4), { 0x04 }}; // patched 004274e7 from 2 to 4 // patch 004274e7 to 4 maybe?
+
+    if(init == 60 * 3) { // css needs to finish loading in bc this disables its animation flags?!
+        //INT3
+        writePatch2v2CSS();
+    }
+
+    if(init == 60 * 4) {
+        // i dont know why.
+        //(uint8_t*)(0x004274e7 + 4) = 0x04;
+        //WRITE_ASM_HACK(omfg);
+
+        uint8_t omfg = 0x04;
+        int res = memwrite((void*)(0x004274e7 + 4), &omfg, 1);
+        if(res) {
+            INT3
+        }
+        init = -1;
+        return;
+    }
+
+    init++;
+
+}
+
+void _naked_processInputsCSS() {
+    
+    // patched at 0x00427589
+
+    PUSH_ALL;
+    writePatch2v2Inputs();
+    POP_ALL;
+
+    __asmStart R"(
+        ret 0x4;
+    )" __asmEnd
+}
+
 void _naked_charTurnAround() {
 
     // patched in at  0x0047587b
@@ -347,22 +415,6 @@ void _naked_throwConnect() {
 
     emitJump(0x004641be);
 
-}
-
-void _naked_loadCSS() {
-
-    // patched at 0x042709a
-
-    PUSH_ALL;
-    writePatch2v2();
-    POP_ALL;
-
-    __asmStart R"(
-        add esp, 0x10;
-        ret 0x4;
-    )" __asmEnd
-
-    
 }
 
 } // namespace AsmHacks
