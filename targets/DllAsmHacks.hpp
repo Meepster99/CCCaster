@@ -626,7 +626,7 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
     
-    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
+    { ( void *) (0x004773ad + 2), { 0xCC }} // let p2/p3 do damage. dont ask me how i know  
 
     //PATCHJUMP(0x004641b2, _naked_throwConnect)
 
@@ -635,14 +635,14 @@ static const AsmList initPatch2v2 =
     // make teamates not collide
     // when health hits 0, set the bg flag active 
 
-    // char select patches:
+    // char select patches: 
 
     //  func at 004289D8 writes over the css -1 thingy when entering a fight
     // func at 0048C9D1 writes -1 when leaving fight
-    PATCHJUMP(0x0042709a, _naked_loadCSS),
-    PATCHJUMP(0x0042706e, _naked_loadCSS), // patch early return
+    //PATCHJUMP(0x0042709a, _naked_loadCSS),
+    //PATCHJUMP(0x0042706e, _naked_loadCSS), // patch early return
 
-    PATCHJUMP(0x00427589, _naked_processInputsCSS) // hopefully, this is only called after animation finishes
+    //PATCHJUMP(0x00427589, _naked_processInputsCSS) // hopefully, this is only called after animation finishes
 
     /*
 
@@ -650,53 +650,29 @@ static const AsmList initPatch2v2 =
     
     vibes tell me that 00428300 and 00427931 need major func patches
 
-    this is,,, very confusing.
-    now wait. 
-    some of p2's css specific things had inline refs inside the code that p3 didnt. check that out (check 0074d938)
+    [[[0055DF18]+4]+n], n is pointer to css data, i can use that to index the char bs
+    but, how can i get different moons?
 
-    // it broke for some reason
-    the amount of patches im doing manually, is, excessive
+    004289C0 and 004289D6  access the css moon thing. do these also access,,,, p3/p4?
 
-    00427952 
-    00427A30 // OK 00427A30 
-    0048A543 // OK 0048A543 
-    0048BD64 // OK 0048BD64 
-    0048BE30 // OK 0048BE30 
+    ok, the data gets copied, and that copy is used
+    things which access the copy's moon are:
 
+    004289D8 - 89 50 0C  - mov [eax+0C],edx
+    00428ACA - 8B 89 4CD87400  - mov ecx,[ecx+0074D84C] # where is this putting the data??, it goes to 0076fc28
+    00440F02 - A1 4CD87400 - mov eax,[0074D84C]
+    004B24F3 - 8B 80 4CD87400  - mov eax,[eax+0074D84C] // following this leads to CoInitializeEx, which seems to be sorta thready?
+    004490B9 - 8B B1 4CD87400  - mov esi,[ecx+0074D84C]  // called inside a thread load func! 
+    0044919A - 8B 90 4CD87400  - mov edx,[eax+0074D84C] // called inside a thread load func! 
+    0041C735 - 66 8B 88 4CD87400  - mov cx,[eax+0074D84C] 
 
-    004A023B 004A023B 
-         0041F305 
-            004A02D0 // this fucker isnt reading p2/p3  
+    one of these fucks is probs in a thread for loading, or passes it to a thread. thats the one i need
 
-
-    004A023B 
-    0041F305 
-
-    004A023B  // CLEAN
-
-    0041f305 is the only non compare read. it happens for all controllers
-    its taking the value somewhere, and fucking up with it
-    all 3 controllers work normally, ingame, so this MUST be something css specific
-
-    MAKE SURE TO DO TESTS WITH 0,1,2,3 PORT NUMBERS SET, NOT ALL ON 2
-
-    00427927 CLEAN
-    00427A30 
-    004284F5 
-    0048A543 
-    0048BD64 
-    0048BE30 
-
-    0042753f, gotten from checking writes on the data loaded at 00427d8a
-    p2 had an extra write. why. what the fuck
-
-    
-
-   
-
-    and that worked.
-    omfg
-    why are they using the controller 2 init var as the animation for the fucking rectangles???!
+    0076fc28:
+        when leaving a battle, 0048CA61 writes to it
+        thats in func 0048c880, which looks like a nice place to look around for the struct of this thing
+        004174E2 and 00428AD6  do some stuff,,  
+        is cheat engine not working with threads again,,
 
     */
 
@@ -734,7 +710,8 @@ static const AsmList patch2v2CSS = {
 
     // for reasons unknown to anyone and everyone, this patch needs to be delayed. how long? until when? im not sure bc i cant catch the crash
     //{ (void*)(0x004274e7 + 4), { 0x04 }}, // patched 004274e7 from 2 to 4 // patch 004274e7 to 4 maybe?
-
+    // this patch is occuring, after the others, check the func which uses this.
+    // also, check everything where the loop is inced, the stage menu shows up when only 2/4 are in, but doesnt allow for movement
     
     { (void*)(0x00427b38 + 2), { INLINE_DWORD(0x74d977) }}, //patched compare at 00427b38 to 0x74d977, // patch 00427b38 to 0x74d92f + (0x24 * 2) = 0x74d977
 
@@ -752,8 +729,7 @@ static const AsmList patch2v2CSS = {
     // enable P2 and P3 CSS bs
 
     //{ (void*)(0x00427fd2), INLINE_NOP_TWO_TIMES }, // fucking remove 00427fd2 and 00427f72 ????? or overwrite them
-    //{ (void*)(0x00427f72), INLINE_NOP_TWO_TIMES }, 
-
+    //{ (void*)(0x00427f72), INLINE_NOP_TWO_TIMES }, // these were onlny needed when trying to patch immediately before css anims
     
     { ( void * ) (0x0074D8F4 + (2 * 0x24) - 4), { INLINE_DWORD(0x02) } },
     { ( void * ) (0x0074D8F4 + (2 * 0x24) + 0), { INLINE_DWORD(0xFFFFFFFF) } }, // p2 enable
@@ -794,7 +770,6 @@ static const AsmList patch2v2CSS = {
 
 
 };
-
 
 } // namespace AsmHacks
 

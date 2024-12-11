@@ -230,7 +230,7 @@ void writePatch2v2() {
         WRITE_ASM_HACK ( hack );
 
 }
-
+ 
 void _naked_battleResetCallback() {
 
     PUSH_ALL;
