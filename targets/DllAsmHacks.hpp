@@ -619,7 +619,7 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
 
-    //PATCHJUMP(0x0046ea20, _naked_collisionConnect), // collision, patch this loop ig
+    PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
     
     //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
 
