@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <iterator>
+#include <regex>
 
 using namespace std;
 
@@ -240,6 +241,94 @@ void _naked_battleResetCallback() {
     __asmStart R"(
         ret 0x4;
     )" __asmEnd
+
+}
+
+extern "C" {
+    unsigned naked_fileLoadEBX = 0; // weird that extern c isnt needed in the palettetests branch, did updating the c++ ver do something?
+} 
+
+void tempLog(const std::string& s) {
+    std::ofstream outfile("log.txt", std::ios_base::app);
+    outfile << s << "\n";
+}
+
+void fileLoadHook() {
+
+    // while nice, regex might not be the best/fastest way to go about this
+
+    std::string loadString = std::string((char*)naked_fileLoadEBX); // does this copy the string?
+
+    tempLog(loadString);
+
+    // some weird loads to look out for
+    if(loadString == R"(.\data\vector.txt)") { 
+        return;
+    }
+
+    const std::regex fullStringPattern(R"((\.\\.+\\)(.+)\.(.+))");
+    std::smatch matches;
+
+    if (!std::regex_search(loadString, matches, fullStringPattern)) {
+        tempLog("failed first reg search");
+        return;
+    }
+
+    if(matches[1] != ".\\data\\") {
+        tempLog("failed match 1");
+        return;
+    }
+    
+    bool isText = matches[3] == "txt";
+    bool isPalette = matches[3] == "pal";
+
+    if(!isText && !isPalette) {
+        tempLog("failed match 3");
+        return;
+    }
+
+    std::string newCharName = "WARC";
+    int newCharMoon = 2;
+    
+    std::string res;
+
+    if(isPalette) {
+        res = matches[1].str() + newCharName + "." + matches[3].str();
+    } else if(isText) {
+        // lots of assumptions here. might not work
+        res = matches[1].str() + newCharName + "_" + std::to_string(newCharMoon) + "_c.txt";
+    }
+
+    char* tempChar = (char*)naked_fileLoadEBX; // things were being weird with strncpy
+    for(char c : res) {
+        *tempChar++ = c;
+    }
+    *tempChar = '\0';
+
+    tempLog("SUCCESS: " + res);
+
+}
+
+void _naked_fileLoad() {
+
+    // patched in at 0041f7c0
+
+    __asmStart R"(
+        mov _naked_fileLoadEBX, ebx;
+    )" __asmEnd
+
+    PUSH_ALL;
+    fileLoadHook();
+    POP_ALL;
+
+    // overwritten instructions
+    __asmStart R"(
+        push ebp;
+        mov ebp, esp; // this instr generates with different bytecode than vanilla! hould be ok tho?
+        and esp, 0xfffffff8
+    )" __asmEnd
+
+    emitJump(0x0041f7c6);
 
 }
 

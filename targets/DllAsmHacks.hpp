@@ -566,19 +566,26 @@ static const AsmList addExtraTextures =
     } },
 };
 
-void battleResetCallback();
+__attribute__((noinline)) void battleResetCallback();
 
-__attribute__((naked)) void _naked_battleResetCallback();
+extern "C" {
+    extern unsigned naked_fileLoadEBX;
+} 
+__attribute__((noinline)) void fileLoadHook();
 
-__attribute__((naked)) void _naked_charTurnAround();
+__attribute__((naked, noinline)) void _naked_battleResetCallback();
 
-__attribute__((naked)) void _naked_hitBoxConnect1();
+__attribute__((naked, noinline)) void _naked_charTurnAround();
 
-__attribute__((naked)) void _naked_hitBoxConnect2();
+__attribute__((naked, noinline)) void _naked_hitBoxConnect1();
 
-__attribute__((naked)) void _naked_hitBoxConnect3();
+__attribute__((naked, noinline)) void _naked_hitBoxConnect2();
 
-__attribute__((naked)) void _naked_throwConnect();
+__attribute__((naked, noinline)) void _naked_hitBoxConnect3();
+
+__attribute__((naked, noinline)) void _naked_throwConnect();
+
+__attribute__((naked, noinline)) void _naked_fileLoad();
 
 static const AsmList initPatch2v2 =
 {
@@ -610,16 +617,69 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
     
+    PATCHJUMP(0x0041f7c0, _naked_fileLoad),
+
     { ( void *) (0x004773ad + 2), { 0xCC }} // let p2/p3 do damage. dont ask me how i know  
 
     //PATCHJUMP(0x004641b2, _naked_throwConnect)
 
     // todo, possibly fix throws
     // make teamates not collide
-    // fix p2/p3 not doing damage (set a write on the health var) 
-    //     
+    // fix ghosts in my melty
+    //  
     //     
     // when health hits 0, set the bg flag active 
+    // 
+
+    /*
+    
+    func 004289b0 reads the cssstruct data 
+    patch 004289f6 to be (0x74d948 + (2 * 0x24)) -> 0x74d990, maybe,,, that will do something????
+    
+    func 0048c310 is called on every character SELECTED, moon transition (not palette)
+    0048c310 is def important
+
+    00448fb0,,, 
+
+    004489e0????
+
+    idc anymore. ill just do the same shit i did for palettes
+    0041f7c0, ebx is the string
+    .\data\HISUI_0_c.txt
+    some files have that weird C in it,,, ig ill just,,, idk
+    ykwhat if i just have ppl always select maids, i wont have to worry
+
+    loads are:
+    .\data\HISUI.pal
+    .\data\HISUI_0_c.txt
+
+    .\data\HISUI.pal
+    .\data\HISUI_0_c.txt
+
+    .\data\KOHAKU.pal
+    .\data\KOHAKU_0_c.txt
+
+    .\data\KOHAKU.pal
+    .\data\KOHAKU_0_c.txt
+
+    // was there an 8th?
+    oh it was the bg dat file
+    i can fuck with that too ig
+
+    warc loads warc.pal and warc_0_c
+
+    something is insanely wrong with ghidra
+    0041f7c0
+    when entering a battle
+    check what calls it, ghidra didnt even mark it as code
+
+    but specifically, the printf calls around 0046c3ee
+    very very nice looking
+    i just need to think. something calls the func which gens the warc.pal string, i need that
+    ghidra noreturn. turn that shit off.
+
+
+    */
 
 
 };
