@@ -417,6 +417,24 @@ void _naked_hitBoxConnect3() {
 
 }
 
+void _naked_collisionConnect() {
+
+    // patch at 0046ea27
+ 
+    __asmStart R"(
+
+        mov cl, [edi + 0x2F0];
+        xor cl, [eax + 0x2F0];
+        xor cl, 0x01;
+        and cl, 0x01;
+        test cl, cl;
+
+    )" __asmEnd
+    
+    emitJump(0x0046ea33);
+
+}
+
 void _naked_throwConnect() {
 
     // patch at 0x004641b2
@@ -437,5 +455,6 @@ void _naked_throwConnect() {
     emitJump(0x004641be);
 
 }
+
 
 } // namespace AsmHacks

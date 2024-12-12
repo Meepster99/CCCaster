@@ -587,6 +587,8 @@ __attribute__((naked, noinline)) void _naked_throwConnect();
 
 __attribute__((naked, noinline)) void _naked_fileLoad();
 
+__attribute__((naked, noinline)) void _naked_collisionConnect();
+
 static const AsmList initPatch2v2 =
 {
     { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
@@ -616,10 +618,24 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
-    
-    PATCHJUMP(0x0041f7c0, _naked_fileLoad),
 
-    { ( void *) (0x004773ad + 2), { 0xCC }} // let p2/p3 do damage. dont ask me how i know  
+    //PATCHJUMP(0x0046ea20, _naked_collisionConnect), // collision, patch this loop ig
+    
+    //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
+
+    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
+
+    /*
+    pain is over
+    hook at 004338F9 to rewrite the css things, or idk make the css shit from yesterday actually work
+    00448fb6 increase the stack alloc to idk 0x200, 
+    change the compare at 00449069 to 4 to actually read all the data in
+    */
+
+   { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
+   { ( void *) (0x00449069 + 2), { 0x04 }}
+
+
 
     //PATCHJUMP(0x004641b2, _naked_throwConnect)
 
@@ -629,7 +645,7 @@ static const AsmList initPatch2v2 =
     //  
     //     
     // when health hits 0, set the bg flag active 
-    // 
+    // if you, in the corner, go friendly, enemy, friendly, all pushback will be canceled due to hitting both of those????!
 
     /*
     
@@ -677,6 +693,26 @@ static const AsmList initPatch2v2 =
     very very nice looking
     i just need to think. something calls the func which gens the warc.pal string, i need that
     ghidra noreturn. turn that shit off.
+
+breakpoint at 004338f9
+modify the fucking bullshit that css is copied to at 0074d840
+all these calls are on the first 2, not on 3
+one of them(these were checking the char index) has to be an enable
+
+00440F19 - 8B 15 6CD87400  - mov edx,[0074D86C]
+004B24ED - 8B 90 40D87400  - mov edx,[eax+0074D840]
+004490B0 - 8B B1 40D87400  - mov esi,[ecx+0074D840]
+00449132 - 8B B8 40D87400  - mov edi,[eax+0074D840]
+
+004b6850 has a 64 compare
+0044909E accesses p1 doesnt p2
+
+00449030 seems to be my guy.
+naw
+
+
+   
+
 
 
     */

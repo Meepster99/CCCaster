@@ -502,6 +502,49 @@ void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, f
 
 }
 
+void updateCSSStuff() {
+
+    // ugh
+
+    typedef struct CSSStructCopy {
+        unsigned palette;
+        unsigned charID;
+        unsigned _unknown1;
+        unsigned _unknown2; // possibly port number idek
+        unsigned moon;
+        unsigned _unknown3;
+        unsigned _unknown4;
+        unsigned _unknown5;
+        unsigned _unknown6;
+        unsigned _unknown7;
+        unsigned _unknown8;
+    } CSSStructCopy;
+
+    static_assert(sizeof(CSSStructCopy) == 0x2C, "CSSStructCopy must be size 0x2C");
+
+    CSSStructCopy* player0 = (CSSStructCopy*)(0x0074d83C + (0 * 0x2C));
+    CSSStructCopy* player1 = (CSSStructCopy*)(0x0074d83C + (1 * 0x2C));
+    CSSStructCopy* player2 = (CSSStructCopy*)(0x0074d83C + (2 * 0x2C));
+    CSSStructCopy* player3 = (CSSStructCopy*)(0x0074d83C + (3 * 0x2C));
+
+    CSSStructCopy* players[4] = {
+        (CSSStructCopy*)(0x0074d83C + (0 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (1 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (2 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (3 * 0x2C))
+    };
+
+    for(int i=2; i<4; i++) {
+        players[i]->palette = 27;
+        players[i]->charID = 0xC;
+        players[i]->moon = i & 1;
+    }
+
+
+
+
+}
+
 void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
 {
 #ifndef RELEASE
@@ -521,10 +564,16 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 #endif // RELEASE
 
     
+    if(*((uint8_t*)0x0054EEE8) == 0x14) { // check if in css
+        updateCSSStuff();
+    }
+
     if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
     //if(true) {
 
         updateScaleParams(device);
+
+        
 
         // draw meter and health info for p2.
         // and any other stuff like that
