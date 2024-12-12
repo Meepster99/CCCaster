@@ -21,6 +21,9 @@ void updateScaleParams(IDirect3DDevice9 *device);
 void scalePoint(float& x, float& y);
 void DrawRectScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, const DWORD ARGB, bool mirror = false);
 void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, float w, const DWORD ARGB, bool mirror = false);
+void DrawTextScaled( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, bool mirror = false);
+void DrawTextScaledWithBG( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror = false);
+void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror = false);
 
 static inline void DrawRectangle ( IDirect3DDevice9 *device, int x1, int y1, int x2, int y2, const D3DCOLOR& color )
 {

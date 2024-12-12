@@ -385,6 +385,8 @@ void invalidateOverlayText()
     }
 }
 
+#define SAFEMOD(a, b) (((b) + ((a) % (b))) % (b))
+
 D3DXVECTOR2 scalePosTopLeft = { 0.0f, 0.0f };
 D3DXVECTOR2 scalePosRenderFactor = { 0.0f, 0.0f };
 
@@ -502,16 +504,90 @@ void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, f
 
 }
 
-void updateCSSStuff() {
+void tempLog(const std::string& s) {
+    std::ofstream outfile("log.txt", std::ios_base::app);
+    outfile << s << "\n";
+}
 
-    // ugh
+void DrawTextScaled( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        x1 = 640.0f - x1;
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    scalePoint(x1, y1);
+
+    RECT temp;
+    temp.top  = temp.bottom = (long)y1;
+    temp.left = temp.right  = (long)x1;
+
+    DrawText(font, text, temp, format, ARGB);
+
+}
+
+void DrawTextScaledWithBG( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    RECT rect = {0, 0, 0, 0};
+
+    font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+
+    long height = abs(rect.top - rect.bottom);
+    long width = abs(rect.left - rect.right);
+
+    rect.top = (long)y1;
+    rect.bottom = (long)(y1 + height);
+
+    rect.left = (long)x1;
+    rect.right = (long)(x1 + width);
+    
+    DrawRectScaled( device, INLINE_RECT(rect), bgARGB, mirror);
+    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
+
+}
+
+void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    RECT rect = {0, 0, 0, 0};
+
+    font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+
+    long height = abs(rect.top - rect.bottom);
+    long width = abs(rect.left - rect.right);
+
+    rect.top = (long)y1;
+    rect.bottom = (long)(y1 + height);
+
+    rect.left = (long)x1;
+    rect.right = (long)(x1 + width);
+    
+    DrawBorderScaled( device, INLINE_RECT(rect), bgARGB, mirror);
+    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
+
+}
+
+
+void updateCSSStuff(IDirect3DDevice9 *device) {
+
+    // ugh. this might not be the best place for this
 
     typedef struct CSSStructCopy {
-        unsigned palette;
-        unsigned charID;
+        int palette;
+        int charID;
         unsigned _unknown1;
         unsigned _unknown2; // possibly port number idek
-        unsigned moon;
+        int moon;
         unsigned _unknown3;
         unsigned _unknown4;
         unsigned _unknown5;
@@ -534,15 +610,211 @@ void updateCSSStuff() {
         (CSSStructCopy*)(0x0074d83C + (3 * 0x2C))
     };
 
+    typedef struct RawInput {
+        BYTE dir = 0;
+        BYTE btn = 0;
+        void set(int playerIndex) {
+            DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+            if(baseControlsAddr == 0) {
+                return;
+            }
+
+            dir = *(BYTE*)(baseControlsAddr + 0x18 + (playerIndex * 0x14));
+            btn = *(BYTE*)(baseControlsAddr + 0x24 + (playerIndex * 0x14));
+        }
+    } RawInput;
+
+    typedef struct OurCSSData { // variables i want to keep track of
+        int idIndex = 0; // what char is hovered, indexed in the below list
+        int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
+        RawInput prevInput;
+        RawInput input;
+        // i should probs just read from where melty gets these,,, but im tired ok? 
+        BYTE pressDir() {
+            if(prevInput.dir != input.dir) {
+                return input.dir;
+            }
+            return 0;
+        }
+    } OurCSSData;
+
+    static OurCSSData ourCSSData[4];
+
+    constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
+    constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satsuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
+
+    static_assert(sizeof(charIDList) / sizeof(charIDList[0]) == sizeof(charIDNames) / sizeof(charIDNames[0]), "length of name and id list must be the same");
+    constexpr int charIDCount = sizeof(charIDList) / sizeof(charIDList[0]);
+
+    std::function<void(int playerIndex, int inc)> ControlFuncs[] = {
+
+        [&](int playerIndex, int inc) mutable -> void {
+            ourCSSData[playerIndex].idIndex = SAFEMOD(ourCSSData[playerIndex].idIndex + inc, charIDCount); 
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+            players[playerIndex]->moon = SAFEMOD(players[playerIndex]->moon + inc, 3);
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+            players[playerIndex]->palette = SAFEMOD(players[playerIndex]->palette + inc, 36);
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+
+        }
+
+    };
+
+    const int menuOptionCount = sizeof(ControlFuncs) / sizeof(ControlFuncs[0]);
+
+    // handle controls
+    // idk where i should grab controls from either, what reads the stuff melty writes to? or i could be safe with a direct melty write, but have to keep track 
+    // of presses myself
+    // maybe one less patch tho
     for(int i=2; i<4; i++) {
-        players[i]->palette = 27;
-        players[i]->charID = 0xC;
-        players[i]->moon = i & 1;
+
+        ourCSSData[i].input.set(i);
+
+        BYTE pressDir = ourCSSData[i].pressDir();
+
+        switch(pressDir) {
+            case 2:
+                ourCSSData[i].selectIndex = SAFEMOD(ourCSSData[i].selectIndex + 1, menuOptionCount);
+                break;
+            case 8:
+                ourCSSData[i].selectIndex = SAFEMOD(ourCSSData[i].selectIndex - 1, menuOptionCount);
+                break;
+            case 4:
+                ControlFuncs[ourCSSData[i].selectIndex](i, -1);
+                break;
+            case 6:
+                ControlFuncs[ourCSSData[i].selectIndex](i,  1);
+                break;
+            default:
+                break;
+        }
+        
+        ourCSSData[i].prevInput = ourCSSData[i].input;
     }
 
+    std::function<void(int selfIndex, int playerIndex, float& x, float& y)> CSSFuncs[] = { // i could pass in more params, but tbh ill just let each function do its own vibe
 
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
 
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
+            players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
+
+            std::string tempCharString = "P" + std::to_string(playerIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
+            DrawTextScaledWithBG(device, font, x, y, 16, tempCharString.c_str(), 0xFFFFFFFF, bgCol, mirror);
+            y += 16;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            const char* tempMoonString = players[playerIndex]->moon == 0 ? "Crescent" : (players[playerIndex]->moon == 1 ? "Full" : "Half"); 
+
+            DrawTextScaledWithBG(device, font, x, y, 16, tempMoonString, 0xFFFFFFFF, bgCol, mirror);
+            y += 16;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            std::string tempPaletteString = "Palette: " + std::to_string(players[playerIndex]->palette + 1);
+            DrawTextScaledWithBG(device, font, x, y, 16, tempPaletteString.c_str(), 0xFFFFFFFF, bgCol, mirror);
+            y += 16;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            DrawTextScaledWithBG(device, font, x, y, 16, "Ready(notworking)", 0xFFFFFFFF, bgCol, mirror);
+            y += 16;      
+        }
+
+    };
+
+    static_assert(sizeof(CSSFuncs) / sizeof(CSSFuncs[0]) == sizeof(ControlFuncs) / sizeof(ControlFuncs[0]), "each cssfunc must have a controlfunc!");
+
+    // draw the shit 
+    for(int i=2; i<4; i++) {
+        float x = 50.0f;
+        float y = 100.0f;
+
+        for(size_t selfIndex = 0; selfIndex < sizeof(CSSFuncs) / sizeof(CSSFuncs[0]); selfIndex++) {
+            CSSFuncs[selfIndex](selfIndex, i, x, y);
+        }
+    }
+}
+
+void updateInGameStuff(IDirect3DDevice9 *device) {
+
+    // draw meter and health info for p2.
+    // and any other stuff like that
+    
+    // these draws are not ideal. in any way.
+
+    DWORD health[4]; // 11400 max
+    DWORD redHealth[4];
+    DWORD moon[4];
+    // should probs include guard guage here
+    DWORD meter[4];
+    DWORD heatTime[4];
+    DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
+
+    for(int i=0; i<4; i++) {
+
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+
+        moon[i] =         *(DWORD*)(0x0055513C + (i * 0xAFC));
+
+        health[i] =       *(DWORD*)(0x005551EC + (i * 0xAFC));
+        redHealth[i] =    *(DWORD*)(0x005551F0 + (i * 0xAFC));
+        
+        meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
+        heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
+        circuitState[i] = *(DWORD*)(0x00555218 + (i * 0xAFC));
+
+        if(health[i] == 0) { // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
+        }
+    }
+
+    float x;
+    for(int i=2; i<4; i++) {
+
+        // draw meter bars
+        x = 30;
+        const int meterWidth = 200;
+        DrawBorderScaled(device, x, 428, x + meterWidth, 438, 2, 0xFFFFFFFF, i == 3);
+
+        int currentMeterWidth = (meterWidth * meter[i]) / (moon[i] == 2 ? 20000 : 30000);
+        int meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+        DrawBorderScaled(device, x, 428, x + currentMeterWidth, 438, 2, meterCol, i == 3);
+
+        // draw health bars
+        x = 58;
+        const int healthWidth = 218;
+        int currentHealthWidth;
+        DrawBorderScaled(device, x, 30, x + 218, 40, 2, 0xFFFFFFFF, i == 3); // white bar
+        currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
+        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFF0000, i == 3); // red health
+        currentHealthWidth = (healthWidth * health[i]) / 11400;
+        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFFFF00, i == 3); // yellow health
+
+    }
+    
 }
 
 void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
@@ -565,64 +837,13 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
     
     if(*((uint8_t*)0x0054EEE8) == 0x14) { // check if in css
-        updateCSSStuff();
+        updateScaleParams(device);
+        updateCSSStuff(device);
     }
 
     if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
-    //if(true) {
-
         updateScaleParams(device);
-
-        
-
-        // draw meter and health info for p2.
-        // and any other stuff like that
-        
-        // these draws are not ideal. in any way.
-
-        DWORD health[4]; // 11400 max
-        DWORD redHealth[4];
-        // should probs include guard guage here
-        DWORD meter[4];
-        DWORD heatTime[4];
-        DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
-
-        for(int i=0; i<4; i++) {
-            health[i] =       *(DWORD*)(0x005551EC + (i * 0xAFC));
-            redHealth[i] =    *(DWORD*)(0x005551F0 + (i * 0xAFC));
-            
-            meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
-            heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
-            circuitState[i] = *(DWORD*)(0x00555218 + (i * 0xAFC));
-
-            if(health[i] == 0) { // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
-                *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
-            }
-        }
-
-        float x;
-        for(int i=2; i<4; i++) {
-
-            // draw meter bars
-            x = 30;
-            const int meterWidth = 200;
-            DrawBorderScaled(device, x, 428, x + meterWidth, 438, 2, 0xFFFFFFFF, i == 3);
-            int currentMeterWidth = (meterWidth * meter[i]) / 30000;
-            int meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-            DrawBorderScaled(device, x, 428, x + currentMeterWidth, 438, 2, meterCol, i == 3);
-
-            // draw health bars
-            x = 58;
-            const int healthWidth = 218;
-            int currentHealthWidth;
-            DrawBorderScaled(device, x, 30, x + 218, 40, 2, 0xFFFFFFFF, i == 3); // white bar
-            currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
-            DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFF0000, i == 3); // red health
-            currentHealthWidth = (healthWidth * health[i]) / 11400;
-            DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFFFF00, i == 3); // yellow health
-
-        }
-        
+        updateInGameStuff(device);
     }
 
     if ( ! TrialManager::dtext.empty() && !TrialManager::hideText ) {

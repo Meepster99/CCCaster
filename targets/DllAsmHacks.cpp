@@ -437,25 +437,8 @@ void _naked_collisionConnect() {
 
         cmp eax, edi;
 
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-        nop;
-
-
         pop edi;
-        pop edx;
+        pop eax;
     )" __asmEnd
 
     emitJump(0x0046ea33);

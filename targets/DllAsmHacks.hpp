@@ -62,6 +62,10 @@
     "ret;" \
     __asmEnd 
 
+#define INT3 __asmStart R"( int3; )" __asmEnd
+
+#define NOPS __asmStart R"( nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; )" __asmEnd
+
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
     do {                                                                                                            \
         const int error = ASM_HACK.write();                                                                         \
