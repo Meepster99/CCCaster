@@ -419,75 +419,46 @@ void _naked_hitBoxConnect3() {
 
 void _naked_collisionConnect() {
 
-    // patch at 0046ed58
+    // patch at 0046ea27
 
     __asmStart R"(
+        push eax;
+        push edi;
 
-        // i can feel free to use ebp, it gets overwritten next instr.
-        // esi has the address to a char(base 134)
-        // eax has the thing
-        // is branchless with a mult/div better than using branches here? why am i caring.
-        // weirdly tho, this loop goes from 4-0, inclusive.
+        sar eax, 2;
+        add eax, 2;
+        and eax, 3;
+        xor eax, 1;
 
-        /*
-       
+        sar edi, 2;
+        //add edi, 2;
+        and edi, 3;
+        xor edi, 1;
 
-        i-=0x00555134;
-        i/=0xAFC;
-        
-        i += 2;
-        i &= 0b11;
-        
-        return i != j;
+        cmp eax, edi;
 
-         // c code for the below asm. i is esi, j is eax.
-        // ran it through gcc to get better asm beforehand
-        // take addr, shift 2, and 3
-        00555134 -> 0
-        00555C30 -> 1
-        0055672C -> 2
-        00557228 -> 3
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
+        nop;
 
-        i >>= 2;
-        i += 2;
-        i &= 0b11;
-        i ^= 0b01;
 
-        */
-
-        cmp eax, 4;
-        JNE _collisionShouldOccur;
-        
-        JE _collisionShouldNotOccur;
-
-        mov ebp, esi;
-
-        sar ebp, 2;
-        add ebp, 2;
-        and ebp, 3;
-        xor ebp, 1;
-
-        //sub eax, 1;
-
-        cmp ebp, eax;
-        JNE _collisionShouldNotOccur;
-        
-
+        pop edi;
+        pop edx;
     )" __asmEnd
 
-    __asmStart R"(
-        _collisionShouldOccur:
-        //add eax, 1;
-        mov ebp, 0x00555238; // overwritten asm
-    )" __asmEnd
-    emitJump(0x0046ed5d); // i want this collision to occur
-
-    __asmStart R"(
-        _collisionShouldNotOccur:
-        //add eax, 1;
-        mov ebp, 0x00555238; // overwritten asm
-    )" __asmEnd
-    emitJump(0x0046ef8a); // i do NOT want this collision to occur
+    emitJump(0x0046ea33);
 
 }
 
