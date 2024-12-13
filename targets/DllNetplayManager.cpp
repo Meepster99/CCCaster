@@ -741,8 +741,8 @@ void NetplayManager::setInput ( uint8_t player, uint16_t input ) // you were pro
     ASSERT ( getIndex() >= _startIndex );
 
     //_inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.delay, input );
-    _inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.delay, input );
-    return;
+    //_inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.delay, input );
+    //return;
 
     // rollback is probs being improperly set for p2/3 and taking some other buffer
     if ( isInRollback() ) {

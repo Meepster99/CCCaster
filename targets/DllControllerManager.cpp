@@ -1029,7 +1029,8 @@ void DllControllerManager::handleMappingOverlay()
 
     for(int i=0; i<4; i++) {
         std::string temp = "";
-        temp += "O:" + std::to_string(_overlayPositions[i]) + "\n";
+        //temp += "O:" + std::to_string(_overlayPositions[i]) + "\n";
+        temp += "\n";
         if(_playerControllers[i] == NULL) {
             temp += ":3\n";
         } else {

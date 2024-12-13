@@ -535,11 +535,12 @@ void DrawTextScaledWithBG( IDirect3DDevice9 *device, ID3DXFont *font, float x1, 
     }
 
     RECT rect = {0, 0, 0, 0};
+    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+    //long height = abs(rect.top - rect.bottom);
+    //long width = abs(rect.left - rect.right);
 
-    font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
-
-    long height = abs(rect.top - rect.bottom);
-    long width = abs(rect.left - rect.right);
+    long height = (size / 2);
+    long width = (strlen(text) * size) / 4;
 
     rect.top = (long)y1;
     rect.bottom = (long)(y1 + height);
@@ -560,11 +561,12 @@ void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, floa
     }
 
     RECT rect = {0, 0, 0, 0};
+    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+    //long height = abs(rect.top - rect.bottom);
+    //long width = abs(rect.left - rect.right); 
 
-    font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
-
-    long height = abs(rect.top - rect.bottom);
-    long width = abs(rect.left - rect.right);
+    long height = (size / 2);
+    long width = (strlen(text) * size) / 2;
 
     rect.top = (long)y1;
     rect.bottom = (long)(y1 + height);
@@ -707,7 +709,7 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
             std::string tempCharString = "P" + std::to_string(playerIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
             DrawTextScaledWithBG(device, font, x, y, 16, tempCharString.c_str(), 0xFFFFFFFF, bgCol, mirror);
-            y += 16;      
+            y += 8;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -718,7 +720,7 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             const char* tempMoonString = players[playerIndex]->moon == 0 ? "Crescent" : (players[playerIndex]->moon == 1 ? "Full" : "Half"); 
 
             DrawTextScaledWithBG(device, font, x, y, 16, tempMoonString, 0xFFFFFFFF, bgCol, mirror);
-            y += 16;      
+            y += 8;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -728,7 +730,7 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
             std::string tempPaletteString = "Palette: " + std::to_string(players[playerIndex]->palette + 1);
             DrawTextScaledWithBG(device, font, x, y, 16, tempPaletteString.c_str(), 0xFFFFFFFF, bgCol, mirror);
-            y += 16;      
+            y += 8;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -737,7 +739,7 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
             DrawTextScaledWithBG(device, font, x, y, 16, "Ready(notworking)", 0xFFFFFFFF, bgCol, mirror);
-            y += 16;      
+            y += 8;      
         }
 
     };
@@ -753,6 +755,13 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             CSSFuncs[selfIndex](selfIndex, i, x, y);
         }
     }
+
+
+    DrawTextScaled(device, font, 0, 0 + (0 * 8), 16, "please follow me on twitter so i have motivation for this", 0xFFFFFFFF, true);
+    DrawTextScaled(device, font, 0, 0 + (1 * 8), 16, "@Meepster99", 0xFFFFFFFF, true);
+    DrawTextScaled(device, font, 0, 0 + (2 * 8), 16, ":3", 0xFFFFFFFF, true);
+
+
 }
 
 void updateInGameStuff(IDirect3DDevice9 *device) {
@@ -803,6 +812,8 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         float currentMeterWidth = 0.0f;
         DWORD meterCol = 0xFF000000;
 
+        std::string meterString = "";
+
         switch(circuitState[i]) {
             case 0:
                 if(moon[i] == 2) { // half
@@ -812,18 +823,24 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
                     currentMeterWidth = ((float)meter[i]) / 30000.0f;
                     meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
                 }
+
+                meterString = std::to_string(meter[i] / 100) + "." + std::to_string((meter[i] / 10) % 10) + "%";
+
                 break;
             case 1:
                 currentMeterWidth = ((float)heatTime[i]) / 600.0f;
                 meterCol = 0xFF0000FF;
+                meterString = "HEAT";
                 break;
             case 2:
                 currentMeterWidth = ((float)heatTime[i]) / 600.0f;
                 meterCol = 0xFFFFA500;
+                meterString = "MAX";
                 break;
             case 3:
                 currentMeterWidth = ((float)heatTime[i]) / 600.0f;
                 meterCol = 0xFFDDDDDD;
+                meterString = "BLOOD HEAT";
                 break;
             default:
                 break;
@@ -831,6 +848,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
         DrawBorderScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, 1, meterCol, i == 3);
+        DrawTextScaled(device, font, x + 1, 428 + 1, 16, meterString.c_str(), 0xFFFFFFFF, i == 3); // meter string
 
         // draw health bars
         x = 58;
@@ -847,7 +865,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
         DrawTextScaled(device, font, x + 20 + 50, 30 - 20, 16, moonString, 0xFFFFFFFF, i == 3); // char moon
 
-        std::string paletteString = std::to_string(palette[i]);
+        std::string paletteString = std::to_string(palette[i] + 1);
         DrawTextScaled(device, font, x + 20 + 50 + 50, 30 - 20, 16, paletteString.c_str(), 0xFFFFFFFF, i == 3); // char palette
 
     }
