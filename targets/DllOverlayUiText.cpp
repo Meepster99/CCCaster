@@ -577,6 +577,37 @@ void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, floa
 
 }
 
+typedef struct RawInput {
+    BYTE dir = 0;
+    BYTE btn = 0;
+    void set(int playerIndex) {
+        DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+        if(baseControlsAddr == 0) {
+            return;
+        }
+
+        dir = *(BYTE*)(baseControlsAddr + 0x18 + (playerIndex * 0x14));
+        btn = *(BYTE*)(baseControlsAddr + 0x24 + (playerIndex * 0x14));
+    }
+} RawInput;
+
+typedef struct OurCSSData { // variables i want to keep track of
+    int idIndex = 0; // what char is hovered, indexed in the below list
+    int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
+    RawInput prevInput;
+    RawInput input;
+    // i should probs just read from where melty gets these,,, but im tired ok? 
+    BYTE pressDir() {
+        if(prevInput.dir != input.dir) {
+            return input.dir;
+        }
+        return 0;
+    }
+} OurCSSData;
+
+OurCSSData ourCSSData[4];
+constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
+constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satsuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
 
 void updateCSSStuff(IDirect3DDevice9 *device) {
 
@@ -609,39 +640,6 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         (CSSStructCopy*)(0x0074d83C + (2 * 0x2C)),
         (CSSStructCopy*)(0x0074d83C + (3 * 0x2C))
     };
-
-    typedef struct RawInput {
-        BYTE dir = 0;
-        BYTE btn = 0;
-        void set(int playerIndex) {
-            DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
-            if(baseControlsAddr == 0) {
-                return;
-            }
-
-            dir = *(BYTE*)(baseControlsAddr + 0x18 + (playerIndex * 0x14));
-            btn = *(BYTE*)(baseControlsAddr + 0x24 + (playerIndex * 0x14));
-        }
-    } RawInput;
-
-    typedef struct OurCSSData { // variables i want to keep track of
-        int idIndex = 0; // what char is hovered, indexed in the below list
-        int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
-        RawInput prevInput;
-        RawInput input;
-        // i should probs just read from where melty gets these,,, but im tired ok? 
-        BYTE pressDir() {
-            if(prevInput.dir != input.dir) {
-                return input.dir;
-            }
-            return 0;
-        }
-    } OurCSSData;
-
-    static OurCSSData ourCSSData[4];
-
-    constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
-    constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satsuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
 
     static_assert(sizeof(charIDList) / sizeof(charIDList[0]) == sizeof(charIDNames) / sizeof(charIDNames[0]), "length of name and id list must be the same");
     constexpr int charIDCount = sizeof(charIDList) / sizeof(charIDList[0]);
@@ -771,6 +769,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     DWORD meter[4];
     DWORD heatTime[4];
     DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
+    DWORD palette[4];
 
     for(int i=0; i<4; i++) {
 
@@ -784,7 +783,9 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         
         meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
         heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
-        circuitState[i] = *(DWORD*)(0x00555218 + (i * 0xAFC));
+        circuitState[i] = *(WORD*)(0x00555218 + (i * 0xAFC));
+
+        palette[i] =      *(BYTE*)(0x0055513A + (i * 0xAFC));
 
         if(health[i] == 0) { // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
             *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
@@ -797,21 +798,57 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         // draw meter bars
         x = 30;
         const int meterWidth = 200;
-        DrawBorderScaled(device, x, 428, x + meterWidth, 438, 2, 0xFFFFFFFF, i == 3);
+        DrawBorderScaled(device, x, 428, x + meterWidth, 438, 1, 0xFFFFFFFF, i == 3);
 
-        int currentMeterWidth = (meterWidth * meter[i]) / (moon[i] == 2 ? 20000 : 30000);
-        int meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-        DrawBorderScaled(device, x, 428, x + currentMeterWidth, 438, 2, meterCol, i == 3);
+        float currentMeterWidth = 0.0f;
+        DWORD meterCol = 0xFF000000;
+
+        switch(circuitState[i]) {
+            case 0:
+                if(moon[i] == 2) { // half
+                    currentMeterWidth = ((float)meter[i]) / 20000.0f;
+                    meterCol = (meter[i] >= 15000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                } else { // full/crescent
+                    currentMeterWidth = ((float)meter[i]) / 30000.0f;
+                    meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                }
+                break;
+            case 1:
+                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                meterCol = 0xFF0000FF;
+                break;
+            case 2:
+                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                meterCol = 0xFFFFA500;
+                break;
+            case 3:
+                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                meterCol = 0xFFDDDDDD;
+                break;
+            default:
+                break;
+        }
+
+        currentMeterWidth = MIN(1.0f, currentMeterWidth);
+        DrawBorderScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, 1, meterCol, i == 3);
 
         // draw health bars
         x = 58;
         const int healthWidth = 218;
         int currentHealthWidth;
-        DrawBorderScaled(device, x, 30, x + 218, 40, 2, 0xFFFFFFFF, i == 3); // white bar
+        DrawBorderScaled(device, x, 30, x + 218, 40, 1, 0xFFFFFFFF, i == 3); // white bar
         currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
-        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFF0000, i == 3); // red health
+        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 1, 0xFFFF0000, i == 3); // red health
         currentHealthWidth = (healthWidth * health[i]) / 11400;
-        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 2, 0xFFFFFF00, i == 3); // yellow health
+        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 1, 0xFFFFFF00, i == 3); // yellow health
+
+        DrawTextScaled(device, font, x + 20, 30 - 20, 16, charIDNames[ourCSSData[i].idIndex], 0xFFFFFFFF, i == 3); // char name
+        
+        const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
+        DrawTextScaled(device, font, x + 20 + 50, 30 - 20, 16, moonString, 0xFFFFFFFF, i == 3); // char moon
+
+        std::string paletteString = std::to_string(palette[i]);
+        DrawTextScaled(device, font, x + 20 + 50 + 50, 30 - 20, 16, paletteString.c_str(), 0xFFFFFFFF, i == 3); // char palette
 
     }
     
