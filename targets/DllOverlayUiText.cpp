@@ -848,7 +848,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
         DrawRectScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, meterCol, i == 3);
-        DrawTextScaled(device, font, x + 1, 428 + 1, 16, meterString.c_str(), 0xFFFFFFFF, i == 3); // meter string
+        DrawTextScaled(device, font, x + 1, 428 + 1, 16, meterString.c_str(), 0xFF000000, i == 3); // meter string
 
         // draw health bars
         x = 58;
