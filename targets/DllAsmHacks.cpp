@@ -445,6 +445,43 @@ void _naked_collisionConnect() {
 
 }
 
+void _naked_checkRoundDone() {
+
+    // patched at 0x0047463c 
+
+    emitCall(0x004735e0); // do the original func
+
+    __asmStart R"(
+        push ebx;
+
+        mov ebx, [0x00562A3C]; // timer check
+        cmp ebx, 0;
+        JLE FAIL;
+
+        mov ebx, [0x005551EC + (0 * 0xAFC)]; // P0 HEALTH
+        add ebx, [0x005551EC + (2 * 0xAFC)]; // P2 HEALTH
+        cmp ebx, 0;
+        JLE FAIL;
+
+        mov ebx, [0x005551EC + (1 * 0xAFC)]; // P1 HEALTH
+        add ebx, [0x005551EC + (3 * 0xAFC)]; // P3 HEALTH
+        cmp ebx, 0;
+        JLE FAIL;
+
+
+        mov eax, 0; // OK        
+        END:
+        pop ebx;     
+        
+        push 0x00474641; // jump to resume
+        ret;
+
+        FAIL:
+        mov eax, 1; // end the round
+        JMP END;
+    )" __asmEnd
+}
+
 void _naked_throwConnect() {
 
     // patch at 0x004641b2

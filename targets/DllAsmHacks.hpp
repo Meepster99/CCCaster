@@ -48,9 +48,10 @@
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 #define LINE_NAME "LINE" LINE_STRING
 
+// needing offset keyword here makes me sad. so much time wasted.
 #define emitCall(addr) \
     __asmStart \
-    "push " LINE_NAME ";" \
+    "push offset " LINE_NAME ";" \
 	"push " #addr ";" \
     "ret;" \
     LINE_NAME ":" \
@@ -593,6 +594,8 @@ __attribute__((naked, noinline)) void _naked_fileLoad();
 
 __attribute__((naked, noinline)) void _naked_collisionConnect();
 
+__attribute__((naked, noinline)) void _naked_checkRoundDone();
+
 static const AsmList initPatch2v2 =
 {
     { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
@@ -625,6 +628,8 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
     
+    PATCHJUMP(0x0047463c, _naked_checkRoundDone),
+
     //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
 
     { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
