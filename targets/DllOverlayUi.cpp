@@ -60,6 +60,8 @@ void InvalidateDeviceObjects()
     invalidateOverlayText();
 }
 
+void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt); // this should,,,, not be like this, but it is. i dont want to mix up the *device names  
+
 // Note: this is called on the SAME thread as the main application thread
 void PresentFrameBegin ( IDirect3DDevice9 *device )
 {
@@ -74,6 +76,8 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
         return;
 
     renderOverlayText ( device, viewport );
+
+    _doDrawCalls( device );
 #ifdef LOGGING
     doEndScene = true;
     if (device->BeginScene() >= 0)

@@ -847,7 +847,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         }
 
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
-        DrawBorderScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, 1, meterCol, i == 3);
+        DrawRectScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, meterCol, i == 3);
         DrawTextScaled(device, font, x + 1, 428 + 1, 16, meterString.c_str(), 0xFFFFFFFF, i == 3); // meter string
 
         // draw health bars
@@ -856,9 +856,9 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         int currentHealthWidth;
         DrawBorderScaled(device, x, 30, x + 218, 40, 1, 0xFFFFFFFF, i == 3); // white bar
         currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
-        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 1, 0xFFFF0000, i == 3); // red health
+        DrawRectScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFF0000, i == 3); // red health
         currentHealthWidth = (healthWidth * health[i]) / 11400;
-        DrawBorderScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 1, 0xFFFFFF00, i == 3); // yellow health
+        DrawRectScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFFFF00, i == 3); // yellow health
 
         DrawTextScaled(device, font, x + 20, 30 - 20, 16, charIDNames[ourCSSData[i].idIndex], 0xFFFFFFFF, i == 3); // char name
         

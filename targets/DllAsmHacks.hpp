@@ -599,6 +599,10 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone();
 static const AsmList initPatch2v2 =
 {
     
+    // todo, makefile, windres (would let me load resources like i can in msvc?)
+    // switch all graphics over to the training mode format,,i sorta wish i could,, ugh
+    // i didnt write that with the knowledge i would use it anywhere else
+
     // it needs to occur when initially loading into a game
     // i actually prefer this patch method(with a lil modification) tbh. its very well done
     
