@@ -598,15 +598,13 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone();
 
 static const AsmList initPatch2v2 =
 {
-    { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
-
-    // i would patch character port and background state here, but that cant occur here
-    // instead, im hooking the reset func again.
     
     // it needs to occur when initially loading into a game
     // i actually prefer this patch method(with a lil modification) tbh. its very well done
-
+    
     // battle reset patches:
+
+    { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
 
     // the reset func can ret early, patch that
     PATCHJUMP(0x004234b9, 0x004234e1),
@@ -617,14 +615,11 @@ static const AsmList initPatch2v2 =
     // patch the port comparison for chars turning around
     PATCHJUMP(0x0047587b, _naked_charTurnAround),
 
-    // patch the port comparison for moves hitting?
-    // i may have to patch FUN_0046f100 and FUN_00468060
-    // 0046F20D, 0046812D, 0046F684
     PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed
 
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
-    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//,
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//, patch is def needed
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
     
@@ -634,98 +629,8 @@ static const AsmList initPatch2v2 =
 
     { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
 
-    /*
-    pain is over
-    hook at 004338F9 to rewrite the css things, or idk make the css shit from yesterday actually work
-    00448fb6 increase the stack alloc to idk 0x200, 
-    change the compare at 00449069 to 4 to actually read all the data in
-    */
-
-   { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
-   { ( void *) (0x00449069 + 2), { 0x04 }}
-
-
-
-    //PATCHJUMP(0x004641b2, _naked_throwConnect)
-
-    // todo, possibly fix throws
-    // make teamates not collide
-    // fix ghosts in my melty
-    //  
-    //     
-    // when health hits 0, set the bg flag active 
-    // if you, in the corner, go friendly, enemy, friendly, all pushback will be canceled due to hitting both of those????!
-
-    /*
-    
-    func 004289b0 reads the cssstruct data 
-    patch 004289f6 to be (0x74d948 + (2 * 0x24)) -> 0x74d990, maybe,,, that will do something????
-    
-    func 0048c310 is called on every character SELECTED, moon transition (not palette)
-    0048c310 is def important
-
-    00448fb0,,, 
-
-    004489e0????
-
-    idc anymore. ill just do the same shit i did for palettes
-    0041f7c0, ebx is the string
-    .\data\HISUI_0_c.txt
-    some files have that weird C in it,,, ig ill just,,, idk
-    ykwhat if i just have ppl always select maids, i wont have to worry
-
-    loads are:
-    .\data\HISUI.pal
-    .\data\HISUI_0_c.txt
-
-    .\data\HISUI.pal
-    .\data\HISUI_0_c.txt
-
-    .\data\KOHAKU.pal
-    .\data\KOHAKU_0_c.txt
-
-    .\data\KOHAKU.pal
-    .\data\KOHAKU_0_c.txt
-
-    // was there an 8th?
-    oh it was the bg dat file
-    i can fuck with that too ig
-
-    warc loads warc.pal and warc_0_c
-
-    something is insanely wrong with ghidra
-    0041f7c0
-    when entering a battle
-    check what calls it, ghidra didnt even mark it as code
-
-    but specifically, the printf calls around 0046c3ee
-    very very nice looking
-    i just need to think. something calls the func which gens the warc.pal string, i need that
-    ghidra noreturn. turn that shit off.
-
-breakpoint at 004338f9
-modify the fucking bullshit that css is copied to at 0074d840
-all these calls are on the first 2, not on 3
-one of them(these were checking the char index) has to be an enable
-
-00440F19 - 8B 15 6CD87400  - mov edx,[0074D86C]
-004B24ED - 8B 90 40D87400  - mov edx,[eax+0074D840]
-004490B0 - 8B B1 40D87400  - mov esi,[ecx+0074D840]
-00449132 - 8B B8 40D87400  - mov edi,[eax+0074D840]
-
-004b6850 has a 64 compare
-0044909E accesses p1 doesnt p2
-
-00449030 seems to be my guy.
-naw
-
-
-   
-
-
-
-    */
-
+    { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
+    { ( void *) (0x00449069 + 2), { 0x04 }}
 
 };
 
