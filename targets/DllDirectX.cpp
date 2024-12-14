@@ -1,7 +1,69 @@
 
 #include <set>
-
+#include <windows.h>
+#include <ws2tcpip.h>
+#include <winsock2.h>
 #include "DllDirectX.hpp"
+#include "resource.h"
+
+/*
+
+todo, a lot of this code is either legacy, deprecated, only needed for training mode, or just plain stupid
+really need to go clean this up
+switch to only one vert format
+
+*/
+
+void ___log(const char* msg)
+{
+	const char* ipAddress = "127.0.0.1";
+	unsigned short port = 17474;
+	int msgLen = strlen(msg);
+	const char* message = msg;
+	WSADATA wsaData;
+	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (result != 0) 
+	{
+		return;
+	}
+	SOCKET sendSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sendSocket == INVALID_SOCKET) 
+	{
+		WSACleanup();
+		return;
+	}
+	sockaddr_in destAddr;
+	destAddr.sin_family = AF_INET;
+	destAddr.sin_port = htons(port);
+	if (inet_pton(AF_INET, ipAddress, &destAddr.sin_addr) <= 0) 
+	{
+		closesocket(sendSocket);
+		WSACleanup();
+		return;
+	}
+	int sendResult = sendto(sendSocket, message, strlen(message), 0, (sockaddr*)&destAddr, sizeof(destAddr));
+	if (sendResult == SOCKET_ERROR) 
+	{
+		closesocket(sendSocket);
+		WSACleanup();
+		return;
+	}
+	closesocket(sendSocket);
+	WSACleanup();
+}
+
+void log(const char* format, ...) {
+	static char buffer[1024]; // no more random char buffers everywhere.
+	va_list args;
+	va_start(args, format);
+	vsnprintf_s(buffer, 1024, format, args);
+	___log(buffer);
+	va_end(args);
+}
+
+void __stdcall printDirectXError(HRESULT hr) {
+
+}
 
 void debugLinkedList();
 void displayDebugInfo();
@@ -138,11 +200,10 @@ IDirect3DVertexShader9* createVertexShader(const char* shaderCode) {
 }
 
 bool loadResource(int id, BYTE*& buffer, unsigned& bufferSize) {
+	
+	HMODULE hModule = GetModuleHandle(TEXT("hook.dll"));
 
-	/*
-	HMODULE hModule = GetModuleHandle(TEXT("Extended-Training-Mode-DLL.dll"));
-
-	HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(id), L"PNG");
+	HRSRC hResource = FindResource(hModule, MAKEINTRESOURCE(id), "PNG");
 	if (!hResource) {
 		log("couldnt find embedded resource?");
 		return false;
@@ -167,7 +228,6 @@ bool loadResource(int id, BYTE*& buffer, unsigned& bufferSize) {
 	}
 
 	log("loaded resource %d successfully", id);
-	*/
 
 	return true;
 }
@@ -178,12 +238,12 @@ void _initDefaultFont(IDirect3DTexture9*& resTexture) {
 
 	BYTE* pngBuffer = NULL;
 	unsigned pngSize = 0;
-	//bool res = loadResource(IDB_PNG2, pngBuffer, pngSize);
-	bool res = false;
+	bool res = loadResource(IDB_PNG1, pngBuffer, pngSize);
+	//bool res = false;
 
 	hr = D3DXCreateTextureFromFileInMemory(device, pngBuffer, pngSize, &resTexture);
 	if (FAILED(hr)) {
-		log("font createtexfromfileinmem failed??");
+		log("_initDefaultFont font createtexfromfileinmem failed??");
 		resTexture = NULL;
 		return;
 	}
@@ -368,14 +428,19 @@ void _initMeltyFont() {
 
 	BYTE* pngBuffer = NULL;
 	unsigned pngSize = 0;
-	//bool res = loadResource(IDB_PNG1, pngBuffer, pngSize);
-	bool res = false;
+	bool res = loadResource(IDB_PNG1, pngBuffer, pngSize);
+	//bool res = false;
+
+	if(!res) {
+		log("_initMeltyFont loadResource failed");
+		return;
+	}
 
 	IDirect3DTexture9* meltyTex = NULL;
 
 	hr = D3DXCreateTextureFromFileInMemory(device, pngBuffer, pngSize, &meltyTex);
 	if (FAILED(hr)) {
-		log("font createtexfromfileinmem failed??");
+		log("_initMeltyFont font createtexfromfileinmem failed??");
 		return;
 	}
 
@@ -486,6 +551,8 @@ void _initFontFirstLoad() {
 	// no, no treat, you are going to have to do this painfully.
 	// never call this func more than once, or while hooked.
 
+	HRESULT hr;
+
 	static bool hasRan = false;
 	if (hasRan) {
 		return;
@@ -499,11 +566,21 @@ void _initFontFirstLoad() {
 	//IDirect3DTexture9* fontTex = NULL;
 	_initDefaultFont(fontTexture);
 	if (fontTexture == NULL) {
+		log("failed _initDefaultFont");
 		return;
 	}
+	
+
+	//_initMeltyFont();
+
+	//_initDefaultFont(fontTexture);
+
+	//hr = D3DXSaveTextureToFileA("fontTest.png", D3DXIFF_PNG, fontTexture, NULL);
+
+	fontTextureMelty = fontTexture;
 
 	//_initDefaultFontOutline(fontTex);
-	_initMeltyFont();
+	//_initMeltyFont();
 
 	//fontTex->Release();
 
@@ -512,8 +589,6 @@ void _initFontFirstLoad() {
 }
 
 void initFont() {
-
-	_initFontFirstLoad();
 
 	/*
 	if (fontBuffer == NULL) {
@@ -555,11 +630,17 @@ void initFont() {
 	}
 	*/
 
+	_initFontFirstLoad();
+
+	/*
+	
+
 	hr = D3DXCreateTextureFromFileInMemory(device, fontBufferMelty, fontBufferMeltySize, &fontTextureMelty);
 	if (FAILED(hr)) {
 		log("melty font createtexfromfileinmem failed??");
 		return;
 	}
+	*/
 
 	//hr = D3DXSaveTextureToFileA("fontTest.png", D3DXIFF_PNG, fontTexture, NULL);
 
@@ -1458,7 +1539,17 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 		return;
 	}
 	
+	static bool fontInit = false;
+	// this messed with hooks on extended. it might with this as well
+	if(!fontInit) {
+		initFont();
+		fontInit = true;
+	}
+
+	//TextDraw(0, 0, 16, 0xFFFFFFFF, "money money money!");
+
 	// -- ACTUAL RENDERING --
+
 	backupRenderState();
 
 	_drawGeneralCalls();

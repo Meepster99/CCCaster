@@ -602,6 +602,19 @@ static const AsmList initPatch2v2 =
     // todo, makefile, windres (would let me load resources like i can in msvc?)
     // switch all graphics over to the training mode format,,i sorta wish i could,, ugh
     // i didnt write that with the knowledge i would use it anywhere else
+    // todo circuit break
+    // todo, dont reface when comboing
+    // todo, camera, max zoom maybe?
+    // fn1/fn2 change what char you are focusing?
+    // or i can have it lock on to a combo, prio if you are hitting 
+    // disable effects on certain hits(if both are on fire)
+    // if blocking and a teamate hits you,, proxy block occurs
+    // make it so p1/p2 can pick the same color
+    // or no one can pick same color
+
+    // not getting jump cancel back under certain circumstances if teamate is comboing(could this relate to the weird hud code that deals with that? remember when disabling hud fucked up that?)
+    // if p2 dies, first? and,,, then the round ends? it only reads p2 and p1 for round determine
+    // chisui is missing some,,, item toss move?
 
     // it needs to occur when initially loading into a game
     // i actually prefer this patch method(with a lil modification) tbh. its very well done

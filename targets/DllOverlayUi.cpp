@@ -68,6 +68,8 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
     if ( ! initalizedDirectX )
         InitializeDirectX ( device );
 
+    _doDrawCalls( device );
+
     D3DVIEWPORT9 viewport;
     device->GetViewport ( &viewport );
 
@@ -77,7 +79,6 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
 
     renderOverlayText ( device, viewport );
 
-    _doDrawCalls( device );
 #ifdef LOGGING
     doEndScene = true;
     if (device->BeginScene() >= 0)

@@ -5,6 +5,8 @@
 #include "ProcessManager.hpp"
 #include "Enum.hpp"
 
+#include "DllDirectX.hpp"
+
 #include <windows.h>
 #include <d3dx9.h>
 #include <iostream>
@@ -756,11 +758,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         }
     }
 
-
-    DrawTextScaled(device, font, 0, 0 + (0 * 8), 16, "please follow me on twitter so i have motivation for this", 0xFFFFFFFF, true);
-    DrawTextScaled(device, font, 0, 0 + (1 * 8), 16, "@Meepster99", 0xFFFFFFFF, true);
-    DrawTextScaled(device, font, 0, 0 + (2 * 8), 16, ":3", 0xFFFFFFFF, true);
-
+    TextDraw(500, 0 + (0 * 8), 16, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
+    TextDraw(500, 0 + (1 * 8), 16, 0xFFFFFFFF, "@Meepster99");
+    TextDraw(500, 0 + (2 * 8), 16, 0xFFFFFFFF, ":3");
 
 }
 
@@ -807,8 +807,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         // draw meter bars
         x = 30;
         const int meterWidth = 200;
-        DrawBorderScaled(device, x, 428, x + meterWidth, 438, 1, 0xFFFFFFFF, i == 3);
-
+        
         float currentMeterWidth = 0.0f;
         DWORD meterCol = 0xFF000000;
 
@@ -842,31 +841,38 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
                 meterCol = 0xFFDDDDDD;
                 meterString = "BLOOD HEAT";
                 break;
-            default:
+            case 4: // im just guessing this is break. i hope.
+            default: // maybe ill just make break the default case lol
+                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                meterCol = 0xFF800080;
+                meterString = "CIRCUIT BREAK";
                 break;
         }
 
+        BorderDraw(x, 428, x + meterWidth, 438, 0xFFFFFFFF);//, i == 3);
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
-        DrawRectScaled(device, x, 428, x + (meterWidth * currentMeterWidth), 438, meterCol, i == 3);
-        DrawTextScaled(device, font, x + 1, 428 + 1, 16, meterString.c_str(), 0xFF000000, i == 3); // meter string
+        RectDraw(x, 428, x + (meterWidth * currentMeterWidth), 438, meterCol);//, i == 3);
+        TextDraw(x + 1, 428 + 1, 16, 0xFF000000, meterString.c_str());//, i == 3); // meter string
+
+        continue;
 
         // draw health bars
         x = 58;
         const int healthWidth = 218;
         int currentHealthWidth;
-        DrawBorderScaled(device, x, 30, x + 218, 40, 1, 0xFFFFFFFF, i == 3); // white bar
+        BorderDraw(x, 30, x + 218, 40, 0xFFFFFFFF);//, i == 3); // white bar
         currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
-        DrawRectScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFF0000, i == 3); // red health
+        RectDraw(x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFF0000);//, i == 3); // red health
         currentHealthWidth = (healthWidth * health[i]) / 11400;
-        DrawRectScaled(device, x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFFFF00, i == 3); // yellow health
+        RectDraw(x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFFFF00);//, i == 3); // yellow health
 
-        DrawTextScaled(device, font, x + 20, 30 - 20, 16, charIDNames[ourCSSData[i].idIndex], 0xFFFFFFFF, i == 3); // char name
+        TextDraw(x + 20, 30 - 20, 16, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
         
         const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
-        DrawTextScaled(device, font, x + 20 + 50, 30 - 20, 16, moonString, 0xFFFFFFFF, i == 3); // char moon
+        TextDraw(x + 20 + 50, 30 - 20, 16, 0xFFFFFFFF, moonString);//, i == 3); // char moon
 
         std::string paletteString = std::to_string(palette[i] + 1);
-        DrawTextScaled(device, font, x + 20 + 50 + 50, 30 - 20, 16, paletteString.c_str(), 0xFFFFFFFF, i == 3); // char palette
+        TextDraw(x + 20 + 50 + 50, 30 - 20, 16, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette
 
     }
     
@@ -896,7 +902,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         updateCSSStuff(device);
     }
 
-    if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
+    //if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
+    if(true) {
         updateScaleParams(device);
         updateInGameStuff(device);
     }

@@ -50,7 +50,7 @@ AUTOGEN_HEADERS = $(wildcard lib/Version.*.hpp lib/Protocol.*.hpp)
 # Main program objects
 LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
-DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
+DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) 
 
 # Tool chain
 PREFIX = i686-w64-mingw32-
@@ -81,7 +81,7 @@ endif
 
 
 # Build flags
-DEFINES = -DWIN32_LEAN_AND_MEAN -DWINVER=0x501 -D_WIN32_WINNT=0x501 -D_M_IX86
+DEFINES = -DWIN32_LEAN_AND_MEAN -DWINVER=0x600 -D_WIN32_WINNT=0x600 -D_M_IX86
 DEFINES += -DNAMED_PIPE='"\\\\.\\pipe\\cccaster_pipe"' -DNAMED_PIPE2='"\\\\.\\pipe\\cccaster2_pipe"' -DPALETTES_FOLDER='"$(PALETTES_FOLDER)\\"' -DREADME='"$(README)"'
 DEFINES += -DMBAA_EXE='"$(MBAA_EXE)"' -DBINARY='"$(BINARY)"' -DFOLDER='"$(FOLDER)\\"' -DCHANGELOG='"$(CHANGELOG)"'
 DEFINES += -DHOOK_DLL='"$(FOLDER)\\$(DLL)"' -DLAUNCHER='"$(FOLDER)\\$(LAUNCHER)"' -DUPDATER='"$(UPDATER)"'
@@ -157,7 +157,7 @@ ifneq (,$(findstring release,$(MAKECMDGOALS)))
 endif
 	echo $(MAKECMDGOALS)
 
-$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res
+$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res targets/DllDirectXRC.res
 	rm -f $(filter-out $(BINARY),$(wildcard $(NAME)*.exe))
 	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
@@ -165,7 +165,7 @@ $(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res
 	$(CHMOD_X)
 	@echo
 
-$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) res/rollback.o targets/CallDraw.s | $(FOLDER)
+$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) targets/DllDirectXRC.res res/rollback.o targets/CallDraw.s | $(FOLDER)
 	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a $^ -shared $(LD_FLAGS) -ld3dx9
 	@echo
 	$(STRIP) $@
@@ -283,6 +283,9 @@ res/palettes.res: res/palettes.rc res/palettes.ico
 	$(WINDRES) -F pe-i386 res/palettes.rc -O coff -o $@
 	@echo
 
+targets/DllDirectXRC.res: targets/DllDirectXRC.rc targets/DBGFNT02.png
+	$(WINDRES) -F pe-i386 targets/DllDirectXRC.rc -O coff -o $@
+	@echo
 
 define make_version
 @scripts/make_version $(VERSION)$(SUFFIX) > lib/Version.local.hpp
@@ -321,7 +324,7 @@ clean-proto:
 	rm -f $(AUTOGEN_HEADERS)
 
 clean-res:
-	rm -f res/rollback.* res/icon.res
+	rm -f res/rollback.* res/icon.res targets/DllDirectXRC.res
 	rm -rf GRP
 
 clean-lib:
