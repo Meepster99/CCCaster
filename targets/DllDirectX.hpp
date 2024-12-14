@@ -776,17 +776,6 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4)
 
 // -----
 
-void LineDrawBlend(float x1, float y1, float x2, float y2, DWORD ARGB = 0x8042e5f4, bool side = false);
-
-void RectDrawBlend(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
-
-void BorderDrawBlend(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
-
-void BorderRectDrawBlend(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
-
-// -----
-
-
 Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format);
 
 Rect TextDraw(const Point& p, float size, DWORD ARGB, const char* format);

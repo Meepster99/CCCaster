@@ -213,6 +213,7 @@ extern "C" void addExtraTexturesCb() {
     TrialManager::trialBGTextures = loadTextureFromMemory(rawimg, imgsize, 0, 0, 0);
     TrialManager::trialInputTextures = loadTextureFromMemory(rawimg3, imgsize3, 0, 0, 0);
 }
+
 int Asm::write() const
 {
     backup.resize ( bytes.size() );
@@ -454,9 +455,10 @@ void _naked_checkRoundDone() {
     __asmStart R"(
         push ebx;
 
-        mov ebx, [0x00562A3C]; // timer check
-        cmp ebx, 0;
-        JLE FAIL;
+        // commenting this out disables the timer. which is technically a bugfix?
+        //mov ebx, [0x00562A3C]; // timer check
+        //cmp ebx, 0;
+        //JLE FAIL;
 
         mov ebx, [0x005551EC + (0 * 0xAFC)]; // P0 HEALTH
         add ebx, [0x005551EC + (2 * 0xAFC)]; // P2 HEALTH
@@ -467,7 +469,6 @@ void _naked_checkRoundDone() {
         add ebx, [0x005551EC + (3 * 0xAFC)]; // P3 HEALTH
         cmp ebx, 0;
         JLE FAIL;
-
 
         mov eax, 0; // OK        
         END:
@@ -481,6 +482,52 @@ void _naked_checkRoundDone() {
         JMP END;
     )" __asmEnd
 }
+
+void _naked_checkRoundDone2() {
+
+    // patch at 0x004735ed
+
+    __asmStart R"(
+        
+        // edi is already xored, just use that
+
+        mov [esp + 0x10], edi;
+        mov [esp + 0x14], edi;
+        mov [esp + 0x18], edi;
+        mov [esp + 0x1C], edi;
+
+        mov [esp + 0x20], edi;
+        mov [esp + 0x24], edi;
+        mov [esp + 0x28], edi;
+        mov [esp + 0x2C], edi;
+    
+    )" __asmEnd
+
+    emitJump(0x004735fd); 
+
+}
+
+void _naked_checkWhoWon() {
+
+    __asmStart R"(
+    
+        push ebx;
+        xor eax, eax;
+
+        mov ebx, [0x005551EC + (1 * 0xAFC)]; // P1 HEALTH
+        add ebx, [0x005551EC + (3 * 0xAFC)]; // P3 HEALTH
+        cmp ebx, 0;
+        JLE TEAM0WON;
+
+        mov eax, 1;
+
+        TEAM0WON:
+        
+        pop ebx;
+        ret;
+    )" __asmEnd
+
+}   
 
 void _naked_throwConnect() {
 
@@ -502,6 +549,5 @@ void _naked_throwConnect() {
     emitJump(0x004641be);
 
 }
-
 
 } // namespace AsmHacks

@@ -596,21 +596,20 @@ __attribute__((naked, noinline)) void _naked_collisionConnect();
 
 __attribute__((naked, noinline)) void _naked_checkRoundDone();
 
+__attribute__((naked, noinline)) void _naked_checkRoundDone2();
+
+__attribute__((naked, noinline)) void _naked_checkWhoWon();
+
 static const AsmList initPatch2v2 =
 {
     
-    // todo, makefile, windres (would let me load resources like i can in msvc?)
-    // switch all graphics over to the training mode format,,i sorta wish i could,, ugh
-    // i didnt write that with the knowledge i would use it anywhere else
-    // todo circuit break
     // todo, dont reface when comboing
     // todo, camera, max zoom maybe?
     // fn1/fn2 change what char you are focusing?
     // or i can have it lock on to a combo, prio if you are hitting 
-    // disable effects on certain hits(if both are on fire)
+    
     // if blocking and a teamate hits you,, proxy block occurs
-    // make it so p1/p2 can pick the same color
-    // or no one can pick same color
+    // draw sion bullets/roa electric thingy for p2/p3
 
     // not getting jump cancel back under certain circumstances if teamate is comboing(could this relate to the weird hud code that deals with that? remember when disabling hud fucked up that?)
     // if p2 dies, first? and,,, then the round ends? it only reads p2 and p1 for round determine
@@ -640,13 +639,23 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
     
-    PATCHJUMP(0x0047463c, _naked_checkRoundDone),
+    // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?
+
+    PATCHJUMP(0x0047463c, _naked_checkRoundDone), // prevents game from ending until a team dies
+
+    PATCHJUMP(0x004735ed, _naked_checkRoundDone2), // possibly unneeded stack clear patch
+
+    PATCHCALL(0x00474759, _naked_checkWhoWon),
+
+    { ( void *) (0x00425253), INLINE_NOP_FIVE_TIMES }, // stop showing timer. (i ate it)
+
+    { ( void *) (0x004736fc + 2), { 0x10 }}, // check for each player in this loop
 
     { ( void *) (0x0048c7d0), { 0xC3 }}, // ret early, allow for for of the same palette 
 
     //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
 
-    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
+    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know.
 
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
     { ( void *) (0x00449069 + 2), { 0x04 }}

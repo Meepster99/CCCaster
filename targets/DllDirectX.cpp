@@ -1079,124 +1079,44 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 // -----
 
-void LineDrawBlend(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
+float getCharWidth(const char c, const float w) {
+	// values taken from the switch in below TextDraw func
 
+	float res = w;
 
-	MeltyVert v1 = { x1, y1, ARGB };
-	MeltyVert v2 = { x2, y2, ARGB };
-
-	scaleVertex(v1);
-	scaleVertex(v2);
-
-	//meltyVertData
-	meltyLineData.add(v1, v2);
-
-	return;
-
-	/*
-	x1 /= 480.0f;
-	x2 /= 480.0f;
-	y1 /= 480.0f;
-	y2 /= 480.0f;
-
-	// this is going to need to be changed at different resolutions
-	float lineWidth = 1.0f / vHeight;
-
-	// i am,,, i bit confused on how exactly to do this.
-	// current vibes say,,, two very thin triangles.
-
-	// i would like,,, diag lines please too.
-	// there are,,, angle issues with that tho
-
-	// feel free to play around with https://www.desmos.com/calculator/ppviwesili
-	// side chooses which "side" of the input line is actually drawn
-	// you will only really care about this,,, if you really care abt it?
-
-	Point p1 = { x1, y1 };
-	Point p2 = { x2, y2 };
-
-	float mx = p2.x - p1.x;
-	float my = p2.y - p1.y;
-	float m = my / mx;
-
-	float a = atan2(my, mx) + (3.1415926535f / 2.0f);
-
-	float m2 = tan(a);
-
-	Point p3 = { x1, y1 };
-	Point p4 = { x2, y2 };
-
-	Point offset = { lineWidth * cos(a), lineWidth * sin(a) };
-
-	if (side) {
-		p3.x += offset.x;
-		p3.y += offset.y;
-		p4.x += offset.x;
-		p4.y += offset.y;
-	}
-	else {
-		p3.x -= offset.x;
-		p3.y -= offset.y;
-		p4.x -= offset.x;
-		p4.y -= offset.y;
+	switch(c) {
+		case ARROW_1:
+		case ARROW_2:
+		case ARROW_3:
+		case ARROW_4:
+		case ARROW_6:
+		case ARROW_7:
+		case ARROW_8:
+		case ARROW_9:
+		case BUTTON_A:
+		case BUTTON_B:
+		case BUTTON_C:
+		case BUTTON_D:
+		case BUTTON_A_GRAY:
+		case BUTTON_B_GRAY:
+		case BUTTON_C_GRAY:
+		case BUTTON_D_GRAY:
+		case ARCICON:
+		case MECHICON:
+		case HIMEICON:
+		case WARAICON:
+		case ARROW_0:
+		case ARROW_5:
+		case JOYSTICK:
+		case WHISK:
+			break;
+		default: 
+			res *= 0.75;
+			break;
 	}
 
-	p1.y = 1 - p1.y;
-	p2.y = 1 - p2.y;
-	p3.y = 1 - p3.y;
-	p4.y = 1 - p4.y;
-
-	PosColVert v1 = { D3DVECTOR((p1.x * 1.5f) - 1.0f, (p1.y * 2.0f) - 1.0f, 0.5f), ARGB };
-	PosColVert v2 = { D3DVECTOR((p2.x * 1.5f) - 1.0f, (p2.y * 2.0f) - 1.0f, 0.5f), ARGB };
-	PosColVert v3 = { D3DVECTOR((p3.x * 1.5f) - 1.0f, (p3.y * 2.0f) - 1.0f, 0.5f), ARGB };
-	PosColVert v4 = { D3DVECTOR((p4.x * 1.5f) - 1.0f, (p4.y * 2.0f) - 1.0f, 0.5f), ARGB };
-
-	scaleVertex(v1.position);
-	scaleVertex(v2.position);
-	scaleVertex(v3.position);
-	scaleVertex(v4.position);
-
-	posColVertData.add(v1, v2, v3);
-	posColVertData.add(v2, v3, v4);
-	*/
-
+	return res;
 }
-
-void RectDrawBlend(float x, float y, float w, float h, DWORD ARGB) {
-
-	MeltyVert v1 = { x,     y,     ARGB };
-	MeltyVert v2 = { x + w, y,     ARGB };
-	MeltyVert v3 = { x,     y + h, ARGB };
-	MeltyVert v4 = { x + w, y + h, ARGB };
-
-	scaleVertex(v1);
-	scaleVertex(v2);
-	scaleVertex(v3);
-	scaleVertex(v4);
-
-	meltyVertData.add(v1, v2, v3);
-	meltyVertData.add(v2, v3, v4);
-}
-
-void BorderDrawBlend(float x, float y, float w, float h, DWORD ARGB) {
-
-	float lineWidth = 480.0f * (1.0f / vHeight);
-
-	h -= lineWidth;
-	w -= lineWidth;
-
-	LineDrawBlend(x + lineWidth, y, x + w, y, ARGB, true);
-	LineDrawBlend(x, y, x, y + h, ARGB, false);
-	LineDrawBlend(x + w, y, x + w, y + h, ARGB, false);
-	LineDrawBlend(x, y + h, x + w + lineWidth, y + h, ARGB, true);
-}
-
-void BorderRectDrawBlend(float x, float y, float w, float h, DWORD ARGB) {
-	RectDrawBlend(x, y, w, h, ARGB);
-	BorderDrawBlend(x, y, w, h, ARGB | 0xFF000000);
-}
-
-// -----
 
 Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 	// i do hope that this allocing does not slow things down. i tried saving the va_args for when the actual print func was called, but it would not work
@@ -1206,9 +1126,20 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 	}
 
 	if(shouldReverseDraws) {
-		float tempCharWidth =  (fontRatio * size * 2.0f) * 1.0f * 0.75; // this is NOT accurate. .75 comes from default width
+		// this is NOT accurate. .75 comes from default width
+		// i should probs,, either make a second switch statement or have a constexpr array
+		// i should consider having periods be thinner
+
+		float tempCharWidth = (fontRatio * size * 2.0f);
+		float textWidth = 0.0f;
+		const char* c = format;
+		while(*c != '\0') {
+			textWidth += getCharWidth(*c, tempCharWidth);
+			c++;
+		}
+		
 		x = 640.0f - x;
-		x -= (tempCharWidth * strlen(format));
+		x -= textWidth;
 	}
 
 	Rect res(Point(x, y), Point(x, y + size));

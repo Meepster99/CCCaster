@@ -875,7 +875,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         } else {
             currentMeterWidth = ((float)circuitBreakTimer[i]) / 600.0f;
             meterCol = 0xFF800080;
-            meterString = "CIRCUIT BREAK";
+            meterString = "BREAK";
         }
 
        
