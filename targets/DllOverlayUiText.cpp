@@ -613,7 +613,7 @@ typedef struct OurCSSData { // variables i want to keep track of
 
 OurCSSData ourCSSData[4];
 constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
-constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satsuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
+constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
 
 void updateCSSStuff(IDirect3DDevice9 *device) {
 
@@ -795,6 +795,8 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
     DWORD palette[4];
 
+    DWORD circuitBreakTimer[4]; 
+
     for(int i=0; i<4; i++) {
 
         // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
@@ -811,7 +813,15 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         palette[i] =      *(BYTE*)(0x0055513A + (i * 0xAFC));
 
-        if(health[i] == 0) { // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
+        // im not confident with any of this
+        if(*(WORD*)(0x00555234 + (i * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
+            circuitBreakTimer[i] = 0;
+        } else {
+            circuitBreakTimer[i] = *(WORD*)(0x00555230 + (i * 0xAFC));
+        }
+
+        // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
+        if(health[i] == 0) { // is this/should this be a -1 or 0 thing,,, 
             *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
         }
     }
@@ -830,47 +840,50 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         std::string meterString = "";
 
-        switch(circuitState[i]) {
-            case 0:
-                if(moon[i] == 2) { // half
-                    currentMeterWidth = ((float)meter[i]) / 20000.0f;
-                    meterCol = (meter[i] >= 15000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-                } else { // full/crescent
-                    currentMeterWidth = ((float)meter[i]) / 30000.0f;
-                    meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-                }
+        if(circuitBreakTimer[i] == 0) {
+            switch(circuitState[i]) {
+                case 0:
+                    if(moon[i] == 2) { // half
+                        currentMeterWidth = ((float)meter[i]) / 20000.0f;
+                        meterCol = (meter[i] >= 15000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                    } else { // full/crescent
+                        currentMeterWidth = ((float)meter[i]) / 30000.0f;
+                        meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                    }
 
-                meterString = std::to_string(meter[i] / 100) + "." + std::to_string((meter[i] / 10) % 10) + "%";
+                    meterString = std::to_string(meter[i] / 100) + "." + std::to_string((meter[i] / 10) % 10) + "%";
 
-                break;
-            case 1:
-                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
-                meterCol = 0xFF0000FF;
-                meterString = "HEAT";
-                break;
-            case 2:
-                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
-                meterCol = 0xFFFFA500;
-                meterString = "MAX";
-                break;
-            case 3:
-                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
-                meterCol = 0xFFDDDDDD;
-                meterString = "BLOOD HEAT";
-                break;
-            case 4: // im just guessing this is break. i hope.
-            default: // maybe ill just make break the default case lol
-                currentMeterWidth = ((float)heatTime[i]) / 600.0f;
-                meterCol = 0xFF800080;
-                meterString = "CIRCUIT BREAK";
-                break;
+                    break;
+                case 1:
+                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    meterCol = 0xFF0000FF;
+                    meterString = "HEAT";
+                    break;
+                case 2:
+                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    meterCol = 0xFFFFA500;
+                    meterString = "MAX";
+                    break;
+                case 3:
+                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    meterCol = 0xFFDDDDDD;
+                    meterString = "BLOOD HEAT";
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            currentMeterWidth = ((float)circuitBreakTimer[i]) / 600.0f;
+            meterCol = 0xFF800080;
+            meterString = "CIRCUIT BREAK";
         }
 
+       
         const float meterSize = 15.0f;
 
-        BorderDraw(x, 428, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
         RectDraw(x, 428, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
+        BorderDraw(x, 428, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
         TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
 
         // draw health bars. SOME OF THESE CALLS MIGHT HAVE BACKFACE ISSUES. but look at me go, not caring. someones going to mention it. ugh
@@ -930,8 +943,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         updateCSSStuff(device);
     }
 
-    //if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
-    if(true) {
+    if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
+    //if(true) {
         updateScaleParams(device);
         updateInGameStuff(device);
     }

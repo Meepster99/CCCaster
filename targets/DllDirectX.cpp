@@ -1032,7 +1032,7 @@ void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 	scaleVertex(v3.position);
 	scaleVertex(v4.position);
 
-	log("what %.4f %.4f %.4f", v1.position.x, v1.position.y, v1.position.z);
+	//log("what %.4f %.4f %.4f", v1.position.x, v1.position.y, v1.position.z);
 
 	posColVertData.add(v1, v2, v3);
 	posColVertData.add(v2, v3, v4);
