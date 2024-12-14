@@ -849,9 +849,9 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
                 break;
         }
 
-        BorderDraw(x, 428, x + meterWidth, 438, 0xFFFFFFFF);//, i == 3);
+        BorderDraw(x, 428, meterWidth, 10, 0xFFFFFFFF);//, i == 3);
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
-        RectDraw(x, 428, x + (meterWidth * currentMeterWidth), 438, meterCol);//, i == 3);
+        RectDraw(x, 428, (meterWidth * currentMeterWidth), 10, meterCol);//, i == 3);
         TextDraw(x + 1, 428 + 1, 16, 0xFF000000, meterString.c_str());//, i == 3); // meter string
 
         continue;
