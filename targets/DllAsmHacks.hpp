@@ -642,6 +642,8 @@ static const AsmList initPatch2v2 =
     
     PATCHJUMP(0x0047463c, _naked_checkRoundDone),
 
+    { ( void *) (0x0048c7d0), { 0xC3 }}, // ret early, allow for for of the same palette 
+
     //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
 
     { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know  
