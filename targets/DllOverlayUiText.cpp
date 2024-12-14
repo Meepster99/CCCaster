@@ -394,6 +394,8 @@ D3DXVECTOR2 scalePosRenderFactor = { 0.0f, 0.0f };
 
 void updateScaleParams(IDirect3DDevice9 *device) {
 
+    return;
+
     // this should only be called on resize.
 
     float vWidth = 640;
@@ -615,6 +617,8 @@ constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Koha
 
 void updateCSSStuff(IDirect3DDevice9 *device) {
 
+    shouldReverseDraws = false;
+
     // ugh. this might not be the best place for this
 
     typedef struct CSSStructCopy {
@@ -710,7 +714,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
 
             std::string tempCharString = "P" + std::to_string(playerIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
-            DrawTextScaledWithBG(device, font, x, y, 16, tempCharString.c_str(), 0xFFFFFFFF, bgCol, mirror);
+            RectDraw(x, y, 64, 8, bgCol);
+            TextDraw(x, y, 8, 0xFFFFFFFF, tempCharString.c_str());
             y += 8;      
         },
 
@@ -721,7 +726,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
             const char* tempMoonString = players[playerIndex]->moon == 0 ? "Crescent" : (players[playerIndex]->moon == 1 ? "Full" : "Half"); 
 
-            DrawTextScaledWithBG(device, font, x, y, 16, tempMoonString, 0xFFFFFFFF, bgCol, mirror);
+            RectDraw(x, y, 64, 8, bgCol);
+            TextDraw(x, y, 8, 0xFFFFFFFF, tempMoonString);
             y += 8;      
         },
 
@@ -731,7 +737,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
             std::string tempPaletteString = "Palette: " + std::to_string(players[playerIndex]->palette + 1);
-            DrawTextScaledWithBG(device, font, x, y, 16, tempPaletteString.c_str(), 0xFFFFFFFF, bgCol, mirror);
+            RectDraw(x, y, 64, 8, bgCol);
+            TextDraw(x, y, 8, 0xFFFFFFFF, tempPaletteString.c_str());
             y += 8;      
         },
 
@@ -740,7 +747,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             bool mirror = playerIndex & 1;
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
-            DrawTextScaledWithBG(device, font, x, y, 16, "Ready(notworking)", 0xFFFFFFFF, bgCol, mirror);
+            RectDraw(x, y, 64, 8, bgCol);
+            TextDraw(x, y, 8, 0xFFFFFFFF, "Ready(notworking)");
             y += 8;      
         }
 
@@ -750,6 +758,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
     // draw the shit 
     for(int i=2; i<4; i++) {
+
+        shouldReverseDraws = (i == 3);
+
         float x = 50.0f;
         float y = 100.0f;
 
@@ -758,13 +769,17 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         }
     }
 
-    TextDraw(500, 0 + (0 * 8), 16, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
-    TextDraw(500, 0 + (1 * 8), 16, 0xFFFFFFFF, "@Meepster99");
-    TextDraw(500, 0 + (2 * 8), 16, 0xFFFFFFFF, ":3");
+    shouldReverseDraws = true;
+    TextDraw(10, 0 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
+    TextDraw(10, 0 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
+    TextDraw(10, 0 + (2 * 8), 8, 0xFFFFFFFF, ":3");
+    shouldReverseDraws = false;
 
 }
 
 void updateInGameStuff(IDirect3DDevice9 *device) {
+
+    shouldReverseDraws = false;
 
     // draw meter and health info for p2.
     // and any other stuff like that
@@ -803,6 +818,8 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
     float x;
     for(int i=2; i<4; i++) {
+
+        shouldReverseDraws = (i == 3);
 
         // draw meter bars
         x = 30;
@@ -849,30 +866,41 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
                 break;
         }
 
-        BorderDraw(x, 428, meterWidth, 10, 0xFFFFFFFF);//, i == 3);
+        const float meterSize = 15.0f;
+
+        BorderDraw(x, 428, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
-        RectDraw(x, 428, (meterWidth * currentMeterWidth), 10, meterCol);//, i == 3);
-        TextDraw(x + 1, 428 + 1, 16, 0xFF000000, meterString.c_str());//, i == 3); // meter string
+        RectDraw(x, 428, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
+        TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
 
-        continue;
-
-        // draw health bars
+        // draw health bars. SOME OF THESE CALLS MIGHT HAVE BACKFACE ISSUES. but look at me go, not caring. someones going to mention it. ugh
         x = 58;
-        const int healthWidth = 218;
-        int currentHealthWidth;
-        BorderDraw(x, 30, x + 218, 40, 0xFFFFFFFF);//, i == 3); // white bar
-        currentHealthWidth = (healthWidth * redHealth[i]) / 11400;
-        RectDraw(x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFF0000);//, i == 3); // red health
-        currentHealthWidth = (healthWidth * health[i]) / 11400;
-        RectDraw(x + healthWidth - currentHealthWidth, 30, x + healthWidth, 40, 0xFFFFFF00);//, i == 3); // yellow health
+        const int maxHealthWidth = 218;
+        float currentHealthWidth;
+        
+        Rect r;
+        r.y1 = 30;
+        r.y2 = 40;
+        r.x2 = x + maxHealthWidth;
 
-        TextDraw(x + 20, 30 - 20, 16, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
+        currentHealthWidth = ((float)redHealth[i]) / 11400.0;
+        r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
+        RectDraw(r, 0xFFFF0000);//, i == 3); // red health
+
+        currentHealthWidth = ((float)health[i]) / 11400.0;
+        r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
+        RectDraw(r, 0xFFFFFF00);//, i == 3); // yellow health
+
+        r.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDraw(r, 0xFFFFFFFF);//, i == 3); // white bar
+
+        TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
         
         const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
-        TextDraw(x + 20 + 50, 30 - 20, 16, 0xFFFFFFFF, moonString);//, i == 3); // char moon
+        TextDraw(x + 20 + 50, 30 - 20, 8, 0xFFFFFFFF, moonString);//, i == 3); // char moon
 
         std::string paletteString = std::to_string(palette[i] + 1);
-        TextDraw(x + 20 + 50 + 50, 30 - 20, 16, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette
+        TextDraw(x + 20 + 50 + 50, 30 - 20, 8, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette
 
     }
     

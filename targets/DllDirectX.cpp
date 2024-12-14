@@ -692,6 +692,8 @@ bool kDown = false;
 bool lDown = false;
 bool mDown = false;
 
+bool shouldReverseDraws = false;
+
 // -----
 
 void __stdcall backupRenderState() {
@@ -1000,6 +1002,11 @@ void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
 
 void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
 	x /= 480.0f;
 	w /= 480.0f;
 	y /= 480.0f;
@@ -1007,15 +1014,25 @@ void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	y = 1 - y;
 
-	PosColVert v1 = { ((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f, ARGB };
-	PosColVert v2 = { ((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f, ARGB };
-	PosColVert v3 = { ((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f, ARGB };
-	PosColVert v4 = { ((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f, ARGB };
+	// this code is not working. the above line draw code which does 
+	// this code worked on msvc
+	// the above code from the line func, DOES work. { D3DVECTOR((p4.x * 1.5f) - 1.0f, (p4.y * 2.0f) - 1.0f, 0.5f), ARGB };
+	// is it bc im using brace syntax and its,,, what the fuck
+	// c++ is a horrid language
+	// gcc conforms more to the spec, but msvc does what i want(when it assumes correctly)
+	// that didnt fix it. i dont know what it is
+	// i swapped vert order around. maybe i made an error bc vscode is weird and moves lines sometimes, or maybe this compiler is out of line
+	PosColVert v1 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB };
+	PosColVert v2 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB };
+	PosColVert v3 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB };
+	PosColVert v4 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB };
 
 	scaleVertex(v1.position);
 	scaleVertex(v2.position);
 	scaleVertex(v3.position);
 	scaleVertex(v4.position);
+
+	log("what %.4f %.4f %.4f", v1.position.x, v1.position.y, v1.position.z);
 
 	posColVertData.add(v1, v2, v3);
 	posColVertData.add(v2, v3, v4);
@@ -1026,6 +1043,11 @@ void RectDraw(const Rect& rect, DWORD ARGB) {
 }
 
 void BorderDraw(float x, float y, float w, float h, DWORD ARGB) {
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
 
 	//x /= 480.0f;
 	//w /= 480.0f;
@@ -1183,6 +1205,12 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 		return Rect();
 	}
 
+	if(shouldReverseDraws) {
+		float tempCharWidth =  (fontRatio * size * 2.0f) * 1.0f * 0.75; // this is NOT accurate. .75 comes from default width
+		x = 640.0f - x;
+		x -= (tempCharWidth * strlen(format));
+	}
+
 	Rect res(Point(x, y), Point(x, y + size));
 
 	size *= 2.0f;
@@ -1252,44 +1280,6 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 		case '\t': // please dont use tabs. please
 			str++;
 			continue;
-		case '{': // blue
-			TempARGB = 0xFF8F8FFF;
-			str++;
-			continue;
-		case '~': // red
-			TempARGB = 0xFFFF8F8F;
-			str++;
-			continue;
-		case '@': // green 
-			TempARGB = 0xFF8FFF8F;
-			str++;
-			continue;
-		case '`': // yellow
-			TempARGB = 0xFFFFFF8F;
-			str++;
-			continue;
-		case '^': // purple
-			TempARGB = 0xFFFF8FFF;
-			str++;
-			continue;
-		case '*': // black
-			TempARGB = 0xFF8F8F8F;
-			str++;
-			continue;
-		case '$': // gray
-			TempARGB = 0xFF888888;
-			str++;
-			continue;
-		case '}': // reset 
-			TempARGB = ARGB;
-			str++;
-			continue;
-		case '\\': // in case you want to print one of the above chars, you can escape them
-			str++;
-			if (c == '\0') {
-				return res;
-			}
-			break;
 		case ARROW_1:
 		case ARROW_2:
 		case ARROW_3:
