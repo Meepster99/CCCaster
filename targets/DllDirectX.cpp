@@ -12,6 +12,8 @@ todo, a lot of this code is either legacy, deprecated, only needed for training 
 really need to go clean this up
 switch to only one vert format
 
+also, evictresources needs to be hooked too!!
+
 */
 
 void ___log(const char* msg)

@@ -722,7 +722,14 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
             players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
 
-            std::string tempCharString = "P" + std::to_string(playerIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
+            int displayIndex = playerIndex;
+            if(displayIndex == 1) {
+                displayIndex = 2;
+            } else if(displayIndex == 2) {
+                displayIndex = 1;
+            }
+
+            std::string tempCharString = "P" + std::to_string(displayIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
             RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
             TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempCharString.c_str());
             y += cssMenuFontSize;      
@@ -982,8 +989,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         updateCSSStuff(device);
     }
 
-    //if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
-    if(true && DllOverlayUi::isDisabled()) {
+    if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+    //if(true && DllOverlayUi::isDisabled()) {
         updateScaleParams(device);
         updateInGameStuff(device);
     }
@@ -1139,8 +1146,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         const Point textPosData[5] = {
             Point(640/3, 480/4),
             Point(0,     0), // P0
-            Point(0, 480/2), // P1
             Point(0,     0), // P2
+            Point(0, 480/2), // P1
             Point(0, 480/2)  // P3
         };
         const float fontSize = 12.0f;
@@ -1149,7 +1156,11 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
         for(int i=0; i<text.size(); i++) { 
 
-            shouldReverseDraws = (i > 2);
+            shouldReverseDraws = false;
+
+            if(i == 2 || i == 4) {
+                shouldReverseDraws = true;
+            }
 
             Point textPoint = textPosData[i];
 

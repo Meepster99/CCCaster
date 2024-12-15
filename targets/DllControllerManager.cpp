@@ -930,7 +930,7 @@ void DllControllerManager::handleMappingOverlay()
         if ( _playerControllers[i]->isKeyboard() && _playerControllers[i]->isMapping() && _overlayPositions[i] >= 1 && _overlayPositions[i] <= 4 )
         {
             // this call/above conditional may need to be updated. im not sure
-            DllOverlayUi::updateSelector ( i, headerHeight + _overlayPositions[i], options[_overlayPositions[i]] );
+            DllOverlayUi::updateSelector ( i, _overlayPositions[i], options[_overlayPositions[i]] );
             continue;
         }
 
