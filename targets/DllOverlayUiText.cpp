@@ -13,6 +13,8 @@
 #include <fstream>
 #include <vector>
 #include <iterator>
+#include <regex>
+#include <vector>
 
 using namespace std;
 using namespace DllOverlayUi;
@@ -76,6 +78,8 @@ static ID3DXFont *font = 0;
 static IDirect3DVertexBuffer9 *background = 0;
 
 static array<string, 4> selectorLine;
+
+static array<int, 4> selectorIndex = {0, 0, 0, 0};
 
 namespace DllOverlayUi
 {
@@ -277,6 +281,8 @@ void updateSelector ( uint8_t index, int position, const string& line )
 {
     if ( index >= shouldDrawSelector.size() )
         return;
+
+    selectorIndex[index] = position;// _overlayPositions[index];
 
     selectorLine[index] = line;
     if ( position == 0 || line.empty() )
@@ -704,6 +710,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         ourCSSData[i].prevInput = ourCSSData[i].input;
     }
 
+    constexpr float cssMenuFontSize = 12.0f;
+    constexpr float cssMenuSelectorWidth = 128.0f;
+
     std::function<void(int selfIndex, int playerIndex, float& x, float& y)> CSSFuncs[] = { // i could pass in more params, but tbh ill just let each function do its own vibe
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -714,9 +723,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
 
             std::string tempCharString = "P" + std::to_string(playerIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
-            RectDraw(x, y, 64, 8, bgCol);
-            TextDraw(x, y, 8, 0xFFFFFFFF, tempCharString.c_str());
-            y += 8;      
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempCharString.c_str());
+            y += cssMenuFontSize;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -726,9 +735,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
             const char* tempMoonString = players[playerIndex]->moon == 0 ? "Crescent" : (players[playerIndex]->moon == 1 ? "Full" : "Half"); 
 
-            RectDraw(x, y, 64, 8, bgCol);
-            TextDraw(x, y, 8, 0xFFFFFFFF, tempMoonString);
-            y += 8;      
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempMoonString);
+            y += cssMenuFontSize;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -737,9 +746,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
             std::string tempPaletteString = "Palette: " + std::to_string(players[playerIndex]->palette + 1);
-            RectDraw(x, y, 64, 8, bgCol);
-            TextDraw(x, y, 8, 0xFFFFFFFF, tempPaletteString.c_str());
-            y += 8;      
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempPaletteString.c_str());
+            y += cssMenuFontSize;      
         },
 
         [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
@@ -747,9 +756,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             bool mirror = playerIndex & 1;
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
-            RectDraw(x, y, 64, 8, bgCol);
-            TextDraw(x, y, 8, 0xFFFFFFFF, "Ready(notworking)");
-            y += 8;      
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, "Ready(notworking)");
+            y += cssMenuFontSize;      
         }
 
     };
@@ -761,7 +770,7 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
         shouldReverseDraws = (i == 3);
 
-        float x = 50.0f;
+        float x = 20.0f;
         float y = 100.0f;
 
         for(size_t selfIndex = 0; selfIndex < sizeof(CSSFuncs) / sizeof(CSSFuncs[0]); selfIndex++) {
@@ -919,6 +928,37 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     
 }
 
+std::string strip(const std::string& s) {
+	std::string res = s;
+	std::regex trim_re("^\\s+|\\s+$");
+	res = std::regex_replace(res, trim_re, "");
+	return res;
+}
+
+std::vector<std::string> stripMenuString(std::string s) {
+
+    std::vector<std::string> res;
+
+    int i=0; 
+    while(true) {
+                
+        int temp = s.find('\n', i);
+
+        std::string tempString = strip(s.substr(i, temp - i));
+        if(tempString.size() != 0) {
+            res.push_back(tempString);
+        }
+        
+        if(temp == std::string::npos) {
+            break;
+        }
+        i = temp + 1;
+        
+    }
+
+    return res;
+}
+
 void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
 {
 #ifndef RELEASE
@@ -937,14 +977,13 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
 #endif // RELEASE
 
-    
-    if(*((uint8_t*)0x0054EEE8) == 0x14) { // check if in css
+    if(*((uint8_t*)0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
         updateScaleParams(device);
         updateCSSStuff(device);
     }
 
-    if(*((uint8_t*)0x0054EEE8) == 0x01) { // check if ingame
-    //if(true) {
+    //if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+    if(true && DllOverlayUi::isDisabled()) {
         updateScaleParams(device);
         updateInGameStuff(device);
     }
@@ -1036,6 +1075,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     const float scaleX = ( isShowingMessage() ? messageWidth / viewport.Width : 1.0f );
     const float scaleY = float ( height + 2 * OVERLAY_TEXT_BORDER ) / viewport.Height;
 
+    // i tired to comment out this code, only to have my draw calls not draw?
     D3DXMATRIX translate, scale;
     D3DXMatrixScaling ( &scale, scaleX, scaleY, 1.0f );
     D3DXMatrixTranslation ( &translate, 0.0f, 1.0f - scaleY, 0.0f );
@@ -1044,14 +1084,16 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     device->SetTransform ( D3DTS_VIEW, & ( scale = scale * translate ) );
     device->SetStreamSource ( 0, background, 0, sizeof ( Vertex ) );
     device->SetFVF ( Vertex::Format );
-    device->DrawPrimitive ( D3DPT_TRIANGLESTRIP, 0, 2 );
+    //device->DrawPrimitive ( D3DPT_TRIANGLESTRIP, 0, 2 );
 
     // Only draw text if fully enabled or showing a message
-    if ( state != State::Enabled )
-        return;
+    /*if ( state != State::Enabled )
+        return;*/
 
     if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() && text[3].empty() && text[4].empty() ) )
     {
+
+        /*
         const int centerX = viewport.Width / 2;
 
         RECT rect;
@@ -1089,6 +1131,57 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
                 rect.right += (viewport.Width / 5);
 
             }
+        } */
+
+       
+        // look. i know this sucks. im super tired. ill fix it tomorow
+
+        const Point textPosData[5] = {
+            Point(640/3, 480/4),
+            Point(0,     0), // P0
+            Point(0, 480/2), // P1
+            Point(0,     0), // P2
+            Point(0, 480/2)  // P3
+        };
+        const float fontSize = 12.0f;
+
+        RectDraw(0, 0, 640, 480, 0x80000000); 
+
+        for(int i=0; i<text.size(); i++) { 
+
+            shouldReverseDraws = (i > 2);
+
+            Point textPoint = textPosData[i];
+
+            std::vector<std::string> strings = stripMenuString(text[i]);
+
+            Rect maxRect;
+
+            for(int j=0; j<strings.size(); j++) {
+
+                DWORD textCol = 0xFFFFFFFF;
+                if(j == 0) {
+                    textCol = 0xFF42e5f4;
+                }
+
+                if(i > 0 && shouldDrawSelector[i - 1] && j == selectorIndex[i - 1]) {
+                    RectDraw(textPoint.x, textPoint.y + (2 * fontSize), 164, fontSize, 0xE0FF0000);
+                }
+
+                Rect tempRect = TextDraw(textPoint, fontSize, textCol, strings[j].c_str());
+                textPoint.y += fontSize;
+
+                if(j == 0) {
+                    maxRect = tempRect;
+                } else {
+                    maxRect.x1 = MIN(maxRect.x1, tempRect.x1);
+                    maxRect.y1 = MIN(maxRect.y1, tempRect.y1);
+                    maxRect.x2 = MAX(maxRect.x2, tempRect.x2);
+                    maxRect.y2 = MAX(maxRect.y2, tempRect.y2);
+                }
+            }
+
+            //RectDraw(maxRect, 0xC0000000);
         }
     }
 }

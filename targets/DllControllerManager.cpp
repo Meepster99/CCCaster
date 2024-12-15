@@ -5,6 +5,7 @@
 #include "DllTrialManager.hpp"
 #include "KeyboardState.hpp"
 #include "CharacterSelect.hpp"
+#include "DllDirectX.hpp"
 
 #include <windows.h>
 
@@ -212,7 +213,7 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
             // Cancel all mapping if we're disabling the overlay
             for(int i=0; i<_playerControllers.size(); i++) {
                 /*if(_playerControllers[i]) {
-                    _playerControllers[i]->cancelMapping();
+                    _playerControllers[i]->cancelMapping(); // this,, this is potientially bad. should i have commented this out?
                 }*/
                 _overlayPositions[i] = 0;
             }
@@ -847,7 +848,8 @@ void DllControllerManager::handleMappingOverlay()
         if ( ! _playerControllers[i] )
         {
 
-            constexpr std::array<const char*, 4> playerTextSelector = { "Press Down on P1 controller", "Press Left on P2 controller", "Press Right on P3 controller", "Press Up on P4 controller" };
+            //constexpr std::array<const char*, 4> playerTextSelector = { "Press Down on P1 controller", "Press Left on P2 controller", "Press Right on P3 controller", "Press Up on P4 controller" };
+            constexpr std::array<const char*, 4> playerTextSelector = { "P1: Press Down", "P3: Press Left", "P2: Press Right", "P4: Press Up" };
             playerText = std::string(playerTextSelector[i]);
             DllOverlayUi::updateSelector ( i );
             continue;
@@ -863,7 +865,7 @@ void DllControllerManager::handleMappingOverlay()
             headerHeight = max ( 3u, controllersHeight );
 
             // Instructions for mapping keyboard controls
-            playerText = "Press Enter to set a direction key\n";
+            playerText = "Press Enter to set direction\n";
             playerText += format ( "Press %s to delete a key\n", ( i == 0 ? "Left" : "Left" ) );
             playerText += string ( headerHeight - 3, '\n' );
 
@@ -879,8 +881,8 @@ void DllControllerManager::handleMappingOverlay()
             headerHeight = max ( 2u, controllersHeight );
 
             // Instructions for mapping joystick buttons
-            playerText = format ( "Press %s to delete a key\n", ( i == 0 ? "Left" : "Left" ) );
-            playerText += string ( headerHeight - 2, '\n' );
+            playerText = format ( "Press %s to delete a key\n:3\n", ( i == 0 ? "Left" : "Left" ) );
+            playerText += string ( headerHeight - 3, '\n' );
         }
 
         // Add buttons to mapping options
@@ -1016,26 +1018,27 @@ void DllControllerManager::handleMappingOverlay()
         if ( _overlayPositions[i] == 0 )
         {
             playerText = string ( "Press Down to set keys\n" ); 
-            playerText += string ( "Press Up to change slot\n" ); 
+            playerText += string ( "Press Up to reset slot\n" ); 
             playerText += string ( controllersHeight - 2, '\n' ) + _playerControllers[i]->getName();
-            DllOverlayUi::updateSelector ( i, controllersHeight, _playerControllers[i]->getName() );
+            //DllOverlayUi::updateSelector ( i, controllersHeight, _playerControllers[i]->getName() );
+            DllOverlayUi::updateSelector ( i, -1, _playerControllers[i]->getName() );
         }
         else
         {
             
-            DllOverlayUi::updateSelector ( i, headerHeight + _overlayPositions[i], options[_overlayPositions[i]] );
+            DllOverlayUi::updateSelector ( i, _overlayPositions[i], options[_overlayPositions[i]] );
         }
     }
 
     for(int i=0; i<4; i++) {
         std::string temp = "";
         //temp += "O:" + std::to_string(_overlayPositions[i]) + "\n";
-        temp += "\n";
+        /*temp += "\n";
         if(_playerControllers[i] == NULL) {
             temp += ":3\n";
         } else {
             temp += std::to_string(_playerControllers[i]->isMapping()) + "\n";
-        }
+        }*/
         
         text[i+1] = temp + text[i+1];
     }

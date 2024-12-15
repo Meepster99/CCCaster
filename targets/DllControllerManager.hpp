@@ -62,15 +62,17 @@ public:
 
     bool framestepEnabled;
 
+    #define USEDCONTROLLERCOUNT 4
+
+    std::array<size_t, USEDCONTROLLERCOUNT> _overlayPositions = {{ 0, 0, 0, 0}};
 private:
 
     std::vector<Controller *> _allControllers;
 
-    #define USEDCONTROLLERCOUNT 4
 
     std::array<Controller *, USEDCONTROLLERCOUNT> _playerControllers = {{ 0, 0, 0, 0 }};
 
-    std::array<size_t, USEDCONTROLLERCOUNT> _overlayPositions = {{ 0, 0, 0, 0}};
+    
     std::array<size_t, 3> _trialOverlayPositions = {{ 0, 0, 0 }};
     uint8_t _trialMenuIndex = 0;
     uint8_t _trialMenuSelection = 0;

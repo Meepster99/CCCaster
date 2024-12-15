@@ -1574,6 +1574,7 @@ void DllTrialManager::render()
 
 void DllTrialManager::drawWineOverlay()
 {
+    
     int textHeight = 16;
     int textWidth = 7;
     array<string, 5> text = DllOverlayUi::getText();

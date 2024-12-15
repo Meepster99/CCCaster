@@ -1079,7 +1079,7 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 // -----
 
-float getCharWidth(const char c, const float w) {
+float getCharWidth(const unsigned char c, const float w) {
 	// values taken from the switch in below TextDraw func
 
 	float res = w;
