@@ -607,7 +607,8 @@ static const AsmList initPatch2v2 =
     // todo, camera, max zoom maybe?
     // fn1/fn2 change what char you are focusing?
     // or i can have it lock on to a combo, prio if you are hitting 
-    
+    // chip damage is what causes zombie mode?
+
     // if blocking and a teamate hits you,, proxy block occurs
     // draw sion bullets/roa electric thingy for p2/p3
 
@@ -631,11 +632,13 @@ static const AsmList initPatch2v2 =
     // patch the port comparison for chars turning around
     PATCHJUMP(0x0047587b, _naked_charTurnAround),
 
-    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed
+    // i quite literally, do not know what these two patches do!
+    // im keeping them here, but pleaes keep that in mind
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
 
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
-    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//, patch is def needed
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
     
