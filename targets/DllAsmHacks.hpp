@@ -588,7 +588,9 @@ __attribute__((naked, noinline)) void _naked_hitBoxConnect2();
 
 __attribute__((naked, noinline)) void _naked_hitBoxConnect3();
 
-__attribute__((naked, noinline)) void _naked_throwConnect();
+__attribute__((naked, noinline)) void _naked_throwConnect1();
+
+__attribute__((naked, noinline)) void _naked_throwConnect2();
 
 __attribute__((naked, noinline)) void _naked_proxyGuard();
 
@@ -603,7 +605,7 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone2();
 __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
 static const AsmList initPatch2v2 =
-{
+{ 
 
     /*
     
@@ -615,9 +617,22 @@ static const AsmList initPatch2v2 =
     todo specific:
         stop throwing teamates
             grabs(6e) work correctly, command grabs and hitgrabs dont
-        proxy guard (ONLY works on teamates for some reason?)
-            investigate write at 00466693
-            cased by: 
+            most likely, check the flags on an attack, see if its,,, a grab, and then patch a compare.
+            weird tho, its a different location than where normal box collisions occur
+                somethings checking a flag, branching to a different point in code.
+                hantei has a hitgrab flag.
+                hitgrabs are blockable
+                command grabs are non blockable hitgrabs.
+                most likely, the hitgrab flag is read, and branches
+                idec about the block flags 
+                0046F9EE and 004719AC have potential, 
+
+
+            hitgrabs can be blocked. commmand grabs cannot
+            csion j214a is a,,, hitgrab
+
+
+
         fix round ends, re add timer back in
         character facing: one of the two following ways
             one: 
@@ -669,8 +684,10 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
 
-    PATCHJUMP(0x004641b2, _naked_throwConnect), // this patches grabs, not command grabs and not hitgrabs
+    PATCHJUMP(0x004641b2, _naked_throwConnect1), // this patches grabs, not command grabs and not hitgrabs
     
+    PATCHJUMP(0x0046fa65, _naked_throwConnect2), // patches hit/cmd grabs
+
     PATCHJUMP(0x00462b87, _naked_proxyGuard),
 
     // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?

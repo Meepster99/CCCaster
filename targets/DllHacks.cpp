@@ -85,7 +85,7 @@ MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wPar
                 default:
                     break;
             }
-            break;
+            break; 
 
         case WM_KEYDOWN:
             // Ignore repeated keys

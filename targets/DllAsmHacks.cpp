@@ -418,7 +418,7 @@ void _naked_hitBoxConnect3() {
 
 }
 
-void _naked_throwConnect() {
+void _naked_throwConnect1() {
 
     // patch at 0x004641b2
 
@@ -438,6 +438,25 @@ void _naked_throwConnect() {
     emitJump(0x004641be);
 
 }
+
+void _naked_throwConnect2() {
+
+    // patch at 0x0046fa65
+
+    __asmStart R"(
+
+        mov al, [esi + 0x2f0];
+        xor al, [edi + 0x2f0];
+        and al, 0x01;
+        test al, al;
+
+    )" __asmEnd
+    
+
+    emitJump(0x0046fa71);
+
+}
+
 
 void _naked_proxyGuard() {
 
