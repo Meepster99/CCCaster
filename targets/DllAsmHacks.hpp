@@ -590,6 +590,8 @@ __attribute__((naked, noinline)) void _naked_hitBoxConnect3();
 
 __attribute__((naked, noinline)) void _naked_throwConnect();
 
+__attribute__((naked, noinline)) void _naked_proxyGuard();
+
 __attribute__((naked, noinline)) void _naked_fileLoad();
 
 __attribute__((naked, noinline)) void _naked_collisionConnect();
@@ -602,12 +604,37 @@ __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
 static const AsmList initPatch2v2 =
 {
+
+    /*
     
+    todo general:
+        make hud and everything ingame nicer
+        make CSS nicer
+        explain new controller input screen in a way that doesnt confuse everyone
+
+    todo specific:
+        stop throwing teamates
+            grabs(6e) work correctly, command grabs and hitgrabs dont
+        proxy guard (ONLY works on teamates for some reason?)
+            investigate write at 00466693
+            cased by: 
+        fix round ends, re add timer back in
+        character facing: one of the two following ways
+            one: 
+                manual idea
+                press a button, locked on one player, press it again and it alternates
+                // you know the 1p2p arrow thats above roog knife? use that!
+                if P3 was targeting P2, P2 would have a P3 above their heads
+            two:
+                automatic idea
+                automatic, except always PRIO the person you are comboing
+    
+    */
+
     // todo, dont reface when comboing
     // todo, camera, max zoom maybe?
     // fn1/fn2 change what char you are focusing?
     // or i can have it lock on to a combo, prio if you are hitting 
-    // chip damage is what causes zombie mode?
 
     // if blocking and a teamate hits you,, proxy block occurs
     // draw sion bullets/roa electric thingy for p2/p3
@@ -641,7 +668,11 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
+
+    PATCHJUMP(0x004641b2, _naked_throwConnect), // this patches grabs, not command grabs and not hitgrabs
     
+    PATCHJUMP(0x00462b87, _naked_proxyGuard),
+
     // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?
 
     PATCHJUMP(0x0047463c, _naked_checkRoundDone), // prevents game from ending until a team dies

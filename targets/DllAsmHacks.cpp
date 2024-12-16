@@ -418,6 +418,45 @@ void _naked_hitBoxConnect3() {
 
 }
 
+void _naked_throwConnect() {
+
+    // patch at 0x004641b2
+
+    __asmStart R"(
+
+        mov al, [esi + 0x2f0];
+        xor al, [edi + 0x2f0];
+        and al, 0x01;
+        test al, al;
+
+        // mov AL,byte ptr [ESI + 0x2f0]
+        // cmp byte ptr [EDI + 0x2f0]
+
+    )" __asmEnd
+    
+
+    emitJump(0x004641be);
+
+}
+
+void _naked_proxyGuard() {
+
+    // patch at 00462b87
+
+    __asmStart R"(
+
+        mov al, [edx + 0x2F0];
+        xor al, [esi + 0x2F0];
+        and al, 0x01;
+        test al, al;
+
+    )" __asmEnd
+
+
+    emitJump(0x00462b93);
+    
+}
+
 void _naked_collisionConnect() {
 
     // patch at 0046ea27
@@ -529,25 +568,5 @@ void _naked_checkWhoWon() {
 
 }   
 
-void _naked_throwConnect() {
-
-    // patch at 0x004641b2
-
-    __asmStart R"(
-
-        mov al, [esi + 0x2f0];
-        xor al, [edi + 0x2f0];
-        and al, 0x01;
-        test al, al;
-
-        // mov AL,byte ptr [ESI + 0x2f0]
-        // cmp byte ptr [EDI + 0x2f0]
-
-    )" __asmEnd
-    
-
-    emitJump(0x004641be);
-
-}
 
 } // namespace AsmHacks
