@@ -3,7 +3,7 @@
 #include <string>
 #include <array>
 #include <d3dx9.h>
-
+#include "imgui.h"
 
 #define DEFAULT_MESSAGE_TIMEOUT ( 3000 )
 
@@ -11,8 +11,10 @@
 namespace DllOverlayUi
 {
 
+void EndScene(IDirect3DDevice9* device);
 void init();
 
+extern ImGuiContext* g_ImGuiContext;  // Global ImGui context
 
 void enable();
 

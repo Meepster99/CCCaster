@@ -7,6 +7,12 @@
 
 #include "DllDirectX.hpp"
 
+#include "imgui.h"
+#include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
+#include "montogui.cpp"
+#include "PlayerState.hpp"
+
 #include <windows.h>
 #include <d3dx9.h>
 #include <iostream>
@@ -80,6 +86,7 @@ static IDirect3DVertexBuffer9 *background = 0;
 static array<string, 4> selectorLine;
 
 static array<int, 4> selectorIndex = {0, 0, 0, 0};
+ImGuiContext* DllOverlayUi::g_ImGuiContext = nullptr;
 
 namespace DllOverlayUi
 {
@@ -375,6 +382,21 @@ void initOverlayText ( IDirect3DDevice9 *device )
     background->Lock ( 0, 0, ( void ** ) &ptr, 0 );
     memcpy ( ptr, verts, 4 * sizeof ( verts[0] ) );
     background->Unlock();
+
+}
+
+
+void initImGuiOverlay(IDirect3DDevice9 *device)
+{
+    IMGUI_CHECKVERSION();
+    DllOverlayUi::g_ImGuiContext = ImGui::CreateContext();
+    void* windowHandle = ProcessManager::findWindow(CC_TITLE);
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.WantCaptureMouse = true;
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplWin32_Init(windowHandle);
+    ImGui_ImplDX9_Init(device);
 }
 
 void invalidateOverlayText()
@@ -640,6 +662,47 @@ InGameData inGameData[4];
 constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
 constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
 
+
+// Define the global players array
+PlayerState players[4];
+
+// Define the update function
+void updateAllPlayers() {
+    for(int i = 0; i < 4; i++) {
+        players[i].update(i);
+    }
+}
+
+// Define the PlayerState::update method
+void PlayerState::update(int playerIndex) {
+    const DWORD playerAddr = BASE_ADDR + (playerIndex * DATA_SIZE);
+    const DWORD cssAddr = CSS_BASE_ADDR + (playerIndex * CSS_DATA_SIZE);
+
+    // Copy moon data from CSS to in-game data
+    *(DWORD*)(playerAddr + OFFSET_MOON) = *(DWORD*)(cssAddr + OFFSET_MOON);
+
+    // Read player state data
+    moon = *(DWORD*)(playerAddr + OFFSET_MOON);
+    palette = *(BYTE*)(playerAddr + OFFSET_PALETTE);
+    health = *(DWORD*)(playerAddr + OFFSET_HEALTH);
+    redHealth = *(DWORD*)(playerAddr + OFFSET_RED_HEALTH);
+    meter = *(DWORD*)(playerAddr + OFFSET_METER);
+    heatTime = *(DWORD*)(playerAddr + OFFSET_HEAT_TIME);
+    circuitState = *(WORD*)(playerAddr + OFFSET_CIRCUIT_STATE);
+    hitstun = *(DWORD*)(playerAddr + OFFSET_HITSTUN);
+    knockedDown = *(BYTE*)(playerAddr + OFFSET_KNOCKDOWN_FLAG);
+
+    // Handle circuit break timer
+    const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
+    circuitBreakTimer = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
+
+    // Set background flag when knocked down
+    if (knockedDown != 0) {
+        *(BYTE*)(playerAddr + OFFSET_BACKGROUND_FLAG) = 0x01;
+    }
+}
+
+
 void updateCSSStuff(IDirect3DDevice9 *device) {
 
     shouldReverseDraws = false;
@@ -810,84 +873,9 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
     shouldReverseDraws = false;
 }
 
+
 void updateInGameStuff(IDirect3DDevice9 *device) {
-
-    shouldReverseDraws = false;
-
-    // draw meter and health info for p2.
-    // and any other stuff like that
-    
-    // these draws are not ideal. in any way.
-
-    // this needs to be made into a struct!
-    DWORD health[4]; // 11400 max
-    DWORD redHealth[4];
-    DWORD moon[4];
-    // should probs include guard guage here
-    DWORD meter[4];
-    DWORD heatTime[4];
-    DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
-    DWORD palette[4];
-    DWORD hitstun[4];
-    DWORD circuitBreakTimer[4]; 
-    DWORD knockedDown[4];
-
-    constexpr DWORD PLAYER_BASE_ADDR = 0x00555130;
-    constexpr DWORD CSS_BASE_ADDR = 0x0074d840;
-    constexpr DWORD PLAYER_DATA_SIZE = 0xAFC;
-    constexpr DWORD CSS_DATA_SIZE = 0x2C;
-
-    // Offsets for player data
-    constexpr DWORD OFFSET_MOON = 0x0C;
-    constexpr DWORD OFFSET_PALETTE = 0x0A;
-    constexpr DWORD OFFSET_HEALTH = 0xBC;
-    constexpr DWORD OFFSET_RED_HEALTH = 0xC0;
-    constexpr DWORD OFFSET_METER = 0xE0;
-    constexpr DWORD OFFSET_HEAT_TIME = 0xE4;
-    constexpr DWORD OFFSET_CIRCUIT_STATE = 0xE8;
-    constexpr DWORD OFFSET_CIRCUIT_BREAK = 0x100;
-    constexpr DWORD OFFSET_EX_PENALTY = 0x104;
-    constexpr DWORD OFFSET_BACKGROUND_FLAG = 0x174;
-    constexpr DWORD OFFSET_KNOCKDOWN_FLAG = 0x1B0;
-    constexpr DWORD OFFSET_HITSTUN = 0x1AC;
-
-    for(int i = 0; i < 4; i++) {
-        const DWORD playerAddr = PLAYER_BASE_ADDR + (i * PLAYER_DATA_SIZE);
-        const DWORD cssAddr = CSS_BASE_ADDR + (i * CSS_DATA_SIZE);
-
-        // Copy moon data from CSS to in-game data
-        *(DWORD*)(playerAddr + OFFSET_MOON) = *(DWORD*)(cssAddr + OFFSET_MOON);
-
-        // Read player state data
-        moon[i] = *(DWORD*)(playerAddr + OFFSET_MOON);
-        palette[i] = *(BYTE*)(playerAddr + OFFSET_PALETTE);
-        health[i] = *(DWORD*)(playerAddr + OFFSET_HEALTH);
-        redHealth[i] = *(DWORD*)(playerAddr + OFFSET_RED_HEALTH);
-        meter[i] = *(DWORD*)(playerAddr + OFFSET_METER);
-        heatTime[i] = *(DWORD*)(playerAddr + OFFSET_HEAT_TIME);
-        circuitState[i] = *(WORD*)(playerAddr + OFFSET_CIRCUIT_STATE);
-        hitstun[i] = *(DWORD*)(playerAddr + OFFSET_HITSTUN);
-        knockedDown[i] = *(BYTE*)(playerAddr + OFFSET_KNOCKDOWN_FLAG);
-
-        // Handle circuit break timer
-        const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
-        circuitBreakTimer[i] = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
-
-        // Set dead flag if health is depleted
-        /* if(health[i] == 0) {
-            *(BYTE*)(playerAddr + OFFSET_DEAD_FLAG) = 0x01;
-        } */
-
-        /* if(*(BYTE*)(0x00555130 + 0x1B0 + (i * 0xAFC)) != 0) { // is knocked down
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
-            }    */
-
-       // Set background flag when knocked down
-        if(knockedDown[i] != 0) {
-            *(BYTE*)(playerAddr + OFFSET_BACKGROUND_FLAG) = 0x01;
-        }
-    }
- 
+    updateAllPlayers();
 
     float x;
     for(int i=2; i<4; i++) {
@@ -904,32 +892,32 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         std::string meterString = "";
 
-        if(circuitBreakTimer[i] == 0) {
-            switch(circuitState[i]) {
+        if(players[i].circuitBreakTimer == 0) {
+            switch(players[i].circuitState) {
                 case 0:
-                    if(moon[i] == 2) { // half
-                        currentMeterWidth = ((float)meter[i]) / 20000.0f;
-                        meterCol = (meter[i] >= 15000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                    if(players[i].moon == 2) { // half
+                        currentMeterWidth = ((float)players[i].meter) / 20000.0f;
+                        meterCol = (players[i].meter >= 15000) ? 0xFF00FF00 : ((players[i].meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
                     } else { // full/crescent
-                        currentMeterWidth = ((float)meter[i]) / 30000.0f;
-                        meterCol = (meter[i] >= 20000) ? 0xFF00FF00 : ((meter[i] >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                        currentMeterWidth = ((float)players[i].meter) / 30000.0f;
+                        meterCol = (players[i].meter >= 20000) ? 0xFF00FF00 : ((players[i].meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
                     }
 
-                    meterString = std::to_string(meter[i] / 100) + "." + std::to_string((meter[i] / 10) % 10) + "%";
+                    meterString = std::to_string(players[i].meter / 100) + "." + std::to_string((players[i].meter / 10) % 10) + "%";
 
                     break;
                 case 1:
-                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
                     meterCol = 0xFF0000FF;
                     meterString = "HEAT";
                     break;
                 case 2:
-                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
                     meterCol = 0xFFFFA500;
                     meterString = "MAX";
                     break;
                 case 3:
-                    currentMeterWidth = ((float)heatTime[i]) / 600.0f;
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
                     meterCol = 0xFFDDDDDD;
                     meterString = "BLOOD HEAT";
                     break;
@@ -937,7 +925,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
                     break;
             }
         } else {
-            currentMeterWidth = ((float)circuitBreakTimer[i]) / 600.0f;
+            currentMeterWidth = ((float)players[i].circuitBreakTimer) / 600.0f;
             meterCol = 0xFF800080;
             meterString = "BREAK";
         }
@@ -946,9 +934,9 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         const float meterSize = 15.0f;
 
         currentMeterWidth = MIN(1.0f, currentMeterWidth);
-        RectDraw(x, 428, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
+      /*   RectDraw(x, 428, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
         BorderDraw(x, 428, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
-        TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
+        TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string */
 
         // draw health bars. SOME OF THESE CALLS MIGHT HAVE BACKFACE ISSUES. but look at me go, not caring. someones going to mention it. ugh
         x = 60;
@@ -961,7 +949,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         r.x2 = x + maxHealthWidth;
 
         // draw health bars background
-        r.x1 = r.x2 - maxHealthWidth;  // Full width
+   /*      r.x1 = r.x2 - maxHealthWidth;  // Full width
         RectDraw(r.x1, r.y1, maxHealthWidth, r.y2 - r.y1, 0x80000000);  // 50% opacity black
 
         Rect outerBorder = r;
@@ -973,22 +961,22 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         innerBorder.x1 = r.x2 - (1 * maxHealthWidth);
         BorderDrawThick(innerBorder, 1.0f, 0xFF000000); // black
 
-        currentHealthWidth = ((float)redHealth[i]) / 11400.0;
+        currentHealthWidth = ((float)players[i].redHealth) / 11400.0;
         r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
         //RectDraw(r, 0xFFFF0000);//, i == 3); // red health
         RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFF650000, 0xFFDA0000); //dark red to red
 
-        currentHealthWidth = ((float)health[i]) / 11400.0;
+        currentHealthWidth = ((float)players[i].health) / 11400.0;
         r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
-        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFFff8805, 0xFFfffb7d); // Orange to yellow gradient
-
-        float currentHealth = (float)health[i];
+        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFFff8805, 0xFFfffb7d); // Orange to yellow gradient */
+/* 
+        float currentHealth = (float)players[i].health;
         if (currentHealth < inGameData[i].healthFlash.prevHealth) {
             // Reset flash start time for every hit to trigger the alpha animation
             inGameData[i].healthFlash.flashStartTime = GetTickCount() / 1000.0f;
             
             // Only start a new flash if we're not already in hitstun (not in a combo)
-            if (!inGameData[i].healthFlash.isFlashing || hitstun[i] == 0) {
+            if (!inGameData[i].healthFlash.isFlashing || players[i].hitstun == 0) {
                 // Store the initial health position where the combo started
                 float initialHealthWidth = (inGameData[i].healthFlash.prevHealth / 11400.0f) * maxHealthWidth;
                 
@@ -1010,7 +998,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         }
 
         if (inGameData[i].healthFlash.isFlashing) {
-            if (hitstun[i] > 0) {
+            if (players[i].hitstun > 0) {
                 // Reset the hitstun end tracking when back in hitstun
                 inGameData[i].healthFlash.hasStoredHitstunEnd = false;
                 
@@ -1060,22 +1048,22 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         }
 
         inGameData[i].healthFlash.prevHealth = currentHealth;
-
+ */
 
 /*         Rect outerborder = r;
         outerborder.x1 = r.x2 - (1 * maxHealthWidth);
         BorderDrawThick(outerborder, 4.0f, 0xFFFFFFFF); // WHITE */
 
  
-        TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
+   /*      TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
         
-        const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
+        const char* moonString = players[i].moon == 0 ? "Crescent" : (players[i].moon == 1 ? "Full" : "Half"); 
         TextDraw(x + 20 + 50, 30 - 20, 8, 0xFFFFFFFF, moonString);//, i == 3); // char moon
 
-        std::string paletteString = std::to_string(palette[i] + 1);
-        TextDraw(x + 20 + 50 + 50, 30 - 20, 8, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette
+        std::string paletteString = std::to_string(players[i].palette + 1);
+        TextDraw(x + 20 + 50 + 50, 30 - 20, 8, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette */
 
-    }
+    } 
     
 }
 
@@ -1110,6 +1098,81 @@ std::vector<std::string> stripMenuString(std::string s) {
     return res;
 }
 
+
+
+void updateImGuiStuff(IDirect3DDevice9 *device) 
+{
+    ImGui_ImplDX9_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    
+    // Reset mouse state
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;  // Make sure mouse input is enabled
+    io.WantCaptureMouse = true;
+    
+    for (int i = 0; i < 5; i++) io.MouseDown[i] = false;
+    if (GetAsyncKeyState(VK_LBUTTON) != 0) {
+        io.MouseDown[0] = true;
+    } 
+
+    ImGui::NewFrame();   
+    // Custom window code
+   /*  {
+        static float f = 0.0f;
+        static int counter = 0;
+        static bool show_demo_window = true;
+        static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+        ImGui::Begin("Hello, world!");
+        
+        ImGui::Text("This is some useful text.");
+        ImGui::Checkbox("Demo Window", &show_demo_window);
+        
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+        ImGui::ColorEdit3("clear color", (float*)&clear_color);
+        
+        if (ImGui::Button("Button"))
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+        
+        bool isHovered = ImGui::IsItemHovered();
+        bool isFocused = ImGui::IsItemFocused();
+
+        ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+        ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+        ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, 
+                                             mousePositionAbsolute.y - screenPositionAbsolute.y);
+        
+        ImGui::Text("Is mouse over screen? %s", isHovered ? "Yes" : "No");
+        ImGui::Text("Is screen focused? %s", isFocused ? "Yes" : "No");
+        ImGui::Text("Position: %f, %f", mousePositionRelative.x, mousePositionRelative.y);
+
+        ImGui::Text("h = %d %d", ImGui::IsKeyPressed(ImGuiKey_H), GetAsyncKeyState(0x48));
+        ImGui::Text("h = %d %d", ImGui::IsKeyPressed(ImGuiKey_H), GetAsyncKeyState(VK_LBUTTON));
+        ImGui::Text("Mouse clicked: %s", ImGui::IsMouseDown(ImGuiMouseButton_Left) ? "Yes" : "No");
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        
+        ImGui::End();
+    } */
+    uiHP();
+    //uiMeter();
+    //ImGui::ShowDemoWindow();
+    // call new function here
+
+    ImGui::EndFrame();
+    ImGui::Render();
+    
+    // Save device state
+    IDirect3DStateBlock9* d3d9_state_block = nullptr;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) >= 0)
+    {
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+        d3d9_state_block->Apply();
+        d3d9_state_block->Release();
+    }
+}
+
 void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
 {
 #ifndef RELEASE
@@ -1131,12 +1194,14 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     if(*((uint8_t*)0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
         updateScaleParams(device);
         updateCSSStuff(device);
+        updateImGuiStuff(device);
     }
 
     if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
     //if(true && DllOverlayUi::isDisabled()) {
         updateScaleParams(device);
         updateInGameStuff(device);
+        updateImGuiStuff(device);
     }
 
     if ( ! TrialManager::dtext.empty() && !TrialManager::hideText ) {
@@ -1207,7 +1272,6 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     }
     if ( state == State::Disabled )
         return;
-
     // Calculate message width if showing one
     float messageWidth = 0.0f;
     if ( isShowingMessage() )
@@ -1339,4 +1403,9 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
             //RectDraw(maxRect, 0xC0000000);
         }
     }
+
 }
+
+
+
+

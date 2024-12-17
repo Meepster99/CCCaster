@@ -30,6 +30,7 @@ void init()
 
 
 void initOverlayText ( IDirect3DDevice9 *device );
+void initImGuiOverlay ( IDirect3DDevice9 *device );
 
 void invalidateOverlayText();
 
@@ -37,17 +38,24 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
 void initImGui( IDirect3DDevice9 *device );
 
+void InvalidateDeviceObjects();
+void ResetDeviceObjects(IDirect3DDevice9* device);
+
 void InitializeDirectX ( IDirect3DDevice9 *device )
 {
     if ( ! shouldInitDirectX )
         return;
 
+    // First invalidate any existing objects
+    InvalidateDeviceObjects();
+    
     initalizedDirectX = true;
 
     initOverlayText ( device );
-#ifdef LOGGING
-    initImGui ( device );
-#endif
+    initImGuiOverlay( device );
+    
+    // Ensure device objects are created
+    ResetDeviceObjects(device);
 }
 
 void InvalidateDeviceObjects()
@@ -58,6 +66,15 @@ void InvalidateDeviceObjects()
     initalizedDirectX = false;
 
     invalidateOverlayText();
+    ImGui_ImplDX9_InvalidateDeviceObjects();
+}
+
+void ResetDeviceObjects(IDirect3DDevice9* device)
+{
+    if (!initalizedDirectX)
+        return;
+        
+    ImGui_ImplDX9_CreateDeviceObjects();
 }
 
 void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt); // this should,,,, not be like this, but it is. i dont want to mix up the *device names  
