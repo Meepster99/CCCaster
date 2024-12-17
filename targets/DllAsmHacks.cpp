@@ -4,6 +4,7 @@
 #include "CharacterSelect.hpp"
 #include "Logger.hpp"
 #include "DllTrialManager.hpp"
+#include "DllDirectX.hpp"
 
 #include <windows.h>
 #include <d3dx9.h>
@@ -587,5 +588,125 @@ void _naked_checkWhoWon() {
 
 }   
 
+// -----
+
+extern "C" __attribute__((noinline)) void drawAllPortriats(DWORD index, DWORD texture) {
+    
+    DWORD xPos = (index & 1) ? 384 : 0;
+    DWORD yPos = 100;//0;
+    DWORD width = 0x100;
+    DWORD height = 0x60;
+    DWORD layer = 0x2C0; //0x2C1
+    if(index >= 2) {
+        xPos += (index & 1) ? 25 : 100;
+        width /= 2;
+        height /= 2;
+        layer |= 1;
+    }
+
+
+
+    // uVar2 xOffset?
+    // uVar3 yOffset?
+    // uVar4 width?
+
+    //                  edx    ?        x     y   h    xO yO  wid    hagain?
+    //meltyDrawTexture(0x100, 0, texture, xPos, 0, 0x60, 0, 0, 0x100, 0x60, 0xFFFFFFFF, 0, 0x2C1);
+    // is one width used for,,, what the fuck
+    // oh im soooo fucked ugh
+
+    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
+
+    //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
+
+    // are edx and,,, the other one both width?
+
+}
+
+void _naked_drawAllPortriats() {
+
+    // patched in at 00425a98
+
+    PUSH_ALL;
+    __asmStart R"(
+        push edi; // texture
+        push esi; // index
+        call _drawAllPortriats;
+        add esp, 0x08;
+    )" __asmEnd
+    POP_ALL;
+
+    emitJump(0x00425af0);
+}
+
+extern "C" {
+    DWORD naked_fixPortriatLoadSide_loadCount = 0;
+}
+
+void _naked_fixPortriatLoadSide() { // this solution is not the most elegant, but it works.
+
+    // patched at 004263b6
+    // emit overwritten asm
+
+    // mov ecx, [esp + 0x128];
+    // has 0,1,0,0
+    // but,,, 12c? has char id,,,
+    /*emitByte(0x8B);
+    emitByte(0x8C);
+    emitByte(0x24);
+
+    emitByte(0x28);
+    emitByte(0x01);
+    emitByte(0x00);
+    emitByte(0x00);*/
+
+    __asmStart R"(
+        mov ecx, 1;
+        add _naked_fixPortriatLoadSide_loadCount, ecx;
+
+        //mov ecx, [esp + 0x12C];
+    )" __asmEnd
+
+    // and the resulting load by one to load the correct file?
+    __asmStart R"(
+        mov ecx, _naked_fixPortriatLoadSide_loadCount;
+        and ecx, 0x01;
+        xor ecx, 0x01;
+    )" __asmEnd
+
+    emitJump(0x004263bd);
+
+}
+
+int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
+void newDrawResourcesHud() {
+
+    newDrawResourcesHud_playerIndex = 0;
+
+    while(newDrawResourcesHud_playerIndex < 4) {
+
+        ((void(*)(DWORD))(0x00425260))(newDrawResourcesHud_playerIndex); // draw guard guages
+        ((void(*)(DWORD))(0x004253c0))(newDrawResourcesHud_playerIndex); // draw meter guages
+
+        setRegister(ecx, newDrawResourcesHud_playerIndex);
+        ((void(*)())(0x004258e0))(); // draw moons and palettes
+
+        setRegister(eax, newDrawResourcesHud_playerIndex);
+        ((void(*)())(0x00425a80))(); // draw portriats
+
+        newDrawResourcesHud_playerIndex++;
+    }
+}
+
+void _naked_newDrawResourcesHud() {
+
+    // patched at 0042485b
+
+    PUSH_ALL;
+    newDrawResourcesHud();
+    POP_ALL;
+
+    ASMRET;
+}
 
 } // namespace AsmHacks

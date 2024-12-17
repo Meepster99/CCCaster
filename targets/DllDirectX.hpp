@@ -774,6 +774,13 @@ void BorderDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
 void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
+extern "C" {
+	extern DWORD naked_meltyDrawTexture_ret;
+}
+__attribute__((naked, noinline, cdecl)) void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer);
+
+void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
+
 // -----
 
 Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format);

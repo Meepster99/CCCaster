@@ -797,6 +797,14 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
     shouldReverseDraws = false;
 
+    for(int i=0; i<4; i++) {
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+        }
+    }
+
+    return;
+
     // draw meter and health info for p2.
     // and any other stuff like that
     
@@ -837,15 +845,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
             circuitBreakTimer[i] = *(WORD*)(0x00555230 + (i * 0xAFC));
         }
 
-        // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
-        // most likely,, this is causing zombie mode?
-        /*if(health[i] == 0) { // is this/should this be a -1 or 0 thing,,, 
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
-        }*/
-
-        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
-        }
+       
 
     }
 
@@ -930,6 +930,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         r.x1 = r.x2 - (1 * maxHealthWidth);
         BorderDraw(r, 0xFFFFFFFF);//, i == 3); // white bar
 
+        /*
         TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
         
         const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 
@@ -937,6 +938,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
         std::string paletteString = std::to_string(palette[i] + 1);
         TextDraw(x + 20 + 50 + 50, 30 - 20, 8, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette
+        */
 
     }
     
