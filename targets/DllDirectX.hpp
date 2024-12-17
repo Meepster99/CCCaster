@@ -762,7 +762,7 @@ void __stdcall restoreRenderState();
 
 // -----
 
-void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB = 0x8042e5f4, bool side = false);;
+void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB = 0x8042e5f4, bool side = false);
 
 void RectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 

@@ -801,6 +801,8 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
             *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
         }
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
     }
 
     return;
@@ -824,8 +826,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
 
     for(int i=0; i<4; i++) {
 
-        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
-        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+        
 
         moon[i] =         *(DWORD*)(0x0055513C + (i * 0xAFC));
 
