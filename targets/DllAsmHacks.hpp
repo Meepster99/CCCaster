@@ -4,6 +4,7 @@
 #include "Exceptions.hpp"
 #include "DllNetplayManager.hpp"
 
+#include <stdio.h>
 #include <vector>
 #include <array>
 
@@ -61,9 +62,35 @@
     __asmStart \
 	"push " #addr ";" \
     "ret;" \
-    __asmEnd 
+    __asmEnd
+
+#define emitByte(b) asm __volatile__ (".byte " #b);
+
+/*
+#define setRegister(reg, val) \
+    __asm__ __volatile__( \
+    "movl %%" #reg ", %0" \
+    : \
+    : "r" (val) \
+    : #reg \
+    )
+*/
+
+#define setRegister(reg, val) __asmStart \
+    "mov " #reg ", " #val \
+    __asmEnd
+
+#define pushVar(v) __asmStart \
+    "push " #v \
+    __asmEnd
+
+#define addStack(n) __asmStart \
+    "add esp, " #n \
+    __asmEnd
 
 #define INT3 __asmStart R"( int3; )" __asmEnd
+
+#define ASMRET __asmStart R"( ret; )" __asmEnd
 
 #define NOPS __asmStart R"( nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; )" __asmEnd
 
@@ -604,6 +631,26 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone2();
 
 __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
+// -----
+
+__attribute__((noinline)) void drawAllPortriats();
+
+//__attribute__((naked, noinline)) void _naked_drawAllPortriats();
+
+__attribute__((naked, noinline)) void _naked_fixPortriatLoadSide();
+
+__attribute__((noinline)) void newDrawResourcesHud();
+
+__attribute__((naked, noinline)) void _naked_newDrawResourcesHud();
+
+__attribute__((noinline)) void drawAllPortriats(int playerIndex);
+
+__attribute__((noinline)) void drawHealthBars(int playerIndex);
+
+__attribute__((noinline)) void drawMeterBars(int playerIndex);
+
+__attribute__((noinline)) void drawGuardBars(int playerIndex);
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -615,23 +662,8 @@ static const AsmList initPatch2v2 =
         explain new controller input screen in a way that doesnt confuse everyone
 
     todo specific:
-        stop throwing teamates
-            grabs(6e) work correctly, command grabs and hitgrabs dont
-            most likely, check the flags on an attack, see if its,,, a grab, and then patch a compare.
-            weird tho, its a different location than where normal box collisions occur
-                somethings checking a flag, branching to a different point in code.
-                hantei has a hitgrab flag.
-                hitgrabs are blockable
-                command grabs are non blockable hitgrabs.
-                most likely, the hitgrab flag is read, and branches
-                idec about the block flags 
-                0046F9EE and 004719AC have potential, 
 
-
-            hitgrabs can be blocked. commmand grabs cannot
-            csion j214a is a,,, hitgrab
-
-
+        weird thing where you can lose your jump if your teamate is comboing?
 
         fix round ends, re add timer back in
         character facing: one of the two following ways
@@ -646,19 +678,6 @@ static const AsmList initPatch2v2 =
     
     */
 
-    // todo, dont reface when comboing
-    // todo, camera, max zoom maybe?
-    // fn1/fn2 change what char you are focusing?
-    // or i can have it lock on to a combo, prio if you are hitting 
-
-    // if blocking and a teamate hits you,, proxy block occurs
-    // draw sion bullets/roa electric thingy for p2/p3
-
-    // not getting jump cancel back under certain circumstances if teamate is comboing(could this relate to the weird hud code that deals with that? remember when disabling hud fucked up that?)
-    // if p2 dies, first? and,,, then the round ends? it only reads p2 and p1 for round determine
-    // chisui is missing some,,, item toss move?
-
-    // it needs to occur when initially loading into a game
     // i actually prefer this patch method(with a lil modification) tbh. its very well done
     
     // battle reset patches:
@@ -709,7 +728,29 @@ static const AsmList initPatch2v2 =
     { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know.
 
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
-    { ( void *) (0x00449069 + 2), { 0x04 }}
+    { ( void *) (0x00449069 + 2), { 0x04 }},
+
+    // HUD patches
+
+    // todo, fix this!
+    
+    { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // draws the count for the char specific resource
+    { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // draws the actual char specific texture 
+    { ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
+    { ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
+    { ( void *) (0x00424bdb), { 0x90 } }, // push for above
+
+    PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
+
+    //PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
+
+    PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
+
+    { ( void * ) (0x004253e6 + 1), { 0x04 }}, // allow for 4 calls in meter bar draw.
+
+    { ( void * ) (0x00425a84 + 2), { 0x04 }} // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
+
+    
 
 };
 

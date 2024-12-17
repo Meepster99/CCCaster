@@ -4,6 +4,8 @@
 #include "CharacterSelect.hpp"
 #include "Logger.hpp"
 #include "DllTrialManager.hpp"
+//#include "DllDirectX.hpp"
+void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
 
 #include <windows.h>
 #include <d3dx9.h>
@@ -587,5 +589,153 @@ void _naked_checkWhoWon() {
 
 }   
 
+// -----
+
+extern "C" {
+    DWORD naked_fixPortriatLoadSide_loadCount = 0;
+}
+
+void _naked_fixPortriatLoadSide() { // this solution is not the most elegant, but it works.
+
+    // patched at 004263b6
+    // emit overwritten asm
+
+    // mov ecx, [esp + 0x128];
+    // has 0,1,0,0
+    // but,,, 12c? has char id,,,
+    /*emitByte(0x8B);
+    emitByte(0x8C);
+    emitByte(0x24);
+
+    emitByte(0x28);
+    emitByte(0x01);
+    emitByte(0x00);
+    emitByte(0x00);*/
+
+    __asmStart R"(
+        mov ecx, 1;
+        add _naked_fixPortriatLoadSide_loadCount, ecx;
+
+        //mov ecx, [esp + 0x12C];
+    )" __asmEnd
+
+    // and the resulting load by one to load the correct file?
+    __asmStart R"(
+        mov ecx, _naked_fixPortriatLoadSide_loadCount;
+        and ecx, 0x01;
+        xor ecx, 0x01;
+    )" __asmEnd
+
+    emitJump(0x004263bd);
+
+}
+
+extern "C" {
+    int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
+}
+
+void drawAllPortriats(int playerIndex) {
+
+    DWORD texture = *(DWORD*)(0x005642c8 + (playerIndex * 0x20));
+    if(texture == 0) {
+        return;
+    }
+    
+    DWORD xPos = (playerIndex & 1) ? 384 : 0;
+    DWORD yPos = 100;//0;
+    DWORD width = 0x100;
+    DWORD height = 0x60;
+    DWORD layer = 0x2C0; //0x2C1
+    if(playerIndex >= 2) {
+        xPos += (playerIndex & 1) ? 25 : 100;
+        width /= 2;
+        height /= 2;
+        layer |= 1;
+    }
+
+    // uVar2 xOffset?
+    // uVar3 yOffset?
+    // uVar4 width?
+
+    //                  edx    ?        x     y   h    xO yO  wid    hagain?
+    //meltyDrawTexture(0x100, 0, texture, xPos, 0, 0x60, 0, 0, 0x100, 0x60, 0xFFFFFFFF, 0, 0x2C1);
+    // is one width used for,,, what the fuck
+    // oh im soooo fucked ugh
+
+    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
+
+    //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
+
+    // are edx and,,, the other one both width?
+
+}
+
+void drawHealthBars(int playerIndex) {
+
+}
+
+void drawMeterBars(int playerIndex) {
+    
+
+    __asmStart R"(
+        push _newDrawResourcesHud_playerIndex;
+    )" __asmEnd
+    
+    emitCall(0x004253c0); // draw meter guages
+    
+    __asmStart R"(
+        add esp, 0x04;
+    )" __asmEnd
+
+}
+
+void drawGuardBars(int playerIndex) {
+
+}
+
+void newDrawResourcesHud() {
+
+    newDrawResourcesHud_playerIndex = 0;
+
+    while(newDrawResourcesHud_playerIndex < 4) {
+
+        drawHealthBars(newDrawResourcesHud_playerIndex);
+        drawMeterBars(newDrawResourcesHud_playerIndex);
+        drawGuardBars(newDrawResourcesHud_playerIndex);
+        drawAllPortriats(newDrawResourcesHud_playerIndex);
+
+        // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
+        // or,,, i could just,, trace all the textures and do all the draws myself?
+
+        /*
+        pushVar(_newDrawResourcesHud_playerIndex);
+        emitCall(0x00425260); // draw guard guages
+        addStack(0x04);
+
+        pushVar(_newDrawResourcesHud_playerIndex);
+        emitCall(0x004253c0); // draw meter guages
+        addStack(0x04);
+
+        setRegister(ecx, _newDrawResourcesHud_playerIndex);
+        emitCall(0x004258e0); // draw moons and palettes
+
+        setRegister(eax, _newDrawResourcesHud_playerIndex);
+        emitCall(0x00425a80); // draw portriats
+        */
+
+        newDrawResourcesHud_playerIndex++;
+    }
+}
+
+void _naked_newDrawResourcesHud() {
+
+    // patched at 0042485b
+
+    PUSH_ALL;
+    newDrawResourcesHud();
+    POP_ALL;
+
+    ASMRET;
+}
 
 } // namespace AsmHacks

@@ -4,6 +4,7 @@
 #include <winsock2.h>
 #include "DllDirectX.hpp"
 #include "resource.h"
+#include "DllAsmHacks.hpp"
 
 /*
 
@@ -1118,6 +1119,71 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	RectDraw(x, y, w, h, ARGB);
 	BorderDraw(x, y, w, h, ARGB | 0xFF000000);
+
+}
+
+DWORD naked_meltyDrawTexture_ret;
+void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer) {
+
+	/*
+	
+	edx: displayWidth
+	something: something
+	texture
+	xpos
+	ypos
+	he
+	
+	
+	
+	*/
+
+	// having inline asm read in the vars here,,, would have been cleaner.
+	// but it is less readable, and a massive pain
+	// 9 pushes, along with one extra as the ret
+	//,, i could extern c this thing, but edx is a param!
+	// i could fuck with the stack, save the ret, 
+	// that might not be the worst idea
+
+	__asmStart R"(
+		pop _naked_meltyDrawTexture_ret; // save ret addr in variable
+		pop edx; // instead of doing a mov edx, [esp+4], this can be done, and prevent needing another global
+	)" __asmEnd
+
+	// the stack is now in such a way as if we,,, were actually calling the function.
+	emitCall(0x00415580);
+
+	__asmStart R"(
+		// under normal circumstances, we would add esp, 0x30; // above func is cdecl. clean up after it.
+		// but these circumstances are weird. the CALLER of this func will clean up the stack for us!
+		// but, we popped off an extra edx. we need to put something back.
+		push 0x00000000;
+		push _naked_meltyDrawTexture_ret;
+		ret;
+	)" __asmEnd
+
+}
+
+void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer) {
+	
+	/*
+	
+	texture, texWidth, texHeight, x, y, width, height
+
+	uVar5: texHeight
+	uVar4: texWidth
+
+	edx: drawWidth
+	uVar1: drawHeight	
+
+
+	
+	*/
+
+	//meltyDrawTexture(width, 0, texture, x, y, height, xOff, yOff, width, height, ARGB, 0, layer);
+
+	// xOFF and yOFF might be needed for,,, scaling down a tex properly!
+	meltyDrawTextureDirect(w, 0, texture, x, y, h, texX, texY, texW, texH, ARGB, 0, layer);
 
 
 }
