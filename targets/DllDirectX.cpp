@@ -1138,6 +1138,9 @@ void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD t
 	
 	*/
 
+	// edx is w
+	// 0 tex x y h texX texY texW texH
+
 	//meltyDrawTexture(width, 0, texture, x, y, height, xOff, yOff, width, height, ARGB, 0, layer);
 
 	// xOFF and yOFF might be needed for,,, scaling down a tex properly!

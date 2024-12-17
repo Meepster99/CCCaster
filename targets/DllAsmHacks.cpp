@@ -6,6 +6,8 @@
 #include "DllTrialManager.hpp"
 //#include "DllDirectX.hpp"
 void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
+void __stdcall ___log(const char* msg);
+void __stdcall log(const char* format, ...);
 
 #include <windows.h>
 #include <d3dx9.h>
@@ -641,6 +643,7 @@ void drawAllPortriats(int playerIndex) {
         return;
     }
     
+    /*
     DWORD xPos = (playerIndex & 1) ? 384 : 0;
     DWORD yPos = 100;//0;
     DWORD width = 0x100;
@@ -652,25 +655,97 @@ void drawAllPortriats(int playerIndex) {
         height /= 2;
         layer |= 1;
     }
+    */
 
-    // uVar2 xOffset?
-    // uVar3 yOffset?
-    // uVar4 width?
+    /*
+    DWORD xPos = (playerIndex & 1) ? 384 : 0;
+    DWORD yPos = (playerIndex >= 2) ? 0x60 : 0;
+    DWORD width = 0x100;
+    DWORD height = 0x60;
+    DWORD layer = (playerIndex >= 2) ? 0x2C1 : 0x2C0;
+    */
 
-    //                  edx    ?        x     y   h    xO yO  wid    hagain?
-    //meltyDrawTexture(0x100, 0, texture, xPos, 0, 0x60, 0, 0, 0x100, 0x60, 0xFFFFFFFF, 0, 0x2C1);
-    // is one width used for,,, what the fuck
-    // oh im soooo fucked ugh
+    //DWORD xPos = (playerIndex & 1) ? 384 + 100 : 0;
+    DWORD xPos = (playerIndex & 1) ? 384 + 128 : 0;
+    DWORD yPos = (playerIndex >= 2) ? 0x60 / 2 : 0;
+    DWORD width = 0x100 / 2;
+    DWORD height = 0x60 / 2;
+    DWORD layer = (playerIndex >= 2) ? 0x2C1 : 0x2C0;
 
     meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
-
-    //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
-
-    // are edx and,,, the other one both width?
 
 }
 
 void drawHealthBars(int playerIndex) {
+
+
+    // edx is w
+    // 0 tex x y h texX texY texW texH
+
+    /*
+
+    x: (iVar1 - iVar2) + 0x111
+    y: 0x28
+    w: is a fuckass float, go grab it
+    h: 10
+
+    texX: 0 
+    texY: 0x176
+    texW: 0xd4
+    texH: 10
+
+    */
+
+    // this needs to be, completely unfucked!
+
+    DWORD EAX;
+    DWORD EBX;
+    DWORD ECX;
+    DWORD EDX;
+
+    DWORD ESI;
+    DWORD EDI;
+
+    // code at 00424e03
+    // ima be real. no clue whats going on in it.
+    // i cant even honestly replicate it without using asm
+    // but,, it alternates between -320 on 0 and +320 on 
+    // omfg im going to explode.
+    // im actually,,, not sure of anything. 
+    // at this point, i feel like recreating the original func 1:1 when im just going to mess with it,,, has no point.
+    // i might as well make my own.
+    // i can still use the existing funcs, but still
+    // ugh;
+
+    /*
+    int iVar1 = (playerIndex & 1) ? 320 : -320; // this call occurs at 00424e29. seems to always be 0? 
+
+    int iVar3 = (((*(DWORD*)(0x00564170 + (4 * (playerIndex * 0x17)))) * 200) / 0x18);
+
+    DWORD texture = *(DWORD*)0x005550f8;
+
+    DWORD yPos = 0x28 + (playerIndex * 0x28); //0x28;
+
+    // this variable is,,, accessed at 0042615C and 0042614D  but only for p0/p1
+    int iVar2 = (*(double*)(0x0053df00)) * (*(float*)((0x00564158 + (playerIndex * 0x5C)) + 8));
+    */
+   
+    const DWORD healthBarWidth = 200;
+
+    DWORD health =       *(DWORD*)(0x005551EC + (playerIndex * 0xAFC));
+    DWORD redHealth =    *(DWORD*)(0x005551F0 + (playerIndex * 0xAFC));
+
+    DWORD yPos = playerIndex >= 2 ? 0x28 * 2 : 0x28;
+    DWORD w = healthBarWidth * (((float)health) / 11400.0f);
+
+    if(playerIndex & 1) {
+        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 0, yPos, w, 10, 0xFFFFFFFF, 0x2C2);
+    } else {        
+        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 0, yPos, w, 10, 0xFFFFFFFF, 0x2C2);
+    }
+
+    
+
 
 }
 
