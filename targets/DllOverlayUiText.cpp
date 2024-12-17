@@ -340,7 +340,6 @@ struct Vertex
 };
 
 
-
 void initOverlayText ( IDirect3DDevice9 *device )
 {
     D3DXCreateFont ( device,                                    // device pointer
@@ -603,7 +602,26 @@ typedef struct RawInput {
     }
 } RawInput;
 
-typedef struct OurCSSData { // variables i want to keep track of
+
+typedef struct InGameData {
+    struct HealthFlash {
+        float prevHealth = 11400.0f;
+        float flashStartTime = 0.0f;
+        float hitstunEndTime = 0.0f;  // New timestamp for when hitstun ends
+        bool isFlashing = false;
+        bool hasStoredHitstunEnd = false;  // Flag to track if we've stored the hitstun end time
+        float flashX = 0.0f;
+        float flashStartWidth = 0.0f;
+        float comboStartHealth = 0.0f;
+    };
+    HealthFlash healthFlash;
+} InGameData;
+
+typedef struct OurCSSData {
+    
+
+
+     // variables i want to keep track of
     int idIndex = 0; // what char is hovered, indexed in the below list
     int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
     RawInput prevInput;
@@ -618,6 +636,7 @@ typedef struct OurCSSData { // variables i want to keep track of
 } OurCSSData;
 
 OurCSSData ourCSSData[4];
+InGameData inGameData[4];
 constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
 constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
 
@@ -709,7 +728,6 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         
         ourCSSData[i].prevInput = ourCSSData[i].input;
     }
-
     constexpr float cssMenuFontSize = 12.0f;
     constexpr float cssMenuSelectorWidth = 128.0f;
 
@@ -790,7 +808,6 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
     TextDraw(10, 0 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
     TextDraw(10, 0 + (2 * 8), 8, 0xFFFFFFFF, ":3");
     shouldReverseDraws = false;
-
 }
 
 void updateInGameStuff(IDirect3DDevice9 *device) {
@@ -810,35 +827,52 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     DWORD heatTime[4];
     DWORD circuitState[4]; // 0 is normal, 1 is heat, 2 is max, 3 is blood heat
     DWORD palette[4];
-
+    DWORD hitstun[4];
     DWORD circuitBreakTimer[4]; 
 
-    for(int i=0; i<4; i++) {
 
-        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
-        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+    constexpr DWORD PLAYER_BASE_ADDR = 0x00555130;
+    constexpr DWORD CSS_BASE_ADDR = 0x0074d840;
+    constexpr DWORD PLAYER_DATA_SIZE = 0xAFC;
+    constexpr DWORD CSS_DATA_SIZE = 0x2C;
 
-        moon[i] =         *(DWORD*)(0x0055513C + (i * 0xAFC));
+    // Offsets for player data
+    constexpr DWORD OFFSET_MOON = 0x0C;
+    constexpr DWORD OFFSET_PALETTE = 0x0A;
+    constexpr DWORD OFFSET_HEALTH = 0xBC;
+    constexpr DWORD OFFSET_RED_HEALTH = 0xC0;
+    constexpr DWORD OFFSET_METER = 0xE0;
+    constexpr DWORD OFFSET_HEAT_TIME = 0xE4;
+    constexpr DWORD OFFSET_CIRCUIT_STATE = 0xE8;
+    constexpr DWORD OFFSET_CIRCUIT_BREAK = 0x100;
+    constexpr DWORD OFFSET_EX_PENALTY = 0x104;
+    constexpr DWORD OFFSET_DEAD_FLAG = 0x178;
+    constexpr DWORD OFFSET_HITSTUN = 0x1AC;
 
-        health[i] =       *(DWORD*)(0x005551EC + (i * 0xAFC));
-        redHealth[i] =    *(DWORD*)(0x005551F0 + (i * 0xAFC));
-        
-        meter[i] =        *(DWORD*)(0x00555210 + (i * 0xAFC));
-        heatTime[i] =     *(DWORD*)(0x00555214 + (i * 0xAFC));
-        circuitState[i] = *(WORD*)(0x00555218 + (i * 0xAFC));
+    for(int i = 0; i < 4; i++) {
+        const DWORD playerAddr = PLAYER_BASE_ADDR + (i * PLAYER_DATA_SIZE);
+        const DWORD cssAddr = CSS_BASE_ADDR + (i * CSS_DATA_SIZE);
 
-        palette[i] =      *(BYTE*)(0x0055513A + (i * 0xAFC));
+        // Copy moon data from CSS to in-game data
+        *(DWORD*)(playerAddr + OFFSET_MOON) = *(DWORD*)(cssAddr + OFFSET_MOON);
 
-        // im not confident with any of this
-        if(*(WORD*)(0x00555234 + (i * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
-            circuitBreakTimer[i] = 0;
-        } else {
-            circuitBreakTimer[i] = *(WORD*)(0x00555230 + (i * 0xAFC));
-        }
+        // Read player state data
+        moon[i] = *(DWORD*)(playerAddr + OFFSET_MOON);
+        palette[i] = *(BYTE*)(playerAddr + OFFSET_PALETTE);
+        health[i] = *(DWORD*)(playerAddr + OFFSET_HEALTH);
+        redHealth[i] = *(DWORD*)(playerAddr + OFFSET_RED_HEALTH);
+        meter[i] = *(DWORD*)(playerAddr + OFFSET_METER);
+        heatTime[i] = *(DWORD*)(playerAddr + OFFSET_HEAT_TIME);
+        circuitState[i] = *(WORD*)(playerAddr + OFFSET_CIRCUIT_STATE);
+        hitstun[i] = *(DWORD*)(playerAddr + OFFSET_HITSTUN);
 
-        // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
-        if(health[i] == 0) { // is this/should this be a -1 or 0 thing,,, 
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
+        // Handle circuit break timer
+        const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
+        circuitBreakTimer[i] = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
+
+        // Set dead flag if health is depleted
+        if(health[i] == 0) {
+            *(BYTE*)(playerAddr + OFFSET_DEAD_FLAG) = 0x01;
         }
     }
 
@@ -850,9 +884,10 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         // draw meter bars
         x = 30;
         const int meterWidth = 200;
-        
-        float currentMeterWidth = 0.0f;
+        float currentMeterWidth = 0.0f; 
         DWORD meterCol = 0xFF000000;
+
+
 
         std::string meterString = "";
 
@@ -903,26 +938,122 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
 
         // draw health bars. SOME OF THESE CALLS MIGHT HAVE BACKFACE ISSUES. but look at me go, not caring. someones going to mention it. ugh
-        x = 58;
-        const int maxHealthWidth = 218;
+        x = 60;
+        const int maxHealthWidth = 213;
         float currentHealthWidth;
         
         Rect r;
         r.y1 = 30;
-        r.y2 = 40;
+        r.y2 = 43;
         r.x2 = x + maxHealthWidth;
+
+        // draw health bars background
+        r.x1 = r.x2 - maxHealthWidth;  // Full width
+        RectDraw(r.x1, r.y1, maxHealthWidth, r.y2 - r.y1, 0x80000000);  // 50% opacity black
+
+        Rect outerBorder = r;
+        outerBorder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(outerBorder, 3.0f, 0xFFFFFFFF); // white
+
+        // Then draw the inner border (1px black)
+        Rect innerBorder = r;
+        innerBorder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(innerBorder, 1.0f, 0xFF000000); // black
 
         currentHealthWidth = ((float)redHealth[i]) / 11400.0;
         r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
-        RectDraw(r, 0xFFFF0000);//, i == 3); // red health
+        //RectDraw(r, 0xFFFF0000);//, i == 3); // red health
+        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFF650000, 0xFFDA0000); //dark red to red
 
         currentHealthWidth = ((float)health[i]) / 11400.0;
         r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
-        RectDraw(r, 0xFFFFFF00);//, i == 3); // yellow health
+        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFFff8805, 0xFFfffb7d); // Orange to yellow gradient
 
-        r.x1 = r.x2 - (1 * maxHealthWidth);
-        BorderDraw(r, 0xFFFFFFFF);//, i == 3); // white bar
+        float currentHealth = (float)health[i];
+        if (currentHealth < inGameData[i].healthFlash.prevHealth) {
+            // Reset flash start time for every hit to trigger the alpha animation
+            inGameData[i].healthFlash.flashStartTime = GetTickCount() / 1000.0f;
+            
+            // Only start a new flash if we're not already in hitstun (not in a combo)
+            if (!inGameData[i].healthFlash.isFlashing || hitstun[i] == 0) {
+                // Store the initial health position where the combo started
+                float initialHealthWidth = (inGameData[i].healthFlash.prevHealth / 11400.0f) * maxHealthWidth;
+                
+                // Set flash to start at the initial health position
+                float flashX = r.x2 - initialHealthWidth;
+                float flashStartWidth = initialHealthWidth - (currentHealth / 11400.0f * maxHealthWidth);
+                
+                // Start the flash effect
+                inGameData[i].healthFlash.isFlashing = true;
+                inGameData[i].healthFlash.flashX = flashX;
+                inGameData[i].healthFlash.flashStartWidth = flashStartWidth;
+                inGameData[i].healthFlash.comboStartHealth = inGameData[i].healthFlash.prevHealth; // Store combo start health
+            } else {
+                // Keep the same starting X (where combo began) but extend the width based on current health
+                float currentWidth = (currentHealth / 11400.0f) * maxHealthWidth;
+                float comboStartWidth = (inGameData[i].healthFlash.comboStartHealth / 11400.0f) * maxHealthWidth;
+                inGameData[i].healthFlash.flashStartWidth = comboStartWidth - currentWidth;
+            }
+        }
 
+        if (inGameData[i].healthFlash.isFlashing) {
+            if (hitstun[i] > 0) {
+                // Reset the hitstun end tracking when back in hitstun
+                inGameData[i].healthFlash.hasStoredHitstunEnd = false;
+                
+                // Calculate time since flash started for opacity transition only
+                float timeInHitstun = (GetTickCount() / 1000.0f) - inGameData[i].healthFlash.flashStartTime;
+                
+                // Animate only the alpha during hitstun, keep full width
+                DWORD flashColor;
+                if (timeInHitstun < 0.3f) {
+                    float transitionProgress = timeInHitstun / 0.3f;
+                    BYTE alpha = (BYTE)(0xBB - (transitionProgress * (0xBB - 0x40)));
+                    flashColor = (alpha << 24) | 0x00FFFFFF;
+                } else {
+                    flashColor = 0x40FFFFFF;
+                }
+                
+                // Draw with original width, no reduction
+                RectDraw(inGameData[i].healthFlash.flashX, r.y1, 
+                        inGameData[i].healthFlash.flashStartWidth, r.y2 - r.y1, 
+                        flashColor);
+            } else {
+                // Store the time when hitstun first ends
+                if (!inGameData[i].healthFlash.hasStoredHitstunEnd) {
+                    inGameData[i].healthFlash.hitstunEndTime = GetTickCount() / 1000.0f;
+                    inGameData[i].healthFlash.hasStoredHitstunEnd = true;
+                }
+                
+                // Use time since hitstun ended for animation
+                float timeSinceHitstunEnd = (GetTickCount() / 1000.0f) - inGameData[i].healthFlash.hitstunEndTime;
+                if (timeSinceHitstunEnd < 0.25f) {  // Animate over 0.25 seconds instead of 1 second
+                    float animationProgress = timeSinceHitstunEnd * 4.0f;  // Scale to 0.0 to 1.0 over 0.25 seconds
+                    float currentWidth = inGameData[i].healthFlash.flashStartWidth * (1.0f - animationProgress);
+                    
+                    // Flip animation direction based on player
+                    float flashX = inGameData[i].healthFlash.flashX;
+                    if (i == 3) { // P2 side
+                        // Animate from right to left
+                        flashX = flashX + (inGameData[i].healthFlash.flashStartWidth - currentWidth);
+                    }
+                    
+                    DWORD flashColor = 0x40FFFFFF;
+                    RectDraw(flashX, r.y1, currentWidth, r.y2 - r.y1, flashColor);
+                } else {
+                    inGameData[i].healthFlash.isFlashing = false;
+                }
+            }
+        }
+
+        inGameData[i].healthFlash.prevHealth = currentHealth;
+
+
+/*         Rect outerborder = r;
+        outerborder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(outerborder, 4.0f, 0xFFFFFFFF); // WHITE */
+
+ 
         TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
         
         const char* moonString = moon[i] == 0 ? "Crescent" : (moon[i] == 1 ? "Full" : "Half"); 

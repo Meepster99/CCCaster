@@ -762,7 +762,7 @@ void __stdcall restoreRenderState();
 
 // -----
 
-void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB = 0x8042e5f4, bool side = false);;
+void LineDraw(float x1, float y1, float x2, float y2, float thickness, DWORD ARGB = 0x8042e5f4, bool side = false);
 
 void RectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
@@ -774,6 +774,8 @@ void BorderDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
 void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
+void BorderDrawThick(float x, float y, float w, float h, float strokeWidth, DWORD ARGB = 0x8042e5f4);
+void BorderDrawThick(const Rect& rect, float strokeWidth, DWORD ARGB = 0x8042e5f4);
 // -----
 
 Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format);

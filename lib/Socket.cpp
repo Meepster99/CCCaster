@@ -5,7 +5,7 @@
 #include "SmartSocket.hpp"
 #include "Exceptions.hpp"
 #include "ErrorStrings.hpp"
-
+#include <cstdint>
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>

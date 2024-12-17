@@ -283,7 +283,8 @@ res/palettes.res: res/palettes.rc res/palettes.ico
 	$(WINDRES) -F pe-i386 res/palettes.rc -O coff -o $@
 	@echo
 
-targets/DllDirectXRC.res: targets/DllDirectXRC.rc targets/DBGFNT02.png
+
+targets/DllDirectXRC.res: targets/DllDirectXRC.rc targets/DBGFNT02.png # targets/meter.png
 	$(WINDRES) -F pe-i386 targets/DllDirectXRC.rc -O coff -o $@
 	@echo
 

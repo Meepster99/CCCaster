@@ -1,4 +1,3 @@
-
 #include <set>
 #include <windows.h>
 #include <ws2tcpip.h>
@@ -933,7 +932,48 @@ void __stdcall restoreRenderState() {
 
 // -----
 
-void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
+void RectDrawGradient(float x, float y, float width, float height, DWORD colorLeft, DWORD colorRight) {
+    // Swap colors if we're drawing on P1 side (not reversed)
+    if(!shouldReverseDraws) {
+        DWORD temp = colorLeft;
+        colorLeft = colorRight;
+        colorRight = temp;
+    }
+
+    if(shouldReverseDraws) {
+        x = 640.0f - x;
+        x -= width;
+    }
+
+    x /= 480.0f;
+    width /= 480.0f;
+    y /= 480.0f;
+    height /= 480.0f;
+
+    y = 1 - y;
+
+    D3DVECTOR pos1((x + 0) * 1.5f - 1.0f, (y + 0) * 2.0f - 1.0f, 0.5f);
+    D3DVECTOR pos2((x + width) * 1.5f - 1.0f, (y + 0) * 2.0f - 1.0f, 0.5f);
+    D3DVECTOR pos3((x + 0) * 1.5f - 1.0f, (y - height) * 2.0f - 1.0f, 0.5f);
+    D3DVECTOR pos4((x + width) * 1.5f - 1.0f, (y - height) * 2.0f - 1.0f, 0.5f);
+
+    PosColVert v1 = { pos1, colorLeft };
+    PosColVert v2 = { pos2, colorRight };
+    PosColVert v3 = { pos3, colorLeft };
+    PosColVert v4 = { pos4, colorRight };
+
+    scaleVertex(v1.position);
+    scaleVertex(v2.position);
+    scaleVertex(v3.position);
+    scaleVertex(v4.position);
+
+    posColVertData.add(v1, v2, v3);
+    posColVertData.add(v2, v3, v4);
+}
+
+
+
+void LineDraw(float x1, float y1, float x2, float y2, float thickness, DWORD ARGB, bool side) {
 
 	x1 /= 480.0f;
 	x2 /= 480.0f;
@@ -941,7 +981,8 @@ void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
 	y2 /= 480.0f;
 
 	// this is going to need to be changed at different resolutions
-	float lineWidth = 1.0f / vHeight;
+	//float lineWidth = 1.0f / vHeight;
+    float lineWidth = thickness / vHeight;  // Remove the fixed 1.0f
 
 	// i am,,, i bit confused on how exactly to do this. 
 	// current vibes say,,, two very thin triangles.
@@ -1044,6 +1085,7 @@ void RectDraw(const Rect& rect, DWORD ARGB) {
 	RectDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
 }
 
+
 void BorderDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	if(shouldReverseDraws) {
@@ -1077,8 +1119,30 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 	RectDraw(x, y, w, h, ARGB);
 	BorderDraw(x, y, w, h, ARGB | 0xFF000000);
 
+
 }
 
+void BorderDrawThick(float x, float y, float w, float h, float strokeWidth, DWORD ARGB) {
+    if(shouldReverseDraws) {
+        x = 640.0f - x;
+        x -= w;
+    }
+    // Offset start points by strokeWidth
+    float x1 = x - strokeWidth;
+    float y1 = y - strokeWidth;
+    // Offset end points by subtracting strokeWidth
+    float x2 = x + w - strokeWidth;
+    float y2 = y + h - strokeWidth;
+
+    LineDraw(x1, y1, x2 + strokeWidth, y1, strokeWidth, ARGB, true);          // top
+    LineDraw(x1, y1, x1, y2 + strokeWidth, strokeWidth, ARGB, false);         // left
+    LineDraw(x2 + strokeWidth, y1, x2 + strokeWidth, y2 + strokeWidth, strokeWidth, ARGB, false); // right
+    LineDraw(x1, y2 + strokeWidth, x2 + (strokeWidth * 2), y2 + strokeWidth, strokeWidth, ARGB, true);  // bottom - extended by strokeWidth
+}
+
+void BorderDrawThick(const Rect& rect, float strokeWidth, DWORD ARGB) {
+    BorderDrawThick(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, strokeWidth, ARGB);
+}
 // -----
 
 float getCharWidth(const unsigned char c, const float w) {
@@ -1182,7 +1246,7 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 	float h = charHeightOffset;
 
 	float charWidth = ((float)(fontSize >> 1)) / (float)fontTexWidth;
-	float charHeight = (((float)fontSize) / (float)fontTexWidth) / 2.0f;
+	float charHeight = ((float)fontSize) / (float)fontTexWidth / 2.0f;
 
 	const char* str = format;
 
@@ -1334,7 +1398,7 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 	float maxX = 1.0f + ((wWidth - (wHeight * 4.0f / 3.0f)) / 2.0f) / wWidth;
 
 	const float charWidth = ((float)(fontSize >> 1)) / (float)fontTexWidth;
-	const float charHeight = ((float)fontSize) / (float)fontTexWidth;
+	float charHeight = (((float)fontSize) / (float)fontTexWidth) / 2.0f;
 
 	const float symbolWidth = charWidth;
 	const float symbolHeight = charHeight / 2.0f;
