@@ -4,7 +4,8 @@
 #include "CharacterSelect.hpp"
 #include "Logger.hpp"
 #include "DllTrialManager.hpp"
-#include "DllDirectX.hpp"
+//#include "DllDirectX.hpp"
+void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
 
 #include <windows.h>
 #include <d3dx9.h>
@@ -590,55 +591,6 @@ void _naked_checkWhoWon() {
 
 // -----
 
-extern "C" __attribute__((noinline)) void drawAllPortriats(DWORD index, DWORD texture) {
-    
-    DWORD xPos = (index & 1) ? 384 : 0;
-    DWORD yPos = 100;//0;
-    DWORD width = 0x100;
-    DWORD height = 0x60;
-    DWORD layer = 0x2C0; //0x2C1
-    if(index >= 2) {
-        xPos += (index & 1) ? 25 : 100;
-        width /= 2;
-        height /= 2;
-        layer |= 1;
-    }
-
-
-
-    // uVar2 xOffset?
-    // uVar3 yOffset?
-    // uVar4 width?
-
-    //                  edx    ?        x     y   h    xO yO  wid    hagain?
-    //meltyDrawTexture(0x100, 0, texture, xPos, 0, 0x60, 0, 0, 0x100, 0x60, 0xFFFFFFFF, 0, 0x2C1);
-    // is one width used for,,, what the fuck
-    // oh im soooo fucked ugh
-
-    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
-
-    //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
-
-    // are edx and,,, the other one both width?
-
-}
-
-void _naked_drawAllPortriats() {
-
-    // patched in at 00425a98
-
-    PUSH_ALL;
-    __asmStart R"(
-        push edi; // texture
-        push esi; // index
-        call _drawAllPortriats;
-        add esp, 0x08;
-    )" __asmEnd
-    POP_ALL;
-
-    emitJump(0x00425af0);
-}
-
 extern "C" {
     DWORD naked_fixPortriatLoadSide_loadCount = 0;
 }
@@ -678,25 +630,69 @@ void _naked_fixPortriatLoadSide() { // this solution is not the most elegant, bu
 
 }
 
+extern "C" {
+    int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
+}
+
+void drawAllPortriats(int playerIndex) {
+
+    DWORD texture = *(DWORD*)(0x005642c8 + (playerIndex * 0x20));
+    if(texture == 0) {
+        return;
+    }
+    
+    DWORD xPos = (playerIndex & 1) ? 384 : 0;
+    DWORD yPos = 100;//0;
+    DWORD width = 0x100;
+    DWORD height = 0x60;
+    DWORD layer = 0x2C0; //0x2C1
+    if(playerIndex >= 2) {
+        xPos += (playerIndex & 1) ? 25 : 100;
+        width /= 2;
+        height /= 2;
+        layer |= 1;
+    }
+
+    // uVar2 xOffset?
+    // uVar3 yOffset?
+    // uVar4 width?
+
+    //                  edx    ?        x     y   h    xO yO  wid    hagain?
+    //meltyDrawTexture(0x100, 0, texture, xPos, 0, 0x60, 0, 0, 0x100, 0x60, 0xFFFFFFFF, 0, 0x2C1);
+    // is one width used for,,, what the fuck
+    // oh im soooo fucked ugh
+
+    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
+
+    //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
+
+    // are edx and,,, the other one both width?
+
+}
+
 void drawHealthBars(int playerIndex) {
 
 }
 
 void drawMeterBars(int playerIndex) {
     
+
+    __asmStart R"(
+        push _newDrawResourcesHud_playerIndex;
+    )" __asmEnd
+    
+    emitCall(0x004253c0); // draw meter guages
+    
+    __asmStart R"(
+        add esp, 0x04;
+    )" __asmEnd
+
 }
 
 void drawGuardBars(int playerIndex) {
 
 }
 
-void drawCharInfo(int playerIndex) {
-    
-}
-
-extern "C" {
-    int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
-}
 void newDrawResourcesHud() {
 
     newDrawResourcesHud_playerIndex = 0;
@@ -706,7 +702,7 @@ void newDrawResourcesHud() {
         drawHealthBars(newDrawResourcesHud_playerIndex);
         drawMeterBars(newDrawResourcesHud_playerIndex);
         drawGuardBars(newDrawResourcesHud_playerIndex);
-        drawCharInfo(newDrawResourcesHud_playerIndex);
+        drawAllPortriats(newDrawResourcesHud_playerIndex);
 
         // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
         // or,,, i could just,, trace all the textures and do all the draws myself?

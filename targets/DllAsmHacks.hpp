@@ -4,6 +4,7 @@
 #include "Exceptions.hpp"
 #include "DllNetplayManager.hpp"
 
+#include <stdio.h>
 #include <vector>
 #include <array>
 
@@ -634,13 +635,21 @@ __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
 __attribute__((noinline)) void drawAllPortriats();
 
-__attribute__((naked, noinline)) void _naked_drawAllPortriats();
+//__attribute__((naked, noinline)) void _naked_drawAllPortriats();
 
 __attribute__((naked, noinline)) void _naked_fixPortriatLoadSide();
 
 __attribute__((noinline)) void newDrawResourcesHud();
 
 __attribute__((naked, noinline)) void _naked_newDrawResourcesHud();
+
+__attribute__((noinline)) void drawAllPortriats(int playerIndex);
+
+__attribute__((noinline)) void drawHealthBars(int playerIndex);
+
+__attribute__((noinline)) void drawMeterBars(int playerIndex);
+
+__attribute__((noinline)) void drawGuardBars(int playerIndex);
 
 static const AsmList initPatch2v2 =
 { 
@@ -724,8 +733,12 @@ static const AsmList initPatch2v2 =
     // HUD patches
 
     // todo, fix this!
-    { ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES },
-    { ( void *) (0x00424bdb), { 0x90 } },
+    
+    { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // draws the count for the char specific resource
+    { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // draws the actual char specific texture 
+    { ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
+    { ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
+    { ( void *) (0x00424bdb), { 0x90 } }, // push for above
 
     PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
 
@@ -733,7 +746,11 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
 
+    { ( void * ) (0x004253e6 + 1), { 0x04 }}, // allow for 4 calls in meter bar draw.
+
     { ( void * ) (0x00425a84 + 2), { 0x04 }} // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
+
+    
 
 };
 
