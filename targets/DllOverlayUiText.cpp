@@ -819,6 +819,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     
     // these draws are not ideal. in any way.
 
+    // this needs to be made into a struct!
     DWORD health[4]; // 11400 max
     DWORD redHealth[4];
     DWORD moon[4];
@@ -870,10 +871,20 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
         circuitBreakTimer[i] = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
 
-        // Set dead flag if health is depleted
+            // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
+        // most likely,, this is causing zombie mode?
+        /*if(health[i] == 0) { // is this/should this be a -1 or 0 thing,,, 
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
+        }*/
+
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+
+                    // Set dead flag if health is depleted
         if(health[i] == 0) {
             *(BYTE*)(playerAddr + OFFSET_DEAD_FLAG) = 0x01;
         }
+
     }
 
     float x;

@@ -588,7 +588,11 @@ __attribute__((naked, noinline)) void _naked_hitBoxConnect2();
 
 __attribute__((naked, noinline)) void _naked_hitBoxConnect3();
 
-__attribute__((naked, noinline)) void _naked_throwConnect();
+__attribute__((naked, noinline)) void _naked_throwConnect1();
+
+__attribute__((naked, noinline)) void _naked_throwConnect2();
+
+__attribute__((naked, noinline)) void _naked_proxyGuard();
 
 __attribute__((naked, noinline)) void _naked_fileLoad();
 
@@ -601,13 +605,52 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone2();
 __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
 static const AsmList initPatch2v2 =
-{
+{ 
+
+    /*
     
+    todo general:
+        make hud and everything ingame nicer
+        make CSS nicer
+        explain new controller input screen in a way that doesnt confuse everyone
+
+    todo specific:
+        stop throwing teamates
+            grabs(6e) work correctly, command grabs and hitgrabs dont
+            most likely, check the flags on an attack, see if its,,, a grab, and then patch a compare.
+            weird tho, its a different location than where normal box collisions occur
+                somethings checking a flag, branching to a different point in code.
+                hantei has a hitgrab flag.
+                hitgrabs are blockable
+                command grabs are non blockable hitgrabs.
+                most likely, the hitgrab flag is read, and branches
+                idec about the block flags 
+                0046F9EE and 004719AC have potential, 
+
+
+            hitgrabs can be blocked. commmand grabs cannot
+            csion j214a is a,,, hitgrab
+
+
+
+        fix round ends, re add timer back in
+        character facing: one of the two following ways
+            one: 
+                manual idea
+                press a button, locked on one player, press it again and it alternates
+                // you know the 1p2p arrow thats above roog knife? use that!
+                if P3 was targeting P2, P2 would have a P3 above their heads
+            two:
+                automatic idea
+                automatic, except always PRIO the person you are comboing
+    
+    */
+
     // todo, dont reface when comboing
     // todo, camera, max zoom maybe?
     // fn1/fn2 change what char you are focusing?
     // or i can have it lock on to a combo, prio if you are hitting 
-    
+
     // if blocking and a teamate hits you,, proxy block occurs
     // draw sion bullets/roa electric thingy for p2/p3
 
@@ -631,14 +674,22 @@ static const AsmList initPatch2v2 =
     // patch the port comparison for chars turning around
     PATCHJUMP(0x0047587b, _naked_charTurnAround),
 
-    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed
+    // i quite literally, do not know what these two patches do!
+    // im keeping them here, but pleaes keep that in mind
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
 
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
-    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3),//, patch is def needed
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
 
     PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
+
+    PATCHJUMP(0x004641b2, _naked_throwConnect1), // this patches grabs, not command grabs and not hitgrabs
     
+    PATCHJUMP(0x0046fa65, _naked_throwConnect2), // patches hit/cmd grabs
+
+    PATCHJUMP(0x00462b87, _naked_proxyGuard),
+
     // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?
 
     PATCHJUMP(0x0047463c, _naked_checkRoundDone), // prevents game from ending until a team dies
