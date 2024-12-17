@@ -678,21 +678,54 @@ void _naked_fixPortriatLoadSide() { // this solution is not the most elegant, bu
 
 }
 
-int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
+void drawHealthBars(int playerIndex) {
+
+}
+
+void drawMeterBars(int playerIndex) {
+    
+}
+
+void drawGuardBars(int playerIndex) {
+
+}
+
+void drawCharInfo(int playerIndex) {
+    
+}
+
+extern "C" {
+    int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
+}
 void newDrawResourcesHud() {
 
     newDrawResourcesHud_playerIndex = 0;
 
     while(newDrawResourcesHud_playerIndex < 4) {
 
-        ((void(*)(DWORD))(0x00425260))(newDrawResourcesHud_playerIndex); // draw guard guages
-        ((void(*)(DWORD))(0x004253c0))(newDrawResourcesHud_playerIndex); // draw meter guages
+        drawHealthBars(newDrawResourcesHud_playerIndex);
+        drawMeterBars(newDrawResourcesHud_playerIndex);
+        drawGuardBars(newDrawResourcesHud_playerIndex);
+        drawCharInfo(newDrawResourcesHud_playerIndex);
 
-        setRegister(ecx, newDrawResourcesHud_playerIndex);
-        ((void(*)())(0x004258e0))(); // draw moons and palettes
+        // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
+        // or,,, i could just,, trace all the textures and do all the draws myself?
 
-        setRegister(eax, newDrawResourcesHud_playerIndex);
-        ((void(*)())(0x00425a80))(); // draw portriats
+        /*
+        pushVar(_newDrawResourcesHud_playerIndex);
+        emitCall(0x00425260); // draw guard guages
+        addStack(0x04);
+
+        pushVar(_newDrawResourcesHud_playerIndex);
+        emitCall(0x004253c0); // draw meter guages
+        addStack(0x04);
+
+        setRegister(ecx, _newDrawResourcesHud_playerIndex);
+        emitCall(0x004258e0); // draw moons and palettes
+
+        setRegister(eax, _newDrawResourcesHud_playerIndex);
+        emitCall(0x00425a80); // draw portriats
+        */
 
         newDrawResourcesHud_playerIndex++;
     }

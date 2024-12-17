@@ -65,6 +65,7 @@
 
 #define emitByte(b) asm __volatile__ (".byte " #b);
 
+/*
 #define setRegister(reg, val) \
     __asm__ __volatile__( \
     "movl %%" #reg ", %0" \
@@ -72,6 +73,19 @@
     : "r" (val) \
     : #reg \
     )
+*/
+
+#define setRegister(reg, val) __asmStart \
+    "mov " #reg ", " #val \
+    __asmEnd
+
+#define pushVar(v) __asmStart \
+    "push " #v \
+    __asmEnd
+
+#define addStack(n) __asmStart \
+    "add esp, " #n \
+    __asmEnd
 
 #define INT3 __asmStart R"( int3; )" __asmEnd
 
@@ -715,7 +729,7 @@ static const AsmList initPatch2v2 =
 
     PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
 
-    PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
+    //PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
 
     PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
 
