@@ -830,7 +830,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     DWORD palette[4];
     DWORD hitstun[4];
     DWORD circuitBreakTimer[4]; 
-
+    DWORD knockedDown[4];
 
     constexpr DWORD PLAYER_BASE_ADDR = 0x00555130;
     constexpr DWORD CSS_BASE_ADDR = 0x0074d840;
@@ -848,7 +848,7 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     constexpr DWORD OFFSET_CIRCUIT_BREAK = 0x100;
     constexpr DWORD OFFSET_EX_PENALTY = 0x104;
     constexpr DWORD OFFSET_BACKGROUND_FLAG = 0x174;
-    constexpr DWORD OFFSET_KNOCKDOWN_FLAG = 0x1B0
+    constexpr DWORD OFFSET_KNOCKDOWN_FLAG = 0x1B0;
     constexpr DWORD OFFSET_HITSTUN = 0x1AC;
 
     for(int i = 0; i < 4; i++) {
