@@ -847,7 +847,8 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
     constexpr DWORD OFFSET_CIRCUIT_STATE = 0xE8;
     constexpr DWORD OFFSET_CIRCUIT_BREAK = 0x100;
     constexpr DWORD OFFSET_EX_PENALTY = 0x104;
-    constexpr DWORD OFFSET_DEAD_FLAG = 0x178;
+    constexpr DWORD OFFSET_BACKGROUND_FLAG = 0x174;
+    constexpr DWORD OFFSET_KNOCKDOWN_FLAG = 0x1B0
     constexpr DWORD OFFSET_HITSTUN = 0x1AC;
 
     for(int i = 0; i < 4; i++) {
@@ -866,26 +867,27 @@ void updateInGameStuff(IDirect3DDevice9 *device) {
         heatTime[i] = *(DWORD*)(playerAddr + OFFSET_HEAT_TIME);
         circuitState[i] = *(WORD*)(playerAddr + OFFSET_CIRCUIT_STATE);
         hitstun[i] = *(DWORD*)(playerAddr + OFFSET_HITSTUN);
+        knockedDown[i] = *(BYTE*)(playerAddr + OFFSET_KNOCKDOWN_FLAG);
 
         // Handle circuit break timer
         const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
         circuitBreakTimer[i] = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
 
-            // this char is dead, set its bg flag. (will bg flags need to be unset on round end? or reset on round start?s)
-        // most likely,, this is causing zombie mode?
-        /*if(health[i] == 0) { // is this/should this be a -1 or 0 thing,,, 
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01;
-        }*/
-
-        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
-
-                    // Set dead flag if health is depleted
-        if(health[i] == 0) {
+        // Set dead flag if health is depleted
+        /* if(health[i] == 0) {
             *(BYTE*)(playerAddr + OFFSET_DEAD_FLAG) = 0x01;
-        }
+        } */
 
+        /* if(*(BYTE*)(0x00555130 + 0x1B0 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+            }    */
+
+       // Set background flag when knocked down
+        if(knockedDown[i] != 0) {
+            *(BYTE*)(playerAddr + OFFSET_BACKGROUND_FLAG) = 0x01;
+        }
     }
+ 
 
     float x;
     for(int i=2; i<4; i++) {
