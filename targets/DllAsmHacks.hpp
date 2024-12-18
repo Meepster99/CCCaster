@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <vector>
 #include <array>
+#include <windows.h>
+
+#define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
+#define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
+#define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
+#define RIGHTPRESS (GetAsyncKeyState(VK_RIGHT) & 0x0001)
 
 // i wish i ever got the raw strings thing to work
 #define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
@@ -77,7 +83,7 @@
 */
 
 #define setRegister(reg, val) __asmStart \
-    "mov " #reg ", " #val \
+    "mov " #reg ", " #val ";" \
     __asmEnd
 
 #define pushVar(v) __asmStart \
@@ -651,6 +657,12 @@ __attribute__((noinline)) void drawMeterBars(int playerIndex);
 
 __attribute__((noinline)) void drawGuardBars(int playerIndex);
 
+__attribute__((noinline)) void drawMoonsAndPalette(int playerIndex);
+
+__attribute__((naked, noinline)) void _naked_drawWinCount();
+
+__attribute__((naked, noinline)) void _naked_drawRoundDots();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -736,9 +748,15 @@ static const AsmList initPatch2v2 =
     
     { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // draws the count for the char specific resource
     { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // draws the actual char specific texture 
-    { ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
-    { ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
-    { ( void *) (0x00424bdb), { 0x90 } }, // push for above
+    
+    //{ ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
+    
+    PATCHJUMP(0x0042494c, _naked_drawRoundDots),
+
+    //{ ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
+    //{ ( void *) (0x00424bdb), { 0x90 } }, // push for above
+
+    PATCHJUMP(0x00426c67, _naked_drawWinCount),
 
     PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
 
@@ -746,11 +764,11 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
 
-    { ( void * ) (0x004253e6 + 1), { 0x04 }}, // allow for 4 calls in meter bar draw.
+    { ( void * ) (0x004253e6 + 1), { 0x04 }},// allow for 4 calls in meter bar draw.
 
-    { ( void * ) (0x00425a84 + 2), { 0x04 }} // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
+    { ( void * ) (0x00425a84 + 2), { 0x04 }}, // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
 
-    
+    { ( void * ) (0x00425907 + 2), { 0x04 }} // allow for 4 draw calls during drawMoonsAndPalette
 
 };
 
