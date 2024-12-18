@@ -15,6 +15,24 @@
 #include <vector>
 #include <sstream>
 
+#include "DllOverlayConfig.hpp"
+
+namespace AsmHacks {
+    PortraitConfig portraitConfigs[4] = {
+        { 0.0f, 100.0f, 256.0f, 96.0f, 0x2C0 },     // P1
+        { 384.0f, 100.0f, 256.0f, 96.0f, 0x2C0 },   // P2
+        { 100.0f, 100.0f, 128.0f, 48.0f, 0x2C1 },   // P3
+        { 409.0f, 100.0f, 128.0f, 48.0f, 0x2C1 }    // P4
+    };
+
+    MoonConfig moonConfigs[4] = {
+        { 50.0f, 50.0f, 1.0f, 0x2C0 },    // P1
+        { 590.0f, 50.0f, 1.0f, 0x2C0 },   // P2
+        { 50.0f, 150.0f, 0.75f, 0x2C1 },  // P3
+        { 590.0f, 150.0f, 0.75f, 0x2C1 }  // P4
+    };
+}
+
 struct HealthBarFlash {
     float prevHealth = 11400.0f;
     float flashStartTime = 0.0f;
@@ -233,6 +251,7 @@ void drawHealthBar(ImDrawList* draw_list, ImVec2 pos, int playerIndex, bool isRi
 void uiHP()
 {
     static bool open = true;
+    static ImVec2 windowPos(0, 280);  // Remember position between frames
     ImGui::GetIO().MouseDrawCursor = true;
     
     // Set window background to fully transparent
@@ -242,13 +261,17 @@ void uiHP()
     if (ImGui::Begin("Meters", &open, 
         ImGuiWindowFlags_NoTitleBar | 
         ImGuiWindowFlags_NoResize | 
-        ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoScrollbar |
         ImGuiWindowFlags_NoCollapse |
         ImGuiWindowFlags_NoBringToFrontOnFocus))
     {
         ImGui::SetWindowSize(ImVec2(640, 200));
-        ImGui::SetWindowPos(ImVec2(0, 280));
+        ImGui::SetWindowPos(windowPos, ImGuiCond_Once);  // Only set position if window hasn't been moved
+        
+        // Store new position if window was dragged
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseDragging(0)) {
+            windowPos = ImGui::GetWindowPos();
+        }
         
         const float healthWidth = 213.0f;
         const float healthHeight = 12.0f;
@@ -274,7 +297,7 @@ void uiHP()
     ImGui::End();
     
     ImGui::PopStyleColor();
-
+    ImGui::PopStyleVar();
 }
 
 void uiMeter()
@@ -403,5 +426,106 @@ void uiMeter()
         draw_list->PathLineTo(screenPoints[0]);
         draw_list->PathStroke(ImGui::ColorConvertFloat4ToU32(borderColor), ImDrawFlags_Closed, borderThickness);
     }
+    ImGui::End();
+
+}
+
+void uiPortraitDebug()
+{
+    static bool open = true;
+    
+    ImGui::Begin("-W-", &open, ImGuiWindowFlags_AlwaysAutoResize);
+    
+    if (ImGui::CollapsingHeader("Portraits")) {
+        for (int i = 0; i < 4; i++) {
+            if (ImGui::TreeNode(("Portrait P" + std::to_string(i + 1)).c_str())) {
+                AsmHacks::PortraitConfig& config = AsmHacks::portraitConfigs[i];
+                
+                char label[32];
+                
+                // Position controls with drag
+                snprintf(label, sizeof(label), "X Position##p%d", i);
+                ImGui::DragFloat(label, &config.xPos, 1.0f, 0.0f, 800.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                
+                snprintf(label, sizeof(label), "Y Position##p%d", i);
+                ImGui::DragFloat(label, &config.yPos, 1.0f, 0.0f, 600.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                
+                // Scale control (affects both width and height proportionally)
+                snprintf(label, sizeof(label), "Scale##p%d", i);
+                float baseWidth = (i < 2) ? 256.0f : 128.0f;
+                float baseHeight = (i < 2) ? 96.0f : 48.0f;
+                float scale = config.width / baseWidth;
+                if (ImGui::DragFloat(label, &scale, 0.01f, 0.1f, 4.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp)) {
+                    config.width = baseWidth * scale;
+                    config.height = baseHeight * scale;
+                }
+                
+                // Layer control
+                snprintf(label, sizeof(label), "Layer##p%d", i);
+                ImGui::DragFloat(label, &config.layer, 0.001f, 0x2C0, 0x2C1, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                
+                if (ImGui::Button("Reset to Default")) {
+                    if (i < 2) { // P1/P2
+                        config = { (i == 0) ? 0.0f : 384.0f, 100.0f, 256.0f, 96.0f, 0x2C0 };
+                    } else { // P3/P4
+                        config = { (i == 2) ? 100.0f : 409.0f, 100.0f, 128.0f, 48.0f, 0x2C1 };
+                    }
+                }
+                
+                ImGui::TreePop();
+            }
+        }
+    }
+
+    if (ImGui::CollapsingHeader("Palette")) {
+        for (int i = 0; i < 4; i++) {
+            if (ImGui::TreeNode(("Moon P" + std::to_string(i + 1)).c_str())) {
+                AsmHacks::MoonConfig& config = AsmHacks::moonConfigs[i];
+                
+                char label[32];
+                
+                // Moon value display (read-only)
+                const DWORD moonValueBase = 0x55513C;
+                int moonValue = *(int*)(moonValueBase + (i * 0xAFC) + 0x0C);
+                snprintf(label, sizeof(label), "Moon Value##m%d", i);
+                ImGui::LabelText(label, "%d (%s)", moonValue, 
+                    moonValue == 0 ? "Crescent" : 
+                    moonValue == 1 ? "Full" : 
+                    moonValue == 2 ? "Half" : "Unknown");
+                
+                // Position controls with drag
+                snprintf(label, sizeof(label), "X Position##m%d", i);
+                ImGui::DragFloat(label, &config.xPos, 1.0f, 0.0f, 800.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                
+                snprintf(label, sizeof(label), "Y Position##m%d", i);
+                ImGui::DragFloat(label, &config.yPos, 1.0f, 0.0f, 600.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+                
+                snprintf(label, sizeof(label), "Scale##m%d", i);
+                ImGui::DragFloat(label, &config.scale, 0.01f, 0.1f, 2.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp);
+                
+                snprintf(label, sizeof(label), "Layer##m%d", i);
+                ImGui::DragFloat(label, &config.layer, 0.001f, 0x2C0, 0x2C1, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+                
+                if (ImGui::Button("Reset to Default")) {
+                    if (i < 2) { // P1/P2
+                        config = { (i == 0) ? 50.0f : 590.0f, 50.0f, 1.0f, 0x2C0 };
+                    } else { // P3/P4
+                        config = { (i == 2) ? 50.0f : 590.0f, 150.0f, 0.75f, 0x2C1 };
+                    }
+                }
+                
+                ImGui::TreePop();
+            }
+        }
+    }
+    
+    if (ImGui::Button("Save to File")) {
+        // TODO: Implement config saving
+    }
+    
+    if (ImGui::Button("Load from File")) {
+        // TODO: Implement config loading
+    }
+    
     ImGui::End();
 }

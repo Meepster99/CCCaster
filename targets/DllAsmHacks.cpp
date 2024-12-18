@@ -4,6 +4,7 @@
 #include "CharacterSelect.hpp"
 #include "Logger.hpp"
 #include "DllTrialManager.hpp"
+#include "DllOverlayConfig.hpp"
 //#include "DllDirectX.hpp"
 void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
 
@@ -634,24 +635,14 @@ extern "C" {
     int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
 }
 
-void drawAllPortriats(int playerIndex) {
+extern PortraitConfig portraitConfigs[4];  // Add this at the top
 
+void drawAllPortraits(int playerIndex) {
     DWORD texture = *(DWORD*)(0x005642c8 + (playerIndex * 0x20));
     if(texture == 0) {
         return;
     }
     
-    DWORD xPos = (playerIndex & 1) ? 384 : 0;
-    DWORD yPos = 100;//0;
-    DWORD width = 0x100;
-    DWORD height = 0x60;
-    DWORD layer = 0x2C0; //0x2C1
-    if(playerIndex >= 2) {
-        xPos += (playerIndex & 1) ? 25 : 100;
-        width /= 2;
-        height /= 2;
-        layer |= 1;
-    }
 
     // uVar2 xOffset?
     // uVar3 yOffset?
@@ -662,7 +653,19 @@ void drawAllPortriats(int playerIndex) {
     // is one width used for,,, what the fuck
     // oh im soooo fucked ugh
 
-    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
+    //meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
+ const AsmHacks::PortraitConfig& config = AsmHacks::portraitConfigs[playerIndex];
+    meltyDrawTexture(
+        texture,
+        0, 0,                    // Source X, Y
+        0x100, 0x60,            // Source Width, Height
+        config.xPos,            // Dest X
+        config.yPos,            // Dest Y
+        config.width,           // Dest Width
+        config.height,          // Dest Height
+        0xFFFFFFFF,            // Color
+        config.layer           // Layer
+    );
 
     //meltyDrawTexture(texture, xPos, yPos, width, height, 0xFFFFFFFF, 0x2C1);
 
@@ -694,16 +697,14 @@ void drawGuardBars(int playerIndex) {
 }
 
 void newDrawResourcesHud() {
-
     newDrawResourcesHud_playerIndex = 0;
 
     while(newDrawResourcesHud_playerIndex < 4) {
-
         drawHealthBars(newDrawResourcesHud_playerIndex);
         drawMeterBars(newDrawResourcesHud_playerIndex);
         drawGuardBars(newDrawResourcesHud_playerIndex);
-        drawAllPortriats(newDrawResourcesHud_playerIndex);
-
+        drawAllPortraits(newDrawResourcesHud_playerIndex);
+        drawAllMoons(newDrawResourcesHud_playerIndex);
         // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
         // or,,, i could just,, trace all the textures and do all the draws myself?
 
@@ -714,15 +715,15 @@ void newDrawResourcesHud() {
 
         pushVar(_newDrawResourcesHud_playerIndex);
         emitCall(0x004253c0); // draw meter guages
-        addStack(0x04);
+        addStack(0x04); 
 
         setRegister(ecx, _newDrawResourcesHud_playerIndex);
         emitCall(0x004258e0); // draw moons and palettes
 
-        setRegister(eax, _newDrawResourcesHud_playerIndex);
+       setRegister(eax, _newDrawResourcesHud_playerIndex);
         emitCall(0x00425a80); // draw portriats
         */
-
+  
         newDrawResourcesHud_playerIndex++;
     }
 }
@@ -736,6 +737,27 @@ void _naked_newDrawResourcesHud() {
     POP_ALL;
 
     ASMRET;
+}
+
+void drawAllMoons(int playerIndex) {
+    DWORD texture = *(DWORD*)(0x005642cc + (playerIndex * 0x20)); // Adjust offset if needed for moon texture
+    if(texture == 0) {
+        return;
+    }
+    
+    const AsmHacks::MoonConfig& config = AsmHacks::moonConfigs[playerIndex];
+    
+    meltyDrawTexture(
+        texture,
+        0, 0,                    // Source X, Y
+        0x40, 0x40,             // Source Width, Height (adjust if needed)
+        config.xPos,            // Dest X
+        config.yPos,            // Dest Y
+        0x40 * config.scale,    // Dest Width
+        0x40 * config.scale,    // Dest Height
+        0xFFFFFFFF,            // Color
+        config.layer           // Layer
+    );
 }
 
 } // namespace AsmHacks

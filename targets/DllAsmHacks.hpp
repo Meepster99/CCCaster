@@ -633,9 +633,9 @@ __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
 // -----
 
-__attribute__((noinline)) void drawAllPortriats();
+__attribute__((noinline)) void drawAllPortraits();
 
-//__attribute__((naked, noinline)) void _naked_drawAllPortriats();
+//__attribute__((naked, noinline)) void _naked_drawAllPortraits();
 
 __attribute__((naked, noinline)) void _naked_fixPortriatLoadSide();
 
@@ -643,7 +643,7 @@ __attribute__((noinline)) void newDrawResourcesHud();
 
 __attribute__((naked, noinline)) void _naked_newDrawResourcesHud();
 
-__attribute__((noinline)) void drawAllPortriats(int playerIndex);
+__attribute__((noinline)) void drawAllPortraits(int playerIndex);
 
 __attribute__((noinline)) void drawHealthBars(int playerIndex);
 
@@ -742,7 +742,7 @@ static const AsmList initPatch2v2 =
 
     PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
 
-    //PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
+    //PATCHJUMP(0x00425a98, _naked_drawAllPortraits),
 
     PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
 
@@ -777,5 +777,7 @@ static const AsmList patch2v2 =
 
 };
 
+// Add with the other function declarations
+__attribute__((noinline)) void drawAllMoons(int playerIndex);
 
 } // namespace AsmHacks
