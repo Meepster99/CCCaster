@@ -1155,9 +1155,9 @@ void updateImGuiStuff(IDirect3DDevice9 *device)
         
         ImGui::End();
     } */
-    uiHP();
-        uiPortraitDebug();
-
+   // uiHP();
+    //    uiPortraitDebug();
+    //uiMeterConfig();
     //uiMeter();
     //ImGui::ShowDemoWindow();
     // call new function here

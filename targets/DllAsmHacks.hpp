@@ -796,6 +796,6 @@ static const AsmList patch2v2 =
 };
 
 // Add with the other function declarations
-__attribute__((noinline)) void drawAllMoons(int playerIndex);
-
+/* __attribute__((noinline)) void drawAllMoons(int playerIndex);
+ */
 } // namespace AsmHacks

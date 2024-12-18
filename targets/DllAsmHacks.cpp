@@ -16,6 +16,9 @@
 
 using namespace std;
 
+struct HealthBarState {
+    float prevHealth = 11400.0f;
+} healthStates[4];
 
 static int memwrite ( void *dst, const void *src, size_t len )
 {
@@ -641,7 +644,6 @@ const Point hudAnchors[4] = { // i could/should maybe add a xscale and yscale pa
     Point(640, 48)
 };
 
-extern PortraitConfig portraitConfigs[4];  // Add this at the top
 
 void drawAllPortraits(int playerIndex) {
     DWORD texture = *(DWORD*)(0x005642c8 + (playerIndex * 0x20));
@@ -690,59 +692,42 @@ void drawAllPortraits(int playerIndex) {
 }
 
 void drawHealthBars(int playerIndex) {
-
-
-    // edx is w
-    // 0 tex x y h texX texY texW texH
-
-    /*
-
-    x: (iVar1 - iVar2) + 0x111
-    y: 0x28
-    w: is a fuckass float, go grab it
-    h: 10
-
-    texX: 0 
-    texY: 0x176
-    texW: 0xd4
-    texH: 10
-
-    */
-
-    //melty only tracks anims for 2/4 players. need to do this on my own
-
     const DWORD maxHealthBarWidth = 200;
-    const DWORD healthBarHeight = 5;
+    const DWORD healthBarHeight = 13;
 
-    DWORD texture = *(DWORD*)0x005550f8;
+    DWORD hudTexture = *(DWORD*)0x005550f8;
 
-    DWORD health =       *(DWORD*)(0x005551EC + (playerIndex * 0xAFC));
-    DWORD redHealth =    *(DWORD*)(0x005551F0 + (playerIndex * 0xAFC));
+    DWORD health = *(DWORD*)(0x005551EC + (playerIndex * 0xAFC));
+    DWORD redHealth = *(DWORD*)(0x005551F0 + (playerIndex * 0xAFC));
 
-    const int x = 30; // switch this to anchor when you refactor this please!
-    
-    //DWORD yPos = playerIndex >= 2 ? 68 : 20;
+    const int x = 30;
     DWORD yPos = hudAnchors[playerIndex].y + 20;  
     
     DWORD yWidth = maxHealthBarWidth * (((float)health) / 11400.0f);
     DWORD rWidth = maxHealthBarWidth * (((float)redHealth) / 11400.0f);
 
-
-    DWORD redHealthColor = 0xFF990b0b;
-
     if(playerIndex & 1) {
-        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
-        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, rWidth, healthBarHeight, redHealthColor, 0x2C2);
-        //meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, maxHealthBarWidth, healthBarHeight, 0xFFc89664, 0x2C2);
+        // Yellow health (P2/P4: 374 + 32)
+        meltyDrawTexture(hudTexture, 0, 374 + 32, 212, 10, 640 - maxHealthBarWidth - x, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
+        
+        
+        // Red health (P2/P4: (374 + 32) + 16)
+        meltyDrawTexture(hudTexture, 0, 374 + 32 + 16, 212, 10, 
+                        640 - maxHealthBarWidth - x, yPos, rWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
     } else {        
-        meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - yWidth, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
-        meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - rWidth, yPos, rWidth, healthBarHeight, redHealthColor, 0x2C2); 
-        //meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - maxHealthBarWidth, yPos, maxHealthBarWidth, healthBarHeight, 0xFFc89664, 0x2C2); // background darkened highlight?
+        // Yellow health (P1/P3: 374)
+        meltyDrawTexture(hudTexture, 0, 374, 212, 10, x + maxHealthBarWidth - yWidth, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
+        
+
+        // Red health (P1/P3: 374 + 16)
+        meltyDrawTexture(hudTexture, 0, 374 + 16, 212, 10, 
+                        x + maxHealthBarWidth - rWidth, yPos, rWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
     }
 
+ 
 }
 
-void drawMeterBars(int playerIndex) {
+/* void drawMeeeeeeeeeeterBars(int playerIndex) {
 
     // i am not the happiest with this method of tweaking things, but it should work
     // or well actually i have no guarentee it will work now that i think about it, bc im not sure if the animations are even tracked for other chars
@@ -766,7 +751,7 @@ void drawMeterBars(int playerIndex) {
     )" __asmEnd
 
     */
-
+/*
     // i am going to explode.
 
     DWORD moon =         *(DWORD*)(0x0055513C + (playerIndex * 0xAFC));
@@ -834,12 +819,211 @@ void drawMeterBars(int playerIndex) {
         meterString = "BREAK";
     }
 
-    currentMeterWidth = MIN(1.0f, currentMeterWidth);
+    /* currentMeterWidth = MIN(1.0f, currentMeterWidth); //do not remove this code/comment block
     RectDraw(x, y, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
     BorderDraw(x, y, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
-    TextDraw(x, y, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
+    TextDraw(x, y, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string */
 
+ /*   
+} */
+
+extern "C" void (*drawMeterText)(int, int, int) = (void(*)(int, int, int))0x41D9E0;
+
+DWORD getStateTextColor(int circuitState, DWORD baseColor) {
+    DWORD frameCounter = *(DWORD*)CC_REAL_TIMER_ADDR;
     
+    switch(circuitState) {
+        case 1: // HEAT
+            return 0xFF5A5AE6;  // Blue
+            
+        case 2: // MAX
+            // Overexpose by using very bright white
+            return (frameCounter % 30) < 15 ? 0xFFFFFFFF : 0xFFA0A0A0;
+            
+        case 3: // BLOOD HEAT
+            return 0xFFB4B4B4;  // Grey
+            
+        case 5: // UNLIMITED
+            return 0xFF3296FF;  // Blue
+            
+        default:
+            return baseColor;
+    }
+}
+
+void drawMeterBars(int playerIndex) {
+    DWORD* hudTextures = (DWORD*)0x005550f8;  // Array of texture pointers
+    
+    // Get player-specific meter data
+    DWORD moon = *(DWORD*)(0x0055513C + (playerIndex * 0xAFC));
+    DWORD meter = *(DWORD*)(0x00555210 + (playerIndex * 0xAFC));
+    DWORD heatTime = *(DWORD*)(0x00555214 + (playerIndex * 0xAFC));
+    DWORD circuitState = *(WORD*)(0x00555218 + (playerIndex * 0xAFC));
+    
+    // Determine moon type texture index (9 for half moon, 0 for full/crescent)
+    int moonMeterType = (moon == 2) ? 9 : 0;  // Only switch texture for half moon type
+    
+    // Calculate base positions
+    const DWORD baseXPos = (playerIndex & 1) ? 400 : 0;
+    const DWORD yPos = (playerIndex < 2) ? 435 : 448;  // P1/P2 higher than P3/P4
+    
+    // Draw meter border first
+    meltyDrawTexture(
+        hudTextures[moonMeterType],             // Texture varies by moon type
+        0,                                      // srcX
+        (playerIndex & 1) ? 0x100 : 0xC0,      // srcY (0xC0 for P1, 0x100 for P2)
+        0xF0,                                  // srcWidth
+        0x30,                                 // srcHeight
+        baseXPos,                              // destX
+        yPos,                                  // destY
+        0xF0,                                  // destWidth
+        0x30,                                 // destHeight
+        -1,                                    // color (no tint)
+        0x2A0                                 // layer
+    );
+
+    // Calculate meter fill percentage and color
+    float meterFillPercent = 0.0f;
+    DWORD meterColor = 0xFF000000;
+    
+    // Calculate meter fill percentage  
+    if(circuitState == 0) { // Normal meter
+        if(moon == 2) { // Half moon
+            meterFillPercent = ((float)meter) / 20000.0f;
+            meterColor = (meter >= 15000) ? 0xFF00C800 : // Green
+                        (meter >= 10000) ? 0xFFC8C800 : // Yellow
+                                         0xFFC80000;  // Red
+        } else {
+            meterFillPercent = ((float)meter) / 30000.0f;
+            meterColor = (meter >= 20000) ? 0xFF00C800 : // Green
+                        (meter >= 10000) ? 0xFFC8C800 : // Yellow
+                                         0xFFC80000;  // Red
+        }
+    } else if(circuitState == 1) { // Heat
+        meterFillPercent = ((float)heatTime) / 600.0f;
+        meterColor = 0xFF5A5AE6; // Blue
+    } else if(circuitState == 2) { // Max
+        meterFillPercent = ((float)heatTime) / 600.0f;
+        meterColor = 0xFFFAA000; // Orange
+    } else if(circuitState == 3) { // Blood Heat
+        meterFillPercent = ((float)heatTime) / 600.0f;
+        meterColor = 0xFFB4B4B4; // Grey
+    }
+
+    // Calculate fill width and position
+    float fillWidth = meterFillPercent * 193.0f;
+    if (playerIndex & 1) fillWidth += 1.0f;  // Add 1px to P2/P4 fill width
+    
+    // Calculate fill position similar to health bars
+    const DWORD fillXPos = baseXPos + ((playerIndex & 1) ? 
+        (205 - fillWidth) :    // P2/P4: Right-aligned
+        0x23);                 // P1/P3: Standard left offset
+    
+    // Draw meter fill
+    meltyDrawTexture(
+        hudTextures[moonMeterType],            // Use same texture as border
+        ((playerIndex & 1) ? 
+            (416 - fillWidth) :  // P2/P4: Mirror the gradient source
+            224),               // P1/P3: Standard gradient position
+        (playerIndex & 1) ? 406 : 0x176,      // source Y differs by player
+        fillWidth,                            // width based on meter value
+        0x20,                                 // height
+        fillXPos,                             // position (now properly aligned for both sides)
+        yPos + 6,                             // slight Y offset for fill
+        fillWidth,                            // dest width same as source
+        0x20,                                 // height
+        meterColor,                           // color based on state
+        0x2A1                                 // layer
+    );
+
+    // After drawing the meter fill, add meter text
+    if(circuitState == 0) {  // Default meter state (numbers)
+        // Calculate X position with adjustable spacing
+        int xOffset = -(playerIndex & 1);
+        int spacing;
+        int baseOffset;
+        if(playerIndex < 2) {
+            spacing = 500;  // Increased spacing for P1/P2
+            baseOffset = 30;  // Default offset for P1/P2
+        } else {
+            spacing = 240;  // Decreased spacing for P3/P4
+            baseOffset = 160;  // Increased offset for P3/P4 to move them more right
+        }
+        xOffset &= spacing;  // Apply spacing between pairs
+        xOffset += baseOffset;  // Apply pair-specific base offset
+        
+        // Get meter value based on player index
+        int meterValue;
+        if(playerIndex < 2) {
+            meterValue = *(DWORD*)(0x00564194 + (playerIndex * 0x5C)) / 10;
+        } else {
+            meterValue = meter / 10;
+        }
+        
+        int textYPos;
+        switch(playerIndex) {
+            case 0: textYPos = 425; break;  // P1
+            case 1: textYPos = 425; break;  // P2
+            case 2: textYPos = 455; break;  // P3
+            case 3: textYPos = 455; break;  // P4
+            default: textYPos = 425; break;
+        }
+        
+        PUSH_ALL;
+        __asm__ __volatile__(
+            "mov %0, %%edi"
+            : // no outputs
+            : "r" (textYPos) // input
+            : "edi" // clobbers
+        );
+        drawMeterText(xOffset, meterValue, textYPos);
+        POP_ALL;
+    } else {
+        // For MAX state, apply flashing effect to the color
+        DWORD textColor = getStateTextColor(circuitState, -1);
+
+        // Calculate X position with adjustable spacing (same as meter text)
+        int xOffset = -(playerIndex & 1);
+        int spacing;
+        int baseOffset;
+        if(playerIndex < 2) {
+            spacing = 460;  // Increased spacing for P1/P2
+            baseOffset = 30;  // Default offset for P1/P2
+        } else {
+            spacing = 240;  // Decreased spacing for P3/P4
+            baseOffset = 136;  // Increased offset for P3/P4 to move them more right
+        }
+        xOffset &= spacing;  // Apply spacing between pairs
+        xOffset += baseOffset;  // Apply pair-specific base offset
+
+        // Calculate Y position (same as meter text)
+        int textYPos;
+        switch(playerIndex) {
+            case 0: textYPos = 425; break;  // P1
+            case 1: textYPos = 425; break;  // P2
+            case 2: textYPos = 455; break;  // P3
+            case 3: textYPos = 455; break;  // P4
+            default: textYPos = 425; break;
+        }
+
+        // Sprite Y positions in gauge02.png (0=MAX, 24=HEAT, 48=BLOOD HEAT, 96=UNLIMITED)
+        const int stateYOffsets[] = { 0, 24, 0, 48, 0, 96 };  // Index by circuitState
+        
+        // Draw the state indicator (HEAT/MAX/BLOOD HEAT/UNLIMITED text)
+        meltyDrawTexture(
+            *(DWORD*)0x00555100,           // gauge02 texture
+            0,                             // srcX
+            stateYOffsets[circuitState],   // srcY based on state
+            0x80,                         // srcWidth (128)
+            0x18,                         // srcHeight (24)
+            xOffset,                      // Use same X position calculation as meter text
+            textYPos,                     // Use same Y as meter text
+            0x80,                         // destWidth (128)
+            0x18,                         // destHeight (24)
+            textColor,                    // color (with flash effect for MAX)
+            0x2C7                         // layer
+        );
+    }
 }
 
 void drawGuardBars(int playerIndex) {
@@ -847,14 +1031,14 @@ void drawGuardBars(int playerIndex) {
 }
 
 void drawMoonsAndPalette(int playerIndex) {
+    BYTE moon = *(BYTE*)(0x0055513C + (playerIndex * 0xAFC));
+    BYTE palette = *(BYTE*)(0x0055513A + (playerIndex * 0xAFC));
 
-    BYTE moon =    *(BYTE*)(0x0055513C + (playerIndex * 0xAFC));
-    BYTE palette = *(BYTE*)(0x0055513B + (playerIndex * 0xAFC));
+    moon = CLAMP(moon, 0, 3);
 
-    moon = CLAMP(moon, 0, 3); // 3 is here,,, since thats eclipse moons
-
-    DWORD texture = *(DWORD*)0x00555110;
-
+    DWORD moonTexture = *(DWORD*)0x00555110;
+    // Get player-specific palette texture
+    DWORD paletteTexture = *(DWORD*)(0x005642cc + (playerIndex * 0x20));
     const DWORD width = 0x30 / 2;
     const DWORD xOffset = 12;
 
@@ -864,11 +1048,28 @@ void drawMoonsAndPalette(int playerIndex) {
     }
 
     xPos += playerIndex & 1 ? -xOffset : xOffset;
-
     DWORD yPos = hudAnchors[playerIndex].y + 32;
 
-    meltyDrawTexture(texture, moon * 0x30, 0, 0x30, 0x30, xPos, yPos, width, width, 0xFFFFFFFF, 0x2c3);
+    // Calculate texture coordinates based on palette index
+    DWORD texX = (palette % 8) * 0x20;  // 32 pixels per palette horizontally
+    DWORD texY = (palette / 8) * 0x10;  // 16 pixels per row
+    
+    // Draw the palette with correct source rectangle
+    meltyDrawTexture(
+        paletteTexture,
+        texX,           // Source X
+        texY,           // Source Y 
+        0x20,          // Source width (32 pixels)
+        0x10,          // Source height (16 pixels)
+        xPos,          // Dest X
+        yPos,          // Dest Y
+        width,         // Dest width
+        width,         // Dest height
+        0xFFFFFFFF,    // Color
+        0x2c2          // Layer
+    );
 
+    meltyDrawTexture(moonTexture, moon * 0x30, 0, 0x30, 0x30, xPos, yPos, width, width, 0xFFFFFFFF, 0x2c3);
 }
 
 void newDrawResourcesHud() {
@@ -880,7 +1081,6 @@ void newDrawResourcesHud() {
         drawGuardBars(newDrawResourcesHud_playerIndex);
         drawMoonsAndPalette(newDrawResourcesHud_playerIndex);
         drawAllPortraits(newDrawResourcesHud_playerIndex);
-        drawAllMoons(newDrawResourcesHud_playerIndex);
         // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
         // or,,, i could just,, trace all the textures and do all the draws myself?
 
@@ -888,11 +1088,11 @@ void newDrawResourcesHud() {
         pushVar(_newDrawResourcesHud_playerIndex);
         emitCall(0x00425260); // draw guard guages
         addStack(0x04);
-
+         
         pushVar(_newDrawResourcesHud_playerIndex);
         emitCall(0x004253c0); // draw meter guages
         addStack(0x04); 
-
+        /*
         setRegister(ecx, _newDrawResourcesHud_playerIndex);
         emitCall(0x004258e0); // draw moons and palettes
 
@@ -915,7 +1115,7 @@ void _naked_newDrawResourcesHud() {
     ASMRET;
 }
 
-void drawAllMoons(int playerIndex) {
+/* void drawAllMoons(int playerIndex) {
     DWORD texture = *(DWORD*)(0x005642cc + (playerIndex * 0x20)); // Adjust offset if needed for moon texture
     if(texture == 0) {
         return;
@@ -935,7 +1135,7 @@ void drawAllMoons(int playerIndex) {
         config.layer           // Layer
     );
 }
-
+ */
 void _naked_drawWinCount() {
 
     __asmStart R"(
@@ -979,3 +1179,5 @@ void _naked_drawRoundDots() {
 }
 
 } // namespace AsmHacks
+
+extern "C" int ftol2(float);
