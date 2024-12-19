@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TimerManager.hpp"
+#include <cstdint>
 
 #include <unordered_map>
 

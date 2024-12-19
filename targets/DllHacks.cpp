@@ -53,10 +53,13 @@ void initializePreLoad()
         WRITE_ASM_HACK ( hack );
 
     WRITE_ASM_HACK ( multiWindow );
-    WRITE_ASM_HACK ( detectAutoReplaySave );
+    WRITE_ASM_HACK ( detectAutoReplaySave ); 
     WRITE_ASM_HACK ( hijackEscapeKey );
     WRITE_ASM_HACK ( disableTrainingMusicReset );
     WRITE_ASM_HACK ( fixBossStageSuperFlashOverlay );
+
+    for ( const Asm& hack : initPatch2v2 )
+        WRITE_ASM_HACK ( hack );
 
     // TODO color hijack is temporary disabled due to some issues
     //
@@ -82,7 +85,7 @@ MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wPar
                 default:
                     break;
             }
-            break;
+            break; 
 
         case WM_KEYDOWN:
             // Ignore repeated keys

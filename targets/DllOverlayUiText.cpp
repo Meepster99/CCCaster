@@ -5,12 +5,22 @@
 #include "ProcessManager.hpp"
 #include "Enum.hpp"
 
+#include "DllDirectX.hpp"
+
+#include "imgui.h"
+#include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
+#include "montogui.cpp"
+#include "PlayerState.hpp"
+
 #include <windows.h>
 #include <d3dx9.h>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <iterator>
+#include <regex>
+#include <vector>
 
 using namespace std;
 using namespace DllOverlayUi;
@@ -63,27 +73,30 @@ static int height = 0, oldHeight = 0, newHeight = 0;
 
 static int initialTimeout = 0, messageTimeout = 0;
 
-static array<string, 3> text;
+static array<string, 5> text;
 
-static array<RECT, 2> selector;
+static array<RECT, 4> selector;
 
-static array<bool, 2> shouldDrawSelector { false, false };
+static array<bool, 4> shouldDrawSelector { false, false, false, false };
 
 static ID3DXFont *font = 0;
 
 static IDirect3DVertexBuffer9 *background = 0;
 
-static array<string, 2> selectorLine;
+static array<string, 4> selectorLine;
+
+static array<int, 4> selectorIndex = {0, 0, 0, 0};
+ImGuiContext* DllOverlayUi::g_ImGuiContext = nullptr;
 
 namespace DllOverlayUi
 {
 
-array<string, 3> getText()
+array<string, 5> getText()
 {
     return text;
 }
 
-array<string, 2> getSelectorLine()
+array<string, 4> getSelectorLine()
 {
     return selectorLine;
 }
@@ -98,12 +111,12 @@ int getNewHeight()
     return newHeight;
 }
 
-array<RECT, 2> getSelector()
+array<RECT, 4> getSelector()
 {
     return selector;
 }
 
-array<bool, 2> getShouldDrawSelector()
+array<bool, 4> getShouldDrawSelector()
 {
     return shouldDrawSelector;
 }
@@ -130,7 +143,7 @@ void toggle()
         enable();
 }
 
-static inline int getTextHeight ( const array<string, 3>& newText )
+static inline int getTextHeight ( const array<string, 5>& newText )
 {
     int height = 0;
 
@@ -145,7 +158,7 @@ void updateText()
     updateText ( text );
 }
 
-void updateText ( const array<string, 3>& newText )
+void updateText ( const array<string, 5>& newText )
 {
     switch ( state.value )
     {
@@ -241,7 +254,7 @@ void showMessage ( const string& newText, int timeout )
 
     // Show the message in the middle
     text = { "", newText, "" };
-    shouldDrawSelector = { false, false };
+    shouldDrawSelector = { false, false, false, false };
 
     enable();
 }
@@ -273,8 +286,10 @@ void updateMessage()
 
 void updateSelector ( uint8_t index, int position, const string& line )
 {
-    if ( index > 1 )
+    if ( index >= shouldDrawSelector.size() )
         return;
+
+    selectorIndex[index] = position;// _overlayPositions[index];
 
     selectorLine[index] = line;
     if ( position == 0 || line.empty() )
@@ -332,7 +347,6 @@ struct Vertex
 };
 
 
-
 void initOverlayText ( IDirect3DDevice9 *device )
 {
     D3DXCreateFont ( device,                                    // device pointer
@@ -368,6 +382,21 @@ void initOverlayText ( IDirect3DDevice9 *device )
     background->Lock ( 0, 0, ( void ** ) &ptr, 0 );
     memcpy ( ptr, verts, 4 * sizeof ( verts[0] ) );
     background->Unlock();
+
+}
+
+
+void initImGuiOverlay(IDirect3DDevice9 *device)
+{
+    IMGUI_CHECKVERSION();
+    DllOverlayUi::g_ImGuiContext = ImGui::CreateContext();
+    void* windowHandle = ProcessManager::findWindow(CC_TITLE);
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.WantCaptureMouse = true;
+
+    ImGui::StyleColorsDark();
+    ImGui_ImplWin32_Init(windowHandle);
+    ImGui_ImplDX9_Init(device);
 }
 
 void invalidateOverlayText()
@@ -382,6 +411,774 @@ void invalidateOverlayText()
     {
         background->Release();
         background = 0;
+    }
+}
+
+#define SAFEMOD(a, b) (((b) + ((a) % (b))) % (b))
+
+D3DXVECTOR2 scalePosTopLeft = { 0.0f, 0.0f };
+D3DXVECTOR2 scalePosRenderFactor = { 0.0f, 0.0f };
+
+void updateScaleParams(IDirect3DDevice9 *device) {
+
+    return;
+
+    // this should only be called on resize.
+
+    float vWidth = 640;
+    float vHeight = 480;
+    float wWidth = 640;
+    float wHeight = 480;
+    bool isWide = false;
+
+    D3DVIEWPORT9 viewport;
+	device->GetViewport(&viewport);
+	vWidth = viewport.Width;
+	vHeight = viewport.Height;
+
+    HWND hwnd = (HWND) * (DWORD*)(0x0074dfac);
+
+	if (hwnd != NULL) {
+		RECT rect;
+		if (GetClientRect(hwnd, &rect)) {
+			wWidth = rect.right - rect.left;
+			wHeight = rect.bottom - rect.top;
+		}
+	}
+
+    const float ratio = 4.0f / 3.0f;
+
+	isWide = wWidth / wHeight > ratio;
+
+    D3DXVECTOR2 factor;
+	factor.x = 1.0f;
+	factor.y = 1.0f;
+
+	if (isWide) {
+		factor.x = (wHeight * ratio) / wWidth;
+	} else {
+		factor.y = (wWidth / ratio) / wHeight;
+	}
+
+	scalePosRenderFactor.x = 1.0f;
+	scalePosRenderFactor.y = 1.0f;
+
+	scalePosRenderFactor.x = (vHeight * (vWidth / vHeight)) / 640.0f;
+	scalePosRenderFactor.y = (vWidth / (vWidth / vHeight)) / 480.0f;
+
+	scalePosRenderFactor.x *= factor.x;
+	scalePosRenderFactor.y *= factor.y;
+
+	scalePosTopLeft.x = 0.0f;
+	scalePosTopLeft.y = 0.0f;
+
+	if (isWide) {
+		scalePosTopLeft.x = 640.0f / factor.x;
+		scalePosTopLeft.x *= (wWidth - (wHeight * ratio)) / (2.0f * wWidth);
+    } else {
+		scalePosTopLeft.y = 480.0f / factor.y;
+		scalePosTopLeft.y *= (wHeight - (wWidth / ratio)) / (2.0f * wHeight);
+	}
+
+}
+
+void scalePoint(float& x, float& y) {
+    x += scalePosTopLeft.x;
+    y += scalePosTopLeft.y;
+
+    x *= scalePosRenderFactor.x;
+    y *= scalePosRenderFactor.y;
+}
+
+void DrawRectScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, const DWORD ARGB, bool mirror) {
+
+    if(mirror) {
+        x1 = 640 - x1;
+        x2 = 640 - x2;
+    }
+    
+    if(x1 > x2) {
+        std::swap(x1, x2);
+    }
+
+    if(y1 > y2) {
+        std::swap(y1, y2);
+    }
+  
+    scalePoint(x1, y1);
+    scalePoint(x2, y2);
+
+    const D3DRECT rect = { (long)x1, (long)y1, (long)x2, (long)y2 };
+    device->Clear ( 1, &rect, D3DCLEAR_TARGET, ARGB, 0, 0 );
+}
+
+void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, float w, const DWORD ARGB, bool mirror) {
+
+    if(mirror) {
+        x1 = 640 - x1;
+        x2 = 640 - x2;
+    }
+
+    if(x1 > x2) {
+        std::swap(x1, x2);
+    }
+
+    if(y1 > y2) {
+        std::swap(y1, y2);
+    }
+
+    DrawRectScaled(device, x1, y1, x2, y1 + w, ARGB );
+    DrawRectScaled(device, x1, y2 - w, x2, y2, ARGB );
+    
+    DrawRectScaled(device, x1, y1, x1 + w, y2, ARGB );
+    DrawRectScaled(device, x2 - w, y1, x2, y2, ARGB );
+
+}
+
+void tempLog(const std::string& s) {
+    std::ofstream outfile("log.txt", std::ios_base::app);
+    outfile << s << "\n";
+}
+
+void DrawTextScaled( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        x1 = 640.0f - x1;
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    scalePoint(x1, y1);
+
+    RECT temp;
+    temp.top  = temp.bottom = (long)y1;
+    temp.left = temp.right  = (long)x1;
+
+    DrawText(font, text, temp, format, ARGB);
+
+}
+
+void DrawTextScaledWithBG( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    RECT rect = {0, 0, 0, 0};
+    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+    //long height = abs(rect.top - rect.bottom);
+    //long width = abs(rect.left - rect.right);
+
+    long height = (size / 2);
+    long width = (strlen(text) * size) / 4;
+
+    rect.top = (long)y1;
+    rect.bottom = (long)(y1 + height);
+
+    rect.left = (long)x1;
+    rect.right = (long)(x1 + width);
+    
+    DrawRectScaled( device, INLINE_RECT(rect), bgARGB, mirror);
+    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
+
+}
+
+void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
+
+    DWORD format = DT_WORDBREAK | DT_LEFT;
+    if(mirror) {
+        format = DT_WORDBREAK | DT_RIGHT;
+    }
+
+    RECT rect = {0, 0, 0, 0};
+    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
+    //long height = abs(rect.top - rect.bottom);
+    //long width = abs(rect.left - rect.right); 
+
+    long height = (size / 2);
+    long width = (strlen(text) * size) / 2;
+
+    rect.top = (long)y1;
+    rect.bottom = (long)(y1 + height);
+
+    rect.left = (long)x1;
+    rect.right = (long)(x1 + width);
+    
+    DrawBorderScaled( device, INLINE_RECT(rect), bgARGB, mirror);
+    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
+
+}
+
+typedef struct RawInput {
+    BYTE dir = 0;
+    BYTE btn = 0;
+    void set(int playerIndex) {
+        DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+        if(baseControlsAddr == 0) {
+            return;
+        }
+
+        dir = *(BYTE*)(baseControlsAddr + 0x18 + (playerIndex * 0x14));
+        btn = *(BYTE*)(baseControlsAddr + 0x24 + (playerIndex * 0x14));
+    }
+} RawInput;
+
+
+typedef struct InGameData {
+    struct HealthFlash {
+        float prevHealth = 11400.0f;
+        float flashStartTime = 0.0f;
+        float hitstunEndTime = 0.0f;  // New timestamp for when hitstun ends
+        bool isFlashing = false;
+        bool hasStoredHitstunEnd = false;  // Flag to track if we've stored the hitstun end time
+        float flashX = 0.0f;
+        float flashStartWidth = 0.0f;
+        float comboStartHealth = 0.0f;
+    };
+    HealthFlash healthFlash;
+} InGameData;
+
+typedef struct OurCSSData {
+    
+
+
+     // variables i want to keep track of
+    int idIndex = 0; // what char is hovered, indexed in the below list
+    int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
+    RawInput prevInput;
+    RawInput input;
+    // i should probs just read from where melty gets these,,, but im tired ok? 
+    BYTE pressDir() {
+        if(prevInput.dir != input.dir) {
+            return input.dir;
+        }
+        return 0;
+    }
+} OurCSSData;
+
+OurCSSData ourCSSData[4];
+InGameData inGameData[4];
+constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
+constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
+
+
+// Define the global players array
+PlayerState players[4];
+
+// Define the update function
+void updateAllPlayers() {
+    for(int i = 0; i < 4; i++) {
+        players[i].update(i);
+    }
+}
+
+// Define the PlayerState::update method
+void PlayerState::update(int playerIndex) {
+    const DWORD playerAddr = BASE_ADDR + (playerIndex * DATA_SIZE);
+    const DWORD cssAddr = CSS_BASE_ADDR + (playerIndex * CSS_DATA_SIZE);
+
+    // Copy moon data from CSS to in-game data
+    *(DWORD*)(playerAddr + OFFSET_MOON) = *(DWORD*)(cssAddr + OFFSET_MOON);
+
+    // Read player state data
+    moon = *(DWORD*)(playerAddr + OFFSET_MOON);
+    palette = *(BYTE*)(playerAddr + OFFSET_PALETTE);
+    health = *(DWORD*)(playerAddr + OFFSET_HEALTH);
+    redHealth = *(DWORD*)(playerAddr + OFFSET_RED_HEALTH);
+    meter = *(DWORD*)(playerAddr + OFFSET_METER);
+    heatTime = *(DWORD*)(playerAddr + OFFSET_HEAT_TIME);
+    circuitState = *(WORD*)(playerAddr + OFFSET_CIRCUIT_STATE);
+    hitstun = *(DWORD*)(playerAddr + OFFSET_HITSTUN);
+    knockedDown = *(BYTE*)(playerAddr + OFFSET_KNOCKDOWN_FLAG);
+
+    // Handle circuit break timer
+    const WORD exPenalty = *(WORD*)(playerAddr + OFFSET_EX_PENALTY);
+    circuitBreakTimer = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
+
+    // Set background flag when knocked down
+    if (health != 0) {
+        *(BYTE*)(playerAddr + OFFSET_BACKGROUND_FLAG) = 0x01;
+    }
+}
+
+
+void updateCSSStuff(IDirect3DDevice9 *device) {
+
+    shouldReverseDraws = false;
+
+    // ugh. this might not be the best place for this
+
+    typedef struct CSSStructCopy {
+        int palette;
+        int charID;
+        unsigned _unknown1;
+        unsigned _unknown2; // possibly port number idek
+        int moon;
+        unsigned _unknown3;
+        unsigned _unknown4;
+        unsigned _unknown5;
+        unsigned _unknown6;
+        unsigned _unknown7;
+        unsigned _unknown8;
+    } CSSStructCopy;
+
+    static_assert(sizeof(CSSStructCopy) == 0x2C, "CSSStructCopy must be size 0x2C");
+
+    CSSStructCopy* player0 = (CSSStructCopy*)(0x0074d83C + (0 * 0x2C));
+    CSSStructCopy* player1 = (CSSStructCopy*)(0x0074d83C + (1 * 0x2C));
+    CSSStructCopy* player2 = (CSSStructCopy*)(0x0074d83C + (2 * 0x2C));
+    CSSStructCopy* player3 = (CSSStructCopy*)(0x0074d83C + (3 * 0x2C));
+
+    CSSStructCopy* players[4] = {
+        (CSSStructCopy*)(0x0074d83C + (0 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (1 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (2 * 0x2C)),
+        (CSSStructCopy*)(0x0074d83C + (3 * 0x2C))
+    };
+
+    static_assert(sizeof(charIDList) / sizeof(charIDList[0]) == sizeof(charIDNames) / sizeof(charIDNames[0]), "length of name and id list must be the same");
+    constexpr int charIDCount = sizeof(charIDList) / sizeof(charIDList[0]);
+
+    std::function<void(int playerIndex, int inc)> ControlFuncs[] = {
+
+        [&](int playerIndex, int inc) mutable -> void {
+            ourCSSData[playerIndex].idIndex = SAFEMOD(ourCSSData[playerIndex].idIndex + inc, charIDCount); 
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+            players[playerIndex]->moon = SAFEMOD(players[playerIndex]->moon + inc, 3);
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+            players[playerIndex]->palette = SAFEMOD(players[playerIndex]->palette + inc, 36);
+        },
+
+        [&](int playerIndex, int inc) mutable -> void {
+
+        }
+
+    };
+
+    const int menuOptionCount = sizeof(ControlFuncs) / sizeof(ControlFuncs[0]);
+
+    // handle controls
+    // idk where i should grab controls from either, what reads the stuff melty writes to? or i could be safe with a direct melty write, but have to keep track 
+    // of presses myself
+    // maybe one less patch tho
+    for(int i=2; i<4; i++) {
+
+        ourCSSData[i].input.set(i);
+
+        BYTE pressDir = ourCSSData[i].pressDir();
+
+        switch(pressDir) {
+            case 2:
+                ourCSSData[i].selectIndex = SAFEMOD(ourCSSData[i].selectIndex + 1, menuOptionCount);
+                break;
+            case 8:
+                ourCSSData[i].selectIndex = SAFEMOD(ourCSSData[i].selectIndex - 1, menuOptionCount);
+                break;
+            case 4:
+                ControlFuncs[ourCSSData[i].selectIndex](i, -1);
+                break;
+            case 6:
+                ControlFuncs[ourCSSData[i].selectIndex](i,  1);
+                break;
+            default:
+                break;
+        }
+        
+        ourCSSData[i].prevInput = ourCSSData[i].input;
+    }
+    constexpr float cssMenuFontSize = 12.0f;
+    constexpr float cssMenuSelectorWidth = 128.0f;
+
+    std::function<void(int selfIndex, int playerIndex, float& x, float& y)> CSSFuncs[] = { // i could pass in more params, but tbh ill just let each function do its own vibe
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
+
+            int displayIndex = playerIndex;
+            if(displayIndex == 1) {
+                displayIndex = 2;
+            } else if(displayIndex == 2) {
+                displayIndex = 1;
+            }
+
+            std::string tempCharString = "P" + std::to_string(displayIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempCharString.c_str());
+            y += cssMenuFontSize;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            const char* tempMoonString = players[playerIndex]->moon == 0 ? "Crescent" : (players[playerIndex]->moon == 1 ? "Full" : "Half"); 
+
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempMoonString);
+            y += cssMenuFontSize;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            std::string tempPaletteString = "Palette: " + std::to_string(players[playerIndex]->palette + 1);
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempPaletteString.c_str());
+            y += cssMenuFontSize;      
+        },
+
+        [&](int selfIndex, int playerIndex, float& x, float& y) mutable -> void {
+
+            bool mirror = playerIndex & 1;
+            DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
+
+            RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
+            TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, "Ready(notworking)");
+            y += cssMenuFontSize;      
+        }
+
+    };
+
+    static_assert(sizeof(CSSFuncs) / sizeof(CSSFuncs[0]) == sizeof(ControlFuncs) / sizeof(ControlFuncs[0]), "each cssfunc must have a controlfunc!");
+
+    // draw the shit 
+    for(int i=2; i<4; i++) {
+
+        shouldReverseDraws = (i == 3);
+
+        float x = 20.0f;
+        float y = 100.0f;
+
+        for(size_t selfIndex = 0; selfIndex < sizeof(CSSFuncs) / sizeof(CSSFuncs[0]); selfIndex++) {
+            CSSFuncs[selfIndex](selfIndex, i, x, y);
+        }
+    }
+
+    shouldReverseDraws = true;
+    TextDraw(10, 0 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
+    TextDraw(10, 0 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
+    TextDraw(10, 0 + (2 * 8), 8, 0xFFFFFFFF, ":3");
+    shouldReverseDraws = false;
+}
+
+
+void updateInGameStuff(IDirect3DDevice9 *device) {
+    updateAllPlayers();
+     for(int i=0; i<4; i++) {
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+        }
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+    }
+    
+    float x;
+    for(int i=2; i<4; i++) {
+
+        shouldReverseDraws = (i == 3);
+
+        // draw meter bars
+        x = 30;
+        const int meterWidth = 200;
+        float currentMeterWidth = 0.0f; 
+        DWORD meterCol = 0xFF000000;
+
+
+
+        std::string meterString = "";
+
+        if(players[i].circuitBreakTimer == 0) {
+            switch(players[i].circuitState) {
+                case 0:
+                    if(players[i].moon == 2) { // half
+                        currentMeterWidth = ((float)players[i].meter) / 20000.0f;
+                        meterCol = (players[i].meter >= 15000) ? 0xFF00FF00 : ((players[i].meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                    } else { // full/crescent
+                        currentMeterWidth = ((float)players[i].meter) / 30000.0f;
+                        meterCol = (players[i].meter >= 20000) ? 0xFF00FF00 : ((players[i].meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+                    }
+
+                    meterString = std::to_string(players[i].meter / 100) + "." + std::to_string((players[i].meter / 10) % 10) + "%";
+
+                    break;
+                case 1:
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
+                    meterCol = 0xFF0000FF;
+                    meterString = "HEAT";
+                    break;
+                case 2:
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
+                    meterCol = 0xFFFFA500;
+                    meterString = "MAX";
+                    break;
+                case 3:
+                    currentMeterWidth = ((float)players[i].heatTime) / 600.0f;
+                    meterCol = 0xFFDDDDDD;
+                    meterString = "BLOOD HEAT";
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            currentMeterWidth = ((float)players[i].circuitBreakTimer) / 600.0f;
+            meterCol = 0xFF800080;
+            meterString = "BREAK";
+        }
+
+       
+        const float meterSize = 15.0f;
+
+        currentMeterWidth = MIN(1.0f, currentMeterWidth);
+      /*   RectDraw(x, 428, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
+        BorderDraw(x, 428, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
+        TextDraw(x, 428, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string */
+
+        // draw health bars. SOME OF THESE CALLS MIGHT HAVE BACKFACE ISSUES. but look at me go, not caring. someones going to mention it. ugh
+        x = 60;
+        const int maxHealthWidth = 213;
+        float currentHealthWidth;
+        
+        Rect r;
+        r.y1 = 30;
+        r.y2 = 43;
+        r.x2 = x + maxHealthWidth;
+
+        // draw health bars background
+   /*      r.x1 = r.x2 - maxHealthWidth;  // Full width
+        RectDraw(r.x1, r.y1, maxHealthWidth, r.y2 - r.y1, 0x80000000);  // 50% opacity black
+
+        Rect outerBorder = r;
+        outerBorder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(outerBorder, 3.0f, 0xFFFFFFFF); // white
+
+        // Then draw the inner border (1px black)
+        Rect innerBorder = r;
+        innerBorder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(innerBorder, 1.0f, 0xFF000000); // black
+
+        currentHealthWidth = ((float)players[i].redHealth) / 11400.0;
+        r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
+        //RectDraw(r, 0xFFFF0000);//, i == 3); // red health
+        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFF650000, 0xFFDA0000); //dark red to red
+
+        currentHealthWidth = ((float)players[i].health) / 11400.0;
+        r.x1 = r.x2 - (currentHealthWidth * maxHealthWidth);
+        RectDrawGradient(r.x1, r.y1, r.x2 - r.x1, r.y2 - r.y1, 0xFFff8805, 0xFFfffb7d); // Orange to yellow gradient */
+/* 
+        float currentHealth = (float)players[i].health;
+        if (currentHealth < inGameData[i].healthFlash.prevHealth) {
+            // Reset flash start time for every hit to trigger the alpha animation
+            inGameData[i].healthFlash.flashStartTime = GetTickCount() / 1000.0f;
+            
+            // Only start a new flash if we're not already in hitstun (not in a combo)
+            if (!inGameData[i].healthFlash.isFlashing || players[i].hitstun == 0) {
+                // Store the initial health position where the combo started
+                float initialHealthWidth = (inGameData[i].healthFlash.prevHealth / 11400.0f) * maxHealthWidth;
+                
+                // Set flash to start at the initial health position
+                float flashX = r.x2 - initialHealthWidth;
+                float flashStartWidth = initialHealthWidth - (currentHealth / 11400.0f * maxHealthWidth);
+                
+                // Start the flash effect
+                inGameData[i].healthFlash.isFlashing = true;
+                inGameData[i].healthFlash.flashX = flashX;
+                inGameData[i].healthFlash.flashStartWidth = flashStartWidth;
+                inGameData[i].healthFlash.comboStartHealth = inGameData[i].healthFlash.prevHealth; // Store combo start health
+            } else {
+                // Keep the same starting X (where combo began) but extend the width based on current health
+                float currentWidth = (currentHealth / 11400.0f) * maxHealthWidth;
+                float comboStartWidth = (inGameData[i].healthFlash.comboStartHealth / 11400.0f) * maxHealthWidth;
+                inGameData[i].healthFlash.flashStartWidth = comboStartWidth - currentWidth;
+            }
+        }
+
+        if (inGameData[i].healthFlash.isFlashing) {
+            if (players[i].hitstun > 0) {
+                // Reset the hitstun end tracking when back in hitstun
+                inGameData[i].healthFlash.hasStoredHitstunEnd = false;
+                
+                // Calculate time since flash started for opacity transition only
+                float timeInHitstun = (GetTickCount() / 1000.0f) - inGameData[i].healthFlash.flashStartTime;
+                
+                // Animate only the alpha during hitstun, keep full width
+                DWORD flashColor;
+                if (timeInHitstun < 0.3f) {
+                    float transitionProgress = timeInHitstun / 0.3f;
+                    BYTE alpha = (BYTE)(0xBB - (transitionProgress * (0xBB - 0x40)));
+                    flashColor = (alpha << 24) | 0x00FFFFFF;
+                } else {
+                    flashColor = 0x40FFFFFF;
+                }
+                
+                // Draw with original width, no reduction
+                RectDraw(inGameData[i].healthFlash.flashX, r.y1, 
+                        inGameData[i].healthFlash.flashStartWidth, r.y2 - r.y1, 
+                        flashColor);
+            } else {
+                // Store the time when hitstun first ends
+                if (!inGameData[i].healthFlash.hasStoredHitstunEnd) {
+                    inGameData[i].healthFlash.hitstunEndTime = GetTickCount() / 1000.0f;
+                    inGameData[i].healthFlash.hasStoredHitstunEnd = true;
+                }
+                
+                // Use time since hitstun ended for animation
+                float timeSinceHitstunEnd = (GetTickCount() / 1000.0f) - inGameData[i].healthFlash.hitstunEndTime;
+                if (timeSinceHitstunEnd < 0.25f) {  // Animate over 0.25 seconds instead of 1 second
+                    float animationProgress = timeSinceHitstunEnd * 4.0f;  // Scale to 0.0 to 1.0 over 0.25 seconds
+                    float currentWidth = inGameData[i].healthFlash.flashStartWidth * (1.0f - animationProgress);
+                    
+                    // Flip animation direction based on player
+                    float flashX = inGameData[i].healthFlash.flashX;
+                    if (i == 3) { // P2 side
+                        // Animate from right to left
+                        flashX = flashX + (inGameData[i].healthFlash.flashStartWidth - currentWidth);
+                    }
+                    
+                    DWORD flashColor = 0x40FFFFFF;
+                    RectDraw(flashX, r.y1, currentWidth, r.y2 - r.y1, flashColor);
+                } else {
+                    inGameData[i].healthFlash.isFlashing = false;
+                }
+            }
+        }
+
+        inGameData[i].healthFlash.prevHealth = currentHealth;
+ */
+
+/*         Rect outerborder = r;
+        outerborder.x1 = r.x2 - (1 * maxHealthWidth);
+        BorderDrawThick(outerborder, 4.0f, 0xFFFFFFFF); // WHITE */
+
+ 
+   /*      TextDraw(x + 20, 30 - 20, 8, 0xFFFFFFFF, charIDNames[ourCSSData[i].idIndex]);//, i == 3); // char name
+        
+        const char* moonString = players[i].moon == 0 ? "Crescent" : (players[i].moon == 1 ? "Full" : "Half"); 
+        TextDraw(x + 20 + 50, 30 - 20, 8, 0xFFFFFFFF, moonString);//, i == 3); // char moon
+
+        std::string paletteString = std::to_string(players[i].palette + 1);
+        TextDraw(x + 20 + 50 + 50, 30 - 20, 8, 0xFFFFFFFF, paletteString.c_str());//, i == 3); // char palette */
+
+    } 
+    
+}
+
+std::string strip(const std::string& s) {
+	std::string res = s;
+	std::regex trim_re("^\\s+|\\s+$");
+	res = std::regex_replace(res, trim_re, "");
+	return res;
+}
+
+std::vector<std::string> stripMenuString(std::string s) {
+
+    std::vector<std::string> res;
+
+    int i=0; 
+    while(true) {
+                
+        int temp = s.find('\n', i);
+
+        std::string tempString = strip(s.substr(i, temp - i));
+        if(tempString.size() != 0) {
+            res.push_back(tempString);
+        }
+        
+        if(temp == std::string::npos) {
+            break;
+        }
+        i = temp + 1;
+        
+    }
+
+    return res;
+}
+
+
+
+void updateImGuiStuff(IDirect3DDevice9 *device) 
+{
+    ImGui_ImplDX9_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    
+    // Reset mouse state
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;  // Make sure mouse input is enabled
+    io.WantCaptureMouse = true;
+    
+    for (int i = 0; i < 5; i++) io.MouseDown[i] = false;
+    if (GetAsyncKeyState(VK_LBUTTON) != 0) {
+        io.MouseDown[0] = true;
+    } 
+
+    ImGui::NewFrame();   
+    // Custom window code
+   /*  {
+        static float f = 0.0f;
+        static int counter = 0;
+        static bool show_demo_window = true;
+        static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+        ImGui::Begin("Hello, world!");
+        
+        ImGui::Text("This is some useful text.");
+        ImGui::Checkbox("Demo Window", &show_demo_window);
+        
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+        ImGui::ColorEdit3("clear color", (float*)&clear_color);
+        
+        if (ImGui::Button("Button"))
+            counter++;
+        ImGui::SameLine();
+        ImGui::Text("counter = %d", counter);
+        
+        bool isHovered = ImGui::IsItemHovered();
+        bool isFocused = ImGui::IsItemFocused();
+
+        ImVec2 mousePositionAbsolute = ImGui::GetMousePos();
+        ImVec2 screenPositionAbsolute = ImGui::GetItemRectMin();
+        ImVec2 mousePositionRelative = ImVec2(mousePositionAbsolute.x - screenPositionAbsolute.x, 
+                                             mousePositionAbsolute.y - screenPositionAbsolute.y);
+        
+        ImGui::Text("Is mouse over screen? %s", isHovered ? "Yes" : "No");
+        ImGui::Text("Is screen focused? %s", isFocused ? "Yes" : "No");
+        ImGui::Text("Position: %f, %f", mousePositionRelative.x, mousePositionRelative.y);
+
+        ImGui::Text("h = %d %d", ImGui::IsKeyPressed(ImGuiKey_H), GetAsyncKeyState(0x48));
+        ImGui::Text("h = %d %d", ImGui::IsKeyPressed(ImGuiKey_H), GetAsyncKeyState(VK_LBUTTON));
+        ImGui::Text("Mouse clicked: %s", ImGui::IsMouseDown(ImGuiMouseButton_Left) ? "Yes" : "No");
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        
+        ImGui::End();
+    } */
+   // uiHP();
+    //    uiPortraitDebug();
+    //uiMeterConfig();
+    //uiMeter();
+    //ImGui::ShowDemoWindow();
+    // call new function here
+
+    ImGui::EndFrame();
+    ImGui::Render();
+    
+    // Save device state
+    IDirect3DStateBlock9* d3d9_state_block = nullptr;
+    if (device->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) >= 0)
+    {
+        ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+        d3d9_state_block->Apply();
+        d3d9_state_block->Release();
     }
 }
 
@@ -402,6 +1199,19 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     }
 
 #endif // RELEASE
+
+    if(*((uint8_t*)0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
+        updateScaleParams(device);
+        updateCSSStuff(device);
+        updateImGuiStuff(device);
+    }
+
+    if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+    //if(true && DllOverlayUi::isDisabled()) {
+        updateScaleParams(device);
+        updateInGameStuff(device);
+        updateImGuiStuff(device);
+    }
 
     if ( ! TrialManager::dtext.empty() && !TrialManager::hideText ) {
         int debugTextAlign = 1;
@@ -471,7 +1281,6 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     }
     if ( state == State::Disabled )
         return;
-
     // Calculate message width if showing one
     float messageWidth = 0.0f;
     if ( isShowingMessage() )
@@ -490,6 +1299,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     const float scaleX = ( isShowingMessage() ? messageWidth / viewport.Width : 1.0f );
     const float scaleY = float ( height + 2 * OVERLAY_TEXT_BORDER ) / viewport.Height;
 
+    // i tired to comment out this code, only to have my draw calls not draw?
     D3DXMATRIX translate, scale;
     D3DXMatrixScaling ( &scale, scaleX, scaleY, 1.0f );
     D3DXMatrixTranslation ( &translate, 0.0f, 1.0f - scaleY, 0.0f );
@@ -498,14 +1308,16 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     device->SetTransform ( D3DTS_VIEW, & ( scale = scale * translate ) );
     device->SetStreamSource ( 0, background, 0, sizeof ( Vertex ) );
     device->SetFVF ( Vertex::Format );
-    device->DrawPrimitive ( D3DPT_TRIANGLESTRIP, 0, 2 );
+    //device->DrawPrimitive ( D3DPT_TRIANGLESTRIP, 0, 2 );
 
     // Only draw text if fully enabled or showing a message
-    if ( state != State::Enabled )
-        return;
+    /*if ( state != State::Enabled )
+        return;*/
 
-    if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() ) )
+    if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() && text[3].empty() && text[4].empty() ) )
     {
+
+        /*
         const int centerX = viewport.Width / 2;
 
         RECT rect;
@@ -514,22 +1326,95 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
         rect.top    = OVERLAY_TEXT_BORDER;
         rect.bottom = rect.top + height + OVERLAY_TEXT_BORDER;
 
-        if ( newHeight == height )
-        {
-            if ( shouldDrawSelector[0] )
-                DrawRectangle ( device, INLINE_RECT ( selector[0] ), OVERLAY_SELECTOR_L_COLOR );
+        for(size_t _i = 0; _i < text.size(); _i++) {
+            // -1s are here since text has size 5, selectors have size 4
+            if ( _i > 0 && newHeight == height && shouldDrawSelector[_i - 1] ) {
 
-            if ( shouldDrawSelector[1] )
-                DrawRectangle ( device, INLINE_RECT ( selector[1] ), OVERLAY_SELECTOR_R_COLOR );
+                RECT tempRect = selector[_i - 1];
+                tempRect.left = rect.left;
+                tempRect.right = rect.left + (viewport.Width / 5);
+                long tempRectHeight = tempRect.bottom - tempRect.top;
+                tempRect.top += (2 * tempRectHeight);
+                tempRect.bottom = tempRect.top + tempRectHeight;
+
+                DrawRectangle ( device, INLINE_RECT ( tempRect ), OVERLAY_SELECTOR_L_COLOR );
+            }
+
+            if ( ! text[_i].empty() ) {
+
+                std::string tempText = "";
+                //tempText += std::to_string(_i) + " ";
+                if(_i > 0) {
+                    tempText += std::to_string(shouldDrawSelector[_i - 1]);
+                }
+                tempText += text[_i];
+
+                DrawText ( font, tempText, rect, DT_WORDBREAK | DT_LEFT, OVERLAY_TEXT_COLOR );
+                // this shouldnt be needed? how did this system work previously?
+                rect.left += (viewport.Width / 5);
+                rect.right += (viewport.Width / 5);
+
+            }
+        } */
+
+       
+        // look. i know this sucks. im super tired. ill fix it tomorow
+
+        const Point textPosData[5] = {
+            Point(640/3, 480/4),
+            Point(0,     0), // P0
+            Point(0,     0), // P2
+            Point(0, 480/2), // P1
+            Point(0, 480/2)  // P3
+        };
+        const float fontSize = 12.0f;
+
+        RectDraw(0, 0, 640, 480, 0x80000000); 
+
+        for(int i=0; i<text.size(); i++) { 
+
+            shouldReverseDraws = false;
+
+            if(i == 2 || i == 4) {
+                shouldReverseDraws = true;
+            }
+
+            Point textPoint = textPosData[i];
+
+            std::vector<std::string> strings = stripMenuString(text[i]);
+
+            Rect maxRect;
+
+            for(int j=0; j<strings.size(); j++) {
+
+                DWORD textCol = 0xFFFFFFFF;
+                if(j == 0) {
+                    textCol = 0xFF42e5f4;
+                }
+
+                if(i > 0 && shouldDrawSelector[i - 1] && j == selectorIndex[i - 1]) {
+                    RectDraw(textPoint.x, textPoint.y + (2 * fontSize), 164, fontSize, 0xE0FF0000);
+                }
+
+                Rect tempRect = TextDraw(textPoint, fontSize, textCol, strings[j].c_str());
+                textPoint.y += fontSize;
+
+                if(j == 0) {
+                    maxRect = tempRect;
+                } else {
+                    maxRect.x1 = MIN(maxRect.x1, tempRect.x1);
+                    maxRect.y1 = MIN(maxRect.y1, tempRect.y1);
+                    maxRect.x2 = MAX(maxRect.x2, tempRect.x2);
+                    maxRect.y2 = MAX(maxRect.y2, tempRect.y2);
+                }
+            }
+
+            //RectDraw(maxRect, 0xC0000000);
         }
-
-        if ( ! text[0].empty() )
-            DrawText ( font, text[0], rect, DT_WORDBREAK | DT_LEFT, OVERLAY_TEXT_COLOR );
-
-        if ( ! text[1].empty() )
-            DrawText ( font, text[1], rect, DT_WORDBREAK | DT_CENTER, OVERLAY_TEXT_COLOR );
-
-        if ( ! text[2].empty() )
-            DrawText ( font, text[2], rect, DT_WORDBREAK | DT_RIGHT, OVERLAY_TEXT_COLOR );
     }
+
 }
+
+
+
+

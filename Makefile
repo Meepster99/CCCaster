@@ -50,12 +50,12 @@ AUTOGEN_HEADERS = $(wildcard lib/Version.*.hpp lib/Protocol.*.hpp)
 # Main program objects
 LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
-DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
+DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) 
 
 # Tool chain
 PREFIX = i686-w64-mingw32-
-GCC = $(PREFIX)gcc
-CXX = $(PREFIX)g++
+GCC = $(PREFIX)gcc -g
+CXX = $(PREFIX)g++ -g
 WINDRES = windres
 STRIP = strip
 TOUCH = touch
@@ -81,7 +81,7 @@ endif
 
 
 # Build flags
-DEFINES = -DWIN32_LEAN_AND_MEAN -DWINVER=0x501 -D_WIN32_WINNT=0x501 -D_M_IX86
+DEFINES = -DWIN32_LEAN_AND_MEAN -DWINVER=0x600 -D_WIN32_WINNT=0x600 -D_M_IX86
 DEFINES += -DNAMED_PIPE='"\\\\.\\pipe\\cccaster_pipe"' -DNAMED_PIPE2='"\\\\.\\pipe\\cccaster2_pipe"' -DPALETTES_FOLDER='"$(PALETTES_FOLDER)\\"' -DREADME='"$(README)"'
 DEFINES += -DMBAA_EXE='"$(MBAA_EXE)"' -DBINARY='"$(BINARY)"' -DFOLDER='"$(FOLDER)\\"' -DCHANGELOG='"$(CHANGELOG)"'
 DEFINES += -DHOOK_DLL='"$(FOLDER)\\$(DLL)"' -DLAUNCHER='"$(FOLDER)\\$(LAUNCHER)"' -DUPDATER='"$(UPDATER)"'
@@ -157,16 +157,16 @@ ifneq (,$(findstring release,$(MAKECMDGOALS)))
 endif
 	echo $(MAKECMDGOALS)
 
-$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res
+$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res targets/DllDirectXRC.res
 	rm -f $(filter-out $(BINARY),$(wildcard $(NAME)*.exe))
-	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++11 $^ $(LD_FLAGS)
+	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
 	@echo
 
-$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) res/rollback.o targets/CallDraw.s | $(FOLDER)
-	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++11 $^ -shared $(LD_FLAGS) -ld3dx9
+$(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) targets/DllDirectXRC.res res/rollback.o targets/CallDraw.s | $(FOLDER)
+	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a $^ -shared $(LD_FLAGS) -ld3dx9
 	@echo
 	$(STRIP) $@
 	$(GRANT)
@@ -180,7 +180,7 @@ $(FOLDER)/$(LAUNCHER): tools/Launcher.cpp | $(FOLDER)
 	@echo
 
 $(FOLDER)/$(UPDATER): tools/Updater.cpp lib/StringUtils.cpp | $(FOLDER)
-	$(CXX) -o $@ $^ -m32 -s -Os -O2 -std=c++11 -I$(CURDIR)/lib -Wall -static -lpsapi
+	$(CXX) -o $@ $^ -m32 -s -Os -O2 -std=c++2a -I$(CURDIR)/lib -Wall -static -lpsapi
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -229,7 +229,7 @@ DEBUGGER_LIB_OBJECTS = \
 	$(addprefix $(LOGGING_PREFIX)/,$(filter-out lib/Version.o lib/LoggerLogVersion.o lib/ConsoleUi.o,$(LIB_OBJECTS)))
 
 tools/$(DEBUGGER): tools/Debugger.cpp $(DEBUGGER_LIB_OBJECTS)
-	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++11 $^ $(LD_FLAGS) \
+	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS) \
 	-I$(CURDIR)/3rdparty/distorm3/include -L$(CURDIR)/3rdparty/distorm3 -ldistorm3
 	@echo
 	$(STRIP) $@
@@ -241,7 +241,7 @@ GENERATOR_LIB_OBJECTS = \
 	$(addprefix $(LOGGING_PREFIX)/,$(filter-out lib/Version.o lib/LoggerLogVersion.o lib/ConsoleUi.o,$(LIB_OBJECTS)))
 
 tools/$(GENERATOR): tools/Generator.cpp $(GENERATOR_LIB_OBJECTS)
-	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++11 $^ $(LD_FLAGS)
+	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -273,7 +273,7 @@ FRAMEDISPLAY_LD_FLAGS += -mwindows -static -lmingw32 -lpng -lz -lglfw -lopengl32
 	$(MAKE) --directory=3rdparty/AntTweakBar/src
 
 $(PALETTES): $(PALETTES_SRC) $(FRAMEDISPLAY_OBJECTS) res/palettes.res 3rdparty/AntTweakBar/lib/libAntTweakBar.a
-	$(CXX) $(FRAMEDISPLAY_CC_FLAGS) -o $@ $(FRAMEDISPLAY_INCLUDES) -Wall -std=c++11 -C $^ $(FRAMEDISPLAY_LD_FLAGS)
+	$(CXX) $(FRAMEDISPLAY_CC_FLAGS) -o $@ $(FRAMEDISPLAY_INCLUDES) -Wall -std=c++2a -C $^ $(FRAMEDISPLAY_LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -283,6 +283,10 @@ res/palettes.res: res/palettes.rc res/palettes.ico
 	$(WINDRES) -F pe-i386 res/palettes.rc -O coff -o $@
 	@echo
 
+
+targets/DllDirectXRC.res: targets/DllDirectXRC.rc targets/DBGFNT02.png # targets/meter.png
+	$(WINDRES) -F pe-i386 targets/DllDirectXRC.rc -O coff -o $@
+	@echo
 
 define make_version
 @scripts/make_version $(VERSION)$(SUFFIX) > lib/Version.local.hpp
@@ -321,7 +325,7 @@ clean-proto:
 	rm -f $(AUTOGEN_HEADERS)
 
 clean-res:
-	rm -f res/rollback.* res/icon.res
+	rm -f res/rollback.* res/icon.res targets/DllDirectXRC.res
 	rm -rf GRP
 
 clean-lib:
@@ -453,7 +457,7 @@ build_debug_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_debug_$(BRANCH)/%.o: %.cpp | build_debug_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -Wall -Wempty-body -std=c++11 -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -Wall -Wempty-body -std=c++2a -o $@ -c $<
 
 build_debug_$(BRANCH)/%.o: %.cc | build_debug_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
@@ -466,7 +470,7 @@ build_logging_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_logging_$(BRANCH)/%.o: %.cpp | build_logging_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -Wempty-body -std=c++11 -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -Wempty-body -std=c++2a -o $@ -c $<
 
 build_logging_$(BRANCH)/%.o: %.cc | build_logging_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -o $@ -c $<
@@ -479,7 +483,7 @@ build_release_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_release_$(BRANCH)/%.o: %.cpp | build_release_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS) -std=c++11 -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS) -std=c++2a -o $@ -c $<
 
 build_release_$(BRANCH)/%.o: %.cc | build_release_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS) -o $@ -c $<

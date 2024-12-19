@@ -20,7 +20,7 @@ void ProcessManager::writeGameInput ( uint8_t player, uint16_t direction, uint16
 
     // LOG ( "player=%d; direction=%d; buttons=%04x", player, direction, buttons );
 
-    char *const baseAddr = * ( char ** ) CC_PTR_TO_WRITE_INPUT_ADDR;
+    char *const baseAddr = * ( char ** ) CC_PTR_TO_WRITE_INPUT_ADDR; // how the hell did he figure this out
 
     switch ( player )
     {
@@ -32,6 +32,16 @@ void ProcessManager::writeGameInput ( uint8_t player, uint16_t direction, uint16
         case 2:
             ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_DIRECTION ) ) = direction;
             ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_BUTTONS ) ) = buttons;
+            break;
+
+        case 3:
+            ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_DIRECTION ) ) = direction;
+            ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_BUTTONS ) ) = buttons;
+            break;
+
+        case 4:
+            ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_DIRECTION ) ) = direction;
+            ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_BUTTONS ) ) = buttons;
             break;
 
         default:

@@ -180,7 +180,7 @@ private:
     uint32_t _spectateStartIndex = 0;
 
     // Mapping: player -> index offset -> frame -> input
-    std::array<InputsContainer<uint16_t>, 2> _inputs;
+    std::array<InputsContainer<uint16_t>, 4> _inputs;
 
     // Mapping: index offset -> RngState (can be null)
     std::vector<MsgPtr> _rngStates;

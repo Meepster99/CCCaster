@@ -623,6 +623,8 @@ void NetplayManager::setState ( NetplayState state )
 
                 _inputs[0].eraseIndexOlderThan ( offset );
                 _inputs[1].eraseIndexOlderThan ( offset );
+                _inputs[2].eraseIndexOlderThan ( offset );
+                _inputs[3].eraseIndexOlderThan ( offset );
 
                 if ( offset >= _rngStates.size() )
                     _rngStates.clear();
@@ -733,11 +735,16 @@ uint16_t NetplayManager::getRawInput ( uint8_t player, uint32_t frame ) const
     return _inputs[player - 1].get ( getIndex() - _startIndex, frame );
 }
 
-void NetplayManager::setInput ( uint8_t player, uint16_t input )
+void NetplayManager::setInput ( uint8_t player, uint16_t input ) // you were probs searching writeinput like an idiot
 {
-    ASSERT ( player == 1 || player == 2 );
+    ASSERT ( player == 1 || player == 2 || player == 3 || player == 4 );
     ASSERT ( getIndex() >= _startIndex );
 
+    //_inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.delay, input );
+    //_inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.delay, input );
+    //return;
+
+    // rollback is probs being improperly set for p2/3 and taking some other buffer
     if ( isInRollback() ) {
         _inputs[player - 1].set ( getIndex() - _startIndex, getFrame() + config.rollbackDelay, input );
     } else if ( _state == NetplayState::RetryMenu ) {
@@ -863,6 +870,12 @@ MsgPtr NetplayManager::getBothInputs ( IndexedFrame& pos ) const
 
     _inputs[1].get ( bothInputs->getIndex() - _startIndex, bothInputs->getStartFrame(),
                      &bothInputs->inputs[1][0], bothInputs->size() );
+    
+    _inputs[2].get ( bothInputs->getIndex() - _startIndex, bothInputs->getStartFrame(),
+                     &bothInputs->inputs[2][0], bothInputs->size() );
+
+    _inputs[2].get ( bothInputs->getIndex() - _startIndex, bothInputs->getStartFrame(),
+                     &bothInputs->inputs[3][0], bothInputs->size() );
 
     return MsgPtr ( bothInputs );
 }
@@ -880,6 +893,12 @@ void NetplayManager::setBothInputs ( const BothInputs& bothInputs )
 
     _inputs[1].set ( bothInputs.getIndex() - _startIndex, bothInputs.getStartFrame(),
                      &bothInputs.inputs[1][0], bothInputs.size() );
+
+    _inputs[2].set ( bothInputs.getIndex() - _startIndex, bothInputs.getStartFrame(),
+                     &bothInputs.inputs[2][0], bothInputs.size() );
+
+    _inputs[3].set ( bothInputs.getIndex() - _startIndex, bothInputs.getStartFrame(),
+                     &bothInputs.inputs[3][0], bothInputs.size() );
 }
 
 bool NetplayManager::isRemoteInputReady() const
