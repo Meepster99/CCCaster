@@ -82,6 +82,11 @@
 #define CC_P2_OFFSET_DIRECTION      ( 0x2C )                    // Offset to write P2 direction input
 #define CC_P2_OFFSET_BUTTONS        ( 0x38 )                    // Offset to write P2 buttons input
 
+#define CC_P3_OFFSET_DIRECTION      ( 0x2C + (0x14 * 1))
+#define CC_P3_OFFSET_BUTTONS        ( 0x38 + (0x14 * 1))
+#define CC_P4_OFFSET_DIRECTION      ( 0x2C + (0x14 * 2))
+#define CC_P4_OFFSET_BUTTONS        ( 0x38 + (0x14 * 2))
+
 // Directions are just written in numpad format, EXCEPT neutral is 0
 #define CC_BUTTON_A                 ( 0x0010 )
 #define CC_BUTTON_B                 ( 0x0020 )

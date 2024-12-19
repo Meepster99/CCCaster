@@ -1,7 +1,7 @@
 #include "KeyboardState.hpp"
 
 #include <windows.h>
-
+#include <cstdint>
 using namespace std;
 
 

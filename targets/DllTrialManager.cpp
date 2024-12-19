@@ -1574,14 +1574,15 @@ void DllTrialManager::render()
 
 void DllTrialManager::drawWineOverlay()
 {
+    
     int textHeight = 16;
     int textWidth = 7;
-    array<string, 3> text = DllOverlayUi::getText();
-    array<string, 2> selectorLine = DllOverlayUi::getSelectorLine();
+    array<string, 5> text = DllOverlayUi::getText();
+    array<string, 4> selectorLine = DllOverlayUi::getSelectorLine();
     int height = DllOverlayUi::getHeight();
     int newHeight = DllOverlayUi::getNewHeight();
-    array<RECT, 2> selector = DllOverlayUi::getSelector();
-    array<bool, 2> shouldDrawSelector = DllOverlayUi::getShouldDrawSelector();
+    array<RECT, 4> selector = DllOverlayUi::getSelector();
+    array<bool, 4> shouldDrawSelector = DllOverlayUi::getShouldDrawSelector();
     int left;
 
     if ( ! TrialManager::dtext.empty() && !TrialManager::hideText ) {

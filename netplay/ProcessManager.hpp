@@ -94,6 +94,8 @@ public:
     {
         writeGameInput ( 1, 0, 0 );
         writeGameInput ( 2, 0, 0 );
+        writeGameInput ( 3, 0, 0 );
+        writeGameInput ( 4, 0, 0 );
     }
 
     // Get / set the game RngState

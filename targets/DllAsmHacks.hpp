@@ -4,9 +4,101 @@
 #include "Exceptions.hpp"
 #include "DllNetplayManager.hpp"
 
+#include <stdio.h>
 #include <vector>
 #include <array>
+#include <windows.h>
 
+#define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
+#define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
+#define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
+#define RIGHTPRESS (GetAsyncKeyState(VK_RIGHT) & 0x0001)
+
+// i wish i ever got the raw strings thing to work
+#define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
+#define __asmEnd ); __asm__ __volatile__ (".att_syntax;");
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))
+#define PUSH_ALL \
+    __asm__ __volatile__( \
+        "push %esp;"  \
+        "push %ebp;"  \
+        "push %edi;"  \
+        "push %esi;"  \
+        "push %edx;"  \
+        "push %ecx;"  \
+        "push %ebx;"  \
+        "push %eax;"  \
+        "push %ebp;"  \
+        "mov %esp, %ebp;" \
+    )
+#define POP_ALL \
+    __asm__ __volatile__( \
+       "pop %ebp;" \
+       "pop %eax;" \
+       "pop %ebx;" \
+       "pop %ecx;" \
+       "pop %edx;" \
+       "pop %esi;" \
+       "pop %edi;" \
+       "pop %ebp;" \
+       "pop %esp;" \
+    )
+
+#define STRINGIFY(x) #x
+#define TO_STRING(x) STRINGIFY(x)
+#define LINE_STRING TO_STRING(__LINE__)
+
+#define CONCATENATE_DETAIL(x, y) x##y
+#define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
+#define LINE_NAME "LINE" LINE_STRING
+
+// needing offset keyword here makes me sad. so much time wasted.
+#define emitCall(addr) \
+    __asmStart \
+    "push offset " LINE_NAME ";" \
+	"push " #addr ";" \
+    "ret;" \
+    LINE_NAME ":" \
+    __asmEnd 
+
+#define emitJump(addr) \
+    __asmStart \
+	"push " #addr ";" \
+    "ret;" \
+    __asmEnd
+
+#define emitByte(b) asm __volatile__ (".byte " #b);
+
+/*
+#define setRegister(reg, val) \
+    __asm__ __volatile__( \
+    "movl %%" #reg ", %0" \
+    : \
+    : "r" (val) \
+    : #reg \
+    )
+*/
+
+#define setRegister(reg, val) __asmStart \
+    "mov " #reg ", " #val ";" \
+    __asmEnd
+
+#define pushVar(v) __asmStart \
+    "push " #v \
+    __asmEnd
+
+#define addStack(n) __asmStart \
+    "add esp, " #n \
+    __asmEnd
+
+#define INT3 __asmStart R"( int3; )" __asmEnd
+
+#define ASMRET __asmStart R"( ret; )" __asmEnd
+
+#define NOPS __asmStart R"( nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; )" __asmEnd
 
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
     do {                                                                                                            \
@@ -39,6 +131,13 @@
 
 #define INLINE_NOP_SEVEN_TIMES { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }
 
+#define PATCHJUMP_HELPER(patchAddr, newAddr) { (void*) patchAddr, { 0xE9, INLINE_DWORD( (newAddr) - ((patchAddr) + 5)) } } 
+
+#define PATCHCALL_HELPER(patchAddr, newAddr) { (void*) patchAddr, { 0xE8, INLINE_DWORD( (newAddr) - ((patchAddr) + 5)) } } 
+
+#define PATCHJUMP(patchAddr, newAddr) PATCHJUMP_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
+
+#define PATCHCALL(patchAddr, newAddr) PATCHCALL_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
 
 namespace AsmHacks
 {
@@ -505,5 +604,198 @@ static const AsmList addExtraTextures =
     } },
 };
 
+__attribute__((noinline)) void battleResetCallback();
 
+extern "C" {
+    extern unsigned naked_fileLoadEBX;
+} 
+__attribute__((noinline)) void fileLoadHook();
+
+__attribute__((naked, noinline)) void _naked_battleResetCallback();
+
+__attribute__((naked, noinline)) void _naked_charTurnAround();
+
+__attribute__((naked, noinline)) void _naked_hitBoxConnect1();
+
+__attribute__((naked, noinline)) void _naked_hitBoxConnect2();
+
+__attribute__((naked, noinline)) void _naked_hitBoxConnect3();
+
+__attribute__((naked, noinline)) void _naked_throwConnect1();
+
+__attribute__((naked, noinline)) void _naked_throwConnect2();
+
+__attribute__((naked, noinline)) void _naked_proxyGuard();
+
+__attribute__((naked, noinline)) void _naked_fileLoad();
+
+__attribute__((naked, noinline)) void _naked_collisionConnect();
+
+__attribute__((naked, noinline)) void _naked_checkRoundDone();
+
+__attribute__((naked, noinline)) void _naked_checkRoundDone2();
+
+__attribute__((naked, noinline)) void _naked_checkWhoWon();
+
+// -----
+
+__attribute__((noinline)) void drawAllPortraits();
+
+//__attribute__((naked, noinline)) void _naked_drawAllPortraits();
+
+__attribute__((naked, noinline)) void _naked_fixPortriatLoadSide();
+
+__attribute__((noinline)) void newDrawResourcesHud();
+
+__attribute__((naked, noinline)) void _naked_newDrawResourcesHud();
+
+__attribute__((noinline)) void drawAllPortraits(int playerIndex);
+
+__attribute__((noinline)) void drawHealthBars(int playerIndex);
+
+__attribute__((noinline)) void drawMeterBars(int playerIndex);
+
+__attribute__((noinline)) void drawGuardBars(int playerIndex);
+
+__attribute__((noinline)) void drawMoonsAndPalette(int playerIndex);
+
+__attribute__((naked, noinline)) void _naked_drawWinCount();
+
+__attribute__((naked, noinline)) void _naked_drawRoundDots();
+
+static const AsmList initPatch2v2 =
+{ 
+
+    /*
+    
+    todo general:
+        make hud and everything ingame nicer
+        make CSS nicer
+        explain new controller input screen in a way that doesnt confuse everyone
+
+    todo specific:
+
+        weird thing where you can lose your jump if your teamate is comboing?
+
+        fix round ends, re add timer back in
+        character facing: one of the two following ways
+            one: 
+                manual idea
+                press a button, locked on one player, press it again and it alternates
+                // you know the 1p2p arrow thats above roog knife? use that!
+                if P3 was targeting P2, P2 would have a P3 above their heads
+            two:
+                automatic idea
+                automatic, except always PRIO the person you are comboing
+    
+    */
+
+    // i actually prefer this patch method(with a lil modification) tbh. its very well done
+    
+    // battle reset patches:
+
+    { ( void * ) (0x00426810 + 2), { 0x04 }}, // ensure that all 4 characters are loaded properly on reset
+
+    // the reset func can ret early, patch that
+    PATCHJUMP(0x004234b9, 0x004234e1),
+
+    // patch the jump to our function
+    PATCHJUMP(0x004234e4, _naked_battleResetCallback),
+
+    // patch the port comparison for chars turning around
+    PATCHJUMP(0x0047587b, _naked_charTurnAround),
+
+    // i quite literally, do not know what these two patches do!
+    // im keeping them here, but pleaes keep that in mind
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
+
+    PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
+
+    PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
+
+    PATCHJUMP(0x0046ea27, _naked_collisionConnect), // collision, patch this loop ig
+
+    PATCHJUMP(0x004641b2, _naked_throwConnect1), // this patches grabs, not command grabs and not hitgrabs
+    
+    PATCHJUMP(0x0046fa65, _naked_throwConnect2), // patches hit/cmd grabs
+
+    PATCHJUMP(0x00462b87, _naked_proxyGuard),
+
+    // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?
+
+    PATCHJUMP(0x0047463c, _naked_checkRoundDone), // prevents game from ending until a team dies
+
+    PATCHJUMP(0x004735ed, _naked_checkRoundDone2), // possibly unneeded stack clear patch
+
+    PATCHCALL(0x00474759, _naked_checkWhoWon),
+
+    { ( void *) (0x00425253), INLINE_NOP_FIVE_TIMES }, // stop showing timer. (i ate it)
+
+    { ( void *) (0x004736fc + 2), { 0x10 }}, // check for each player in this loop
+
+    { ( void *) (0x0048c7d0), { 0xC3 }}, // ret early, allow for for of the same palette 
+
+    //PATCHJUMP(0x0041f7c0, _naked_fileLoad),
+
+    { ( void *) (0x004773ad + 2), { 0xCC }}, // let p2/p3 do damage. dont ask me how i know.
+
+    { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
+    { ( void *) (0x00449069 + 2), { 0x04 }},
+
+    // HUD patches
+
+    // todo, fix this!
+    
+    { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // draws the count for the char specific resource
+    { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // draws the actual char specific texture 
+    
+    //{ ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
+    
+    PATCHJUMP(0x0042494c, _naked_drawRoundDots),
+
+    //{ ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
+    //{ ( void *) (0x00424bdb), { 0x90 } }, // push for above
+
+    PATCHJUMP(0x00426c67, _naked_drawWinCount),
+
+    PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
+
+    //PATCHJUMP(0x00425a98, _naked_drawAllPortraits),
+
+    PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
+
+    { ( void * ) (0x004253e6 + 1), { 0x04 }},// allow for 4 calls in meter bar draw.
+
+    { ( void * ) (0x00425a84 + 2), { 0x04 }}, // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
+
+    { ( void * ) (0x00425907 + 2), { 0x04 }} // allow for 4 draw calls during drawMoonsAndPalette
+
+};
+
+static const AsmList patch2v2 = 
+{
+
+    // patch all character port numbers
+    { ( void * ) (0x00555424 + (0 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x00555424 + (1 * 0xAFC)), { 0x01 }},
+    { ( void * ) (0x00555424 + (2 * 0xAFC)), { 0x02 }},
+    { ( void * ) (0x00555424 + (3 * 0xAFC)), { 0x03 }},
+
+    // patch all character background states
+    { ( void * ) (0x005552A8 + (0 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (1 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (2 * 0xAFC)), { 0x00 }},
+    { ( void * ) (0x005552A8 + (3 * 0xAFC)), { 0x00 }},
+
+    // im not sure what this ref is to, but i think it has to do with duo characters?
+    { ( void * ) (0x0055545C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
+
+};
+
+// Add with the other function declarations
+/* __attribute__((noinline)) void drawAllMoons(int playerIndex);
+ */
 } // namespace AsmHacks

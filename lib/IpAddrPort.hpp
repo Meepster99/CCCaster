@@ -19,7 +19,7 @@ std::string getAddrFromSockAddr ( const sockaddr *sa );
 
 uint16_t getPortFromSockAddr ( const sockaddr *sa );
 
-const char *inet_ntop ( int af, const void *src, char *dst, size_t size );
+//const char *inet_ntop ( int af, const void *src, char *dst, size_t size );
 
 
 // IP address with port
