@@ -834,17 +834,16 @@ DWORD getStateTextColor(int circuitState, DWORD baseColor) {
     
     switch(circuitState) {
         case 1: // HEAT
-            return 0xFF5A5AE6;  // Blue
+            return (frameCounter % 6) < 2 ? 0xFFFFFFFF : 0xFFA0A0A0;
             
         case 2: // MAX
-            // Overexpose by using very bright white
-            return (frameCounter % 30) < 15 ? 0xFFFFFFFF : 0xFFA0A0A0;
+            return (frameCounter % 6) < 2 ? 0xFFFFFFFF : 0xFFA0A0A0;
             
         case 3: // BLOOD HEAT
-            return 0xFFB4B4B4;  // Grey
+            return (frameCounter % 6) < 2 ? 0xFFFFFFFF : 0xFFA0A0A0;
             
         case 5: // UNLIMITED
-            return 0xFF3296FF;  // Blue
+            return (frameCounter % 6) < 2 ? 0xFFFFFFFF : 0xFFA0A0A0;
             
         default:
             return baseColor;
@@ -923,7 +922,7 @@ void drawMeterBars(int playerIndex) {
     meltyDrawTexture(
         hudTextures[moonMeterType],            // Use same texture as border
         ((playerIndex & 1) ? 
-            (416 - fillWidth) :  // P2/P4: Mirror the gradient source
+            (415 - fillWidth) :  // P2/P4: Mirror the gradient source
             224),               // P1/P3: Standard gradient position
         (playerIndex & 1) ? 406 : 0x176,      // source Y differs by player
         fillWidth,                            // width based on meter value
@@ -1027,7 +1026,20 @@ void drawMeterBars(int playerIndex) {
 }
 
 void drawGuardBars(int playerIndex) {
-
+    // Draw full texture at 0x00459f8e
+    meltyDrawTexture(
+        *(DWORD*)0x00459f8e,    // texture address
+        0,                       // srcX
+        0,                       // srcY
+        512,                     // srcWidth
+        512,                     // srcHeight
+        0,                       // destX
+        0,                       // destY
+        512,                     // destWidth
+        512,                     // destHeight
+        -1,                     // color (no tint)
+        0x2A0                   // layer
+    );
 }
 
 void drawMoonsAndPalette(int playerIndex) {

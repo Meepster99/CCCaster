@@ -697,7 +697,7 @@ void PlayerState::update(int playerIndex) {
     circuitBreakTimer = (exPenalty == 110) ? 0 : *(WORD*)(playerAddr + OFFSET_CIRCUIT_BREAK);
 
     // Set background flag when knocked down
-    if (knockedDown != 0) {
+    if (health != 0) {
         *(BYTE*)(playerAddr + OFFSET_BACKGROUND_FLAG) = 0x01;
     }
 }
@@ -876,7 +876,14 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
 
 void updateInGameStuff(IDirect3DDevice9 *device) {
     updateAllPlayers();
-
+     for(int i=0; i<4; i++) {
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+        }
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+    }
+    
     float x;
     for(int i=2; i<4; i++) {
 
