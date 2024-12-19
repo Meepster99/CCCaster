@@ -677,6 +677,8 @@ static const AsmList initPatch2v2 =
 
         weird thing where you can lose your jump if your teamate is comboing?
 
+        hime aad fuckin,, targets closest player? and not closest enemy
+
         fix round ends, re add timer back in
         character facing: one of the two following ways
             one: 

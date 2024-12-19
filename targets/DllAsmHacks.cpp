@@ -519,15 +519,17 @@ void _naked_checkRoundDone() {
         //cmp ebx, 0;
         //JLE FAIL;
 
-        mov ebx, [0x005551EC + (0 * 0xAFC)]; // P0 HEALTH
-        add ebx, [0x005551EC + (2 * 0xAFC)]; // P2 HEALTH
-        cmp ebx, 0;
-        JLE FAIL;
+        // something in here should check for double KO
 
-        mov ebx, [0x005551EC + (1 * 0xAFC)]; // P1 HEALTH
-        add ebx, [0x005551EC + (3 * 0xAFC)]; // P3 HEALTH
-        cmp ebx, 0;
-        JLE FAIL;
+        mov ebx, byte ptr [0x005552A8 + (0 * 0xAFC)]; // P0 
+        add ebx, byte ptr [0x005552A8 + (2 * 0xAFC)]; // P2 
+        cmp ebx, 2;
+        JGE FAIL;
+
+        mov ebx, byte ptr [0x005552A8 + (1 * 0xAFC)]; // P1 
+        add ebx, byte ptr [0x005552A8 + (3 * 0xAFC)]; // P3 
+        cmp ebx, 2;
+        JGE FAIL;
 
         mov eax, 0; // OK        
         END:
