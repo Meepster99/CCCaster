@@ -157,7 +157,7 @@ ifneq (,$(findstring release,$(MAKECMDGOALS)))
 endif
 	echo $(MAKECMDGOALS)
 
-$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res targets/DllDirectXRC.res
+$(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res targets/DllDirectXRC.res targets/Dll2v2UI.res
 	rm -f $(filter-out $(BINARY),$(wildcard $(NAME)*.exe))
 	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
@@ -284,6 +284,10 @@ res/palettes.res: res/palettes.rc res/palettes.ico
 	@echo
 
 targets/DllDirectXRC.res: targets/DllDirectXRC.rc targets/DBGFNT02.png
+	$(WINDRES) -F pe-i386 targets/DllDirectXRC.rc -O coff -o $@
+	@echo
+
+targets/Dll2v2UI.res: targets/DllDirectXRC.rc targets/aacc_2v2_ui_elements.png
 	$(WINDRES) -F pe-i386 targets/DllDirectXRC.rc -O coff -o $@
 	@echo
 

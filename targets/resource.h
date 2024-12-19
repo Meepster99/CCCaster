@@ -3,6 +3,7 @@
 // Used by Extended-Training-Mode-DLL.rc
 //
 #define IDB_PNG1                        101
+#define IDB_PNG2                        102
 
 // Next default values for new objects
 // 

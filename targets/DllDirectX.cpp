@@ -6,6 +6,7 @@
 #include "DllDirectX.hpp"
 #include "resource.h"
 #include "DllAsmHacks.hpp"
+#include "aacc_2v2_ui_elements.h"
 
 /*
 
@@ -90,14 +91,20 @@ BYTE* fontBufferMelty = NULL;
 size_t fontBufferMeltySize = 0;
 IDirect3DTexture9* fontTextureMelty = NULL;
 
+IDirect3DTexture9* uiTexture = NULL;
+
+IDirect3DTexture9* nullTex = NULL;
+
 VertexData<PosColVert, 3 * 2048> posColVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 VertexData<PosTexVert, 3 * 2048> posTexVertData(D3DFVF_XYZ | D3DFVF_TEX1, &fontTexture);
 // need to rework font rendering, 4096 is just horrid
 //VertexData<PosColTexVert, 3 * 4096 * 2> posColTexVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
-VertexData<PosColTexVert, 3 * 4096 * 16> posColTexVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+VertexData<PosColTexVert, 3 * 4096 * 4> posColTexVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+//VertexData<PosColTexVert, 3 * 4096> uiVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &uiTexture);
+VertexData<PosColTexVert, 3 * 4096 * 4> uiVertData(D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &uiTexture);
 
-VertexData<MeltyVert, 3 * 4096 * 2> meltyVertData(D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
-VertexData<MeltyVert, 2 * 16384, D3DPT_LINELIST> meltyLineData(D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty); // 8192 is overkill
+VertexData<MeltyVert, 3 * 4096> meltyVertData(D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+VertexData<MeltyVert, 2 * 4096, D3DPT_LINELIST> meltyLineData(D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty); // 8192 is overkill
 
 unsigned _vertexBytesTotal = 0;
 unsigned _vertexBytesTransferedThisFrame = 0;
@@ -235,312 +242,22 @@ bool loadResource(int id, BYTE*& buffer, unsigned& bufferSize) {
 	return true;
 }
 
-void _initDefaultFont(IDirect3DTexture9*& resTexture) {
+void initTextureResource(int resourceID, IDirect3DTexture9*& resTexture) {
 
 	HRESULT hr;
 
 	BYTE* pngBuffer = NULL;
 	unsigned pngSize = 0;
-	bool res = loadResource(IDB_PNG1, pngBuffer, pngSize);
-	//bool res = false;
+	bool res = loadResource(resourceID, pngBuffer, pngSize);
 
 	hr = D3DXCreateTextureFromFileInMemory(device, pngBuffer, pngSize, &resTexture);
 	if (FAILED(hr)) {
-		log("_initDefaultFont font createtexfromfileinmem failed??");
+		log("_initDefaultFont font createtexfromfileinmem failed?? resource: %d", resourceID);
 		resTexture = NULL;
 		return;
 	}
 
-}
-
-IDirect3DPixelShader9* getFontOutlinePixelShader() {
-	return createPixelShader(R"(
-			sampler2D textureSampler : register(s0);
-			float4 texSize : register(c219);
-
-			float4 main(float2 texCoordIn : TEXCOORD0) : COLOR {
-									
-					float2 texOffset = 4.0 / texSize;
-	
-					//texOffset.y /= (4.0 / 3.0);
-
-					float2 texCoord = texCoordIn + (texOffset * 0.5);
-
-					float4 texColor = tex2D(textureSampler, texCoord);
-				
-					// this outline needs to be a bit different, since im trying to have it be outside the bounds of the drawn color.
-
-					if(texColor.a > 0.0) {
-						return float4(texColor.rgb, 1.0);
-					}
-	
-					float2 offsets[8] = { // order is adjusted to check diags last. performance.
-						
-						texCoord + float2(-texOffset.x, 0.0),
-						texCoord + float2(0.0, -texOffset.y),
-						texCoord + float2(0.0, texOffset.y),
-						texCoord + float2(texOffset.x, 0.0),						
-
-						texCoord + float2(texOffset.x, -texOffset.y),
-						texCoord + float2(-texOffset.x, -texOffset.y),
-						texCoord + float2(-texOffset.x, texOffset.y),
-						texCoord + float2(texOffset.x, texOffset.y)
-					};
-
-
-					float4 tempColor;
-
-					[unroll(8)] for(int i=0; i<8; i++) {
-
-						tempColor = tex2D(textureSampler, offsets[i]);
-						if(tempColor.a > 0) {
-							return float4(0.0, 0.0, 0.0, 1.0);
-						}
-
-					}
-			
-					return float4(0.0, 0.0, 0.0, 0.0);
-
-			}
-
-	)");
-}
-
-IDirect3DVertexShader9* getFontOutlineVertexShader() {
-	return createVertexShader(R"(
-			struct VS_INPUT {
-				float4 position : POSITION;
-				float2 texCoord : TEXCOORD0;
-			};
-    
-			struct VS_OUTPUT {
-				float4 position : POSITION;
-				float2 texCoord : TEXCOORD0;
-			};
-    
-			VS_OUTPUT main(VS_INPUT input) {
-				VS_OUTPUT output;
-				output.position = input.position;
-				output.texCoord = input.texCoord;
-				return output;
-			}
-
-	)");
-}
-
-void _initDefaultFontOutline(IDirect3DTexture9*& fontTex) {
-
-	IDirect3DSurface9* surface = NULL;
-	ID3DXBuffer* buffer = NULL;
-	IDirect3DTexture9* texture = NULL;
-
-	HRESULT hr;
-
-	hr = device->CreateTexture(fontTexWidth, fontTexHeight, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
-	if (FAILED(hr)) {
-		log("font createtexture failed");
-		return;
-	}
-
-	IDirect3DSurface9* oldRenderTarget = nullptr;
-	hr = device->GetRenderTarget(0, &oldRenderTarget);
-	if (FAILED(hr)) {
-		log("font getrendertarget failed");
-		return;
-	}
-
-	hr = texture->GetSurfaceLevel(0, &surface);
-	if (FAILED(hr)) {
-		log("font getsurfacelevel failed");
-		return;
-	}
-
-	hr = device->SetRenderTarget(0, surface);
-	if (FAILED(hr)) {
-		log("font setrendertarget failed");
-		return;
-	}
-
-	IDirect3DPixelShader9* textOutlinePixelShader = getFontOutlinePixelShader();
-	IDirect3DVertexShader9* textOutlineVertexShader = getFontOutlineVertexShader();
-
-
-	device->SetPixelShader(textOutlinePixelShader);
-	device->SetVertexShader(textOutlineVertexShader);
-
-	D3DXVECTOR4 textureSize((float)fontTexWidth, (float)fontTexHeight, 0.0, 0.0);
-	device->SetPixelShaderConstantF(219, (float*)&textureSize, 1);
-
-	device->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-
-
-
-	VertexData<PosTexVert, 3 * 2> tempVertData(D3DFVF_XYZ | D3DFVF_TEX1, &fontTex); // the deconstructor should handle this.	
-	tempVertData.alloc();
-
-	PosTexVert v1 = { D3DVECTOR(-1.0f, 1.0f, 0.5f), D3DXVECTOR2(0.0f, 0.0f) };
-	PosTexVert v2 = { D3DVECTOR(1.0f, 1.0f, 0.5f), D3DXVECTOR2(1.0f, 0.0f) };
-	PosTexVert v3 = { D3DVECTOR(-1.0f, -1.0f, 0.5f), D3DXVECTOR2(0.0f, 1.0f) };
-	PosTexVert v4 = { D3DVECTOR(1.0f, -1.0f, 0.5f), D3DXVECTOR2(1.0f, 1.0f) };
-
-	tempVertData.add(v1, v2, v3);
-	tempVertData.add(v2, v3, v4);
-
-	device->BeginScene();
-
-	tempVertData.draw();
-
-	device->EndScene();
-
-	//hr = D3DXSaveTextureToFileA("fontTest.png", D3DXIFF_PNG, texture, NULL);
-	hr = D3DXSaveTextureToFileInMemory(&buffer, D3DXIFF_PNG, texture, NULL);
-
-	BYTE* bufferPtr = (BYTE*)buffer->GetBufferPointer();
-	size_t bufferSize = buffer->GetBufferSize();
-
-	fontBufferWithOutline = (BYTE*)malloc(bufferSize);
-	if (fontBufferWithOutline == NULL) {
-		log("font malloc failed, what are you doing");
-		return;
-	}
-
-	memcpy(fontBufferWithOutline, bufferPtr, bufferSize);
-	fontBufferSizeWithOutline = bufferSize;
-
-	device->SetRenderTarget(0, oldRenderTarget);
-
-	device->SetPixelShader(NULL);
-	device->SetVertexShader(NULL);
-
-	oldRenderTarget->Release();
-	surface->Release();
-	buffer->Release();
-	texture->Release();
-
-	textOutlinePixelShader->Release();
-	textOutlineVertexShader->Release();
-}
-
-void _initMeltyFont() {
-
-	IDirect3DSurface9* surface = NULL;
-	ID3DXBuffer* buffer = NULL;
-	IDirect3DTexture9* texture = NULL;
-
-	HRESULT hr;
-
-	BYTE* pngBuffer = NULL;
-	unsigned pngSize = 0;
-	bool res = loadResource(IDB_PNG1, pngBuffer, pngSize);
-	//bool res = false;
-
-	if(!res) {
-		log("_initMeltyFont loadResource failed");
-		return;
-	}
-
-	IDirect3DTexture9* meltyTex = NULL;
-
-	hr = D3DXCreateTextureFromFileInMemory(device, pngBuffer, pngSize, &meltyTex);
-	if (FAILED(hr)) {
-		log("_initMeltyFont font createtexfromfileinmem failed??");
-		return;
-	}
-
-	if (!res) {
-		log("failed to load melty font resource");
-		return;
-	}
-
-	hr = device->CreateTexture(fontTexWidth, fontTexHeight, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
-	if (FAILED(hr)) {
-		log("font createtexture failed");
-		return;
-	}
-
-	IDirect3DSurface9* oldRenderTarget = nullptr;
-	hr = device->GetRenderTarget(0, &oldRenderTarget);
-	if (FAILED(hr)) {
-		log("font getrendertarget failed");
-		return;
-	}
-
-	hr = texture->GetSurfaceLevel(0, &surface);
-	if (FAILED(hr)) {
-		log("font getsurfacelevel failed");
-		return;
-	}
-
-	hr = device->SetRenderTarget(0, surface);
-	if (FAILED(hr)) {
-		log("font setrendertarget failed");
-		return;
-	}
-
-	log("creating font outline pixel shader");
-	IDirect3DPixelShader9* textOutlinePixelShader = getFontOutlinePixelShader();
-	log("creating font outline vertex shader");
-	IDirect3DVertexShader9* textOutlineVertexShader = getFontOutlineVertexShader();
-
-	//device->SetPixelShader(textOutlinePixelShader);
-	//device->SetVertexShader(textOutlineVertexShader);
-
-	D3DXVECTOR4 textureSize((float)fontTexWidth, (float)fontTexHeight, 0.0, 0.0);
-	device->SetPixelShaderConstantF(219, (float*)&textureSize, 1);
-
-	device->Clear(0, NULL, D3DCLEAR_TARGET, D3DCOLOR_ARGB(0, 0, 0, 0), 1.0f, 0);
-	
-	VertexData<PosTexVert, 3 * 2> tempVertData(D3DFVF_XYZ | D3DFVF_TEX1, &meltyTex); // the deconstructor should handle this.	
-	tempVertData.alloc();
-
-	PosTexVert v1 = { D3DVECTOR(-1.0f, 1.0f, 0.5f), D3DXVECTOR2(0.0f, 0.0f) };
-	PosTexVert v2 = { D3DVECTOR(1.0f, 1.0f, 0.5f), D3DXVECTOR2(1.0f, 0.0f) };
-	PosTexVert v3 = { D3DVECTOR(-1.0f, -1.0f, 0.5f), D3DXVECTOR2(0.0f, 1.0f) };
-	PosTexVert v4 = { D3DVECTOR(1.0f, -1.0f, 0.5f), D3DXVECTOR2(1.0f, 1.0f) };
-
-	tempVertData.add(v1, v2, v3);
-	tempVertData.add(v2, v3, v4);
-
-	device->BeginScene();
-
-	tempVertData.draw();
-
-	device->EndScene();
-
-	//hr = D3DXSaveTextureToFileA("meltyFontTest.png", D3DXIFF_PNG, texture, NULL);
-	hr = D3DXSaveTextureToFileInMemory(&buffer, D3DXIFF_PNG, texture, NULL);
-	if (FAILED(hr)) {
-		log("_initMeltyFont D3DXSaveTextureToFileInMemory failed");
-		return;
-	}
-
-	BYTE* bufferPtr = (BYTE*)buffer->GetBufferPointer();
-	size_t bufferSize = buffer->GetBufferSize();
-
-	fontBufferMelty = (BYTE*)malloc(bufferSize);
-	if (fontBufferMelty == NULL) {
-		log("font malloc failed, what are you doing");
-		return;
-	}
-
-	memcpy(fontBufferMelty, bufferPtr, bufferSize);
-	fontBufferMeltySize = bufferSize;
-
-	device->SetRenderTarget(0, oldRenderTarget);
-
-	device->SetPixelShader(NULL);
-	device->SetVertexShader(NULL);
-
-	oldRenderTarget->Release();
-	surface->Release();
-	buffer->Release();
-	texture->Release();
-
-	textOutlinePixelShader->Release();
-	textOutlineVertexShader->Release();
-
-	meltyTex->Release();
-
+	log("inited resource texture %d successfully", resourceID);
 }
 
 void _initFontFirstLoad() {
@@ -566,27 +283,20 @@ void _initFontFirstLoad() {
 	device->GetRenderState(D3DRS_MULTISAMPLEANTIALIAS, &antiAliasBackup);
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, FALSE);
 
-	//IDirect3DTexture9* fontTex = NULL;
-	_initDefaultFont(fontTexture);
+	initTextureResource(IDB_PNG1, fontTexture);
 	if (fontTexture == NULL) {
 		log("failed _initDefaultFont");
 		return;
 	}
-	
-
-	//_initMeltyFont();
-
-	//_initDefaultFont(fontTexture);
-
-	//hr = D3DXSaveTextureToFileA("fontTest.png", D3DXIFF_PNG, fontTexture, NULL);
 
 	fontTextureMelty = fontTexture;
 
-	//_initDefaultFontOutline(fontTex);
-	//_initMeltyFont();
-
-	//fontTex->Release();
-
+	initTextureResource(IDB_PNG2, uiTexture);
+	if(uiTexture == NULL) {
+		log("loading uiTexture failed");
+		return;
+	}
+	
 	log("loaded font BUFFER!!!");
 	device->SetRenderState(D3DRS_MULTISAMPLEANTIALIAS, antiAliasBackup);
 }
@@ -1083,6 +793,10 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 DWORD naked_meltyDrawTexture_ret;
 void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer) {
 
+
+	// this func is hacky, and not worth using.
+	return;
+
 	/*
 	
 	edx: displayWidth
@@ -1145,6 +859,43 @@ void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD t
 
 	// xOFF and yOFF might be needed for,,, scaling down a tex properly!
 	meltyDrawTextureDirect(w, 0, texture, x, y, h, texX, texY, texW, texH, ARGB, 0, layer);
+
+}
+
+void UIDraw(const Rect& texRect, const Rect& screenRect, DWORD ARGB) {
+
+	// ill take in the screen rect in normal coords. 	
+
+	float x = screenRect.x1 / 480.0f;
+	float y = screenRect.y1 / 480.0f;
+	float w = (screenRect.x2 / 480.0f) - (screenRect.x1 / 480.0f);
+	float h = (screenRect.y2 / 480.0f) - (screenRect.y1 / 480.0f);
+
+	y = 1.0f - y;
+
+	PosColTexVert v1{ D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, texRect.topLeftV() };
+	PosColTexVert v2{ D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, texRect.topRightV() };
+	PosColTexVert v3{ D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, texRect.bottomLeftV() };
+	PosColTexVert v4{ D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, texRect.bottomRightV() };
+
+	scaleVertex(v1.position);
+	scaleVertex(v2.position);
+	scaleVertex(v3.position);
+	scaleVertex(v4.position);
+
+	uiVertData.add(v1, v2, v3);
+	uiVertData.add(v2, v3, v4);
+
+}
+
+void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB) {
+
+	// create a screen rect based on the scale of the texture being draw.
+
+	//Rect tempRect(p, 480.0f * texRect.w(), 480.0f * tempRect.h()); // how is this legal, compiling, syntax.
+	Rect tempRect(p, 480.0f * texRect.w(), 480.0f * texRect.h()); 
+
+	UIDraw(texRect, tempRect, ARGB);
 
 }
 
@@ -1491,6 +1242,14 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 
 // -----
 
+void drawNewUI() {
+
+	UIDraw(UI::test, Point(0, 0), 0xFFFFFFFF);
+
+}
+
+// -----
+
 void allocVertexBuffers() {
 
 	posColVertData.alloc();
@@ -1498,6 +1257,7 @@ void allocVertexBuffers() {
 	posColTexVertData.alloc();
 	meltyVertData.alloc();
 	meltyLineData.alloc();
+	uiVertData.alloc();
 }
 
 void _drawGeneralCalls() {
@@ -1509,6 +1269,8 @@ void _drawGeneralCalls() {
 	posColVertData.draw();
 
 	posColTexVertData.draw();
+	uiVertData.draw();
+
 	posTexVertData.draw();
 
 	meltyVertData.draw();
@@ -1539,6 +1301,13 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	}
 
 	//TextDraw(0, 0, 16, 0xFFFFFFFF, "money money money!");
+
+	//UIDraw(Rect(Point(0, 0), 1, 1), Point(0, 0), 0xFFFFFFFF);
+	//UIDraw(UI::test, Point(0, 0), 0xFFFFFFFF);
+	
+	drawNewUI();
+
+	//UIDraw(Rect(Point(0, 0), 1, 1), Rect(Point(100, 100), 100, 100), 0xFFFFFFFF);
 
 	// -- ACTUAL RENDERING --
 

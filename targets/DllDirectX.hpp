@@ -218,8 +218,8 @@ typedef struct Rect Rect;
 typedef struct Point {
 	float x = 0.0;
 	float y = 0.0;
-	Point() {}
-	Point(float x_, float y_) : x(x_), y(y_) {}
+	constexpr Point() {}
+	constexpr Point(float x_, float y_) : x(x_), y(y_) {}
 	bool operator==(const Point& rhs) { return x == rhs.x && y == rhs.y; }
 	bool operator!=(const Point& rhs) { return x != rhs.x || y != rhs.y; }
 	Point operator+(const Point& rhs) { return Point(x + rhs.x, y + rhs.y); }
@@ -237,21 +237,11 @@ typedef struct Point {
 typedef struct Rect {
 
 	// there is specifically not a 4 float constructor due to ambiguity between if its 2 points, or 1 point, and width, height
-	Rect() {}
+	constexpr Rect() : x1(0), y1(0), x2(0), y2(0) {}
 
-	Rect(const Point& a, const Point& b) {
-		x1 = a.x;
-		y1 = a.y;
-		x2 = b.x;
-		y2 = b.y;
-	}
+	constexpr Rect(const Point& a, const Point& b) : x1(a.x), y1(a.y), x2(b.x), y2(b.y) { }
 
-	Rect(const Point& a, float w, float h) {
-		x1 = a.x;
-		y1 = a.y;
-		x2 = a.x + w; 
-		y2 = a.y + h;
-	}
+	constexpr Rect(const Point& a, float w, float h) : x1(a.x), y1(a.y), x2(a.x + w), y2(a.y + h) { }
 
 	union {
 		struct {
@@ -277,7 +267,47 @@ typedef struct Rect {
 		return !inside(p);
 	}
 	
+	float w() const {
+		return x2 - x1;
+	}
+
+	float h() const {
+		return y2 - y1;
+	}
+
 	Rect& operator=(const Rect& rhs) { if (this != &rhs) { p1 = rhs.p1; p2 = rhs.p2; } return *this; }
+
+	Point topLeft() const {
+		return Point(x1, y1);
+	}
+
+	Point topRight() const {
+		return Point(x2, y1);
+	}
+	
+	Point bottomLeft() const {
+		return Point(x1, y2);
+	}
+
+	Point bottomRight() const {
+		return Point(x2, y2);
+	}
+
+	D3DXVECTOR2 topLeftV() const {
+		return D3DXVECTOR2(x1, y1);
+	}
+
+	D3DXVECTOR2 topRightV() const {
+		return D3DXVECTOR2(x2, y1);
+	}
+	
+	D3DXVECTOR2 bottomLeftV() const {
+		return D3DXVECTOR2(x1, y2);
+	}
+
+	D3DXVECTOR2 bottomRightV() const {
+		return D3DXVECTOR2(x2, y2);
+	}
 
 } Rect;
 
@@ -599,14 +629,17 @@ extern BYTE* fontBufferMelty;
 extern size_t fontBufferMeltySize;
 extern IDirect3DTexture9* fontTextureMelty;
 
+extern IDirect3DTexture9* uiTexture;
+
 extern VertexData<PosColVert, 3 * 2048> posColVertData;//(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 extern VertexData<PosTexVert, 3 * 2048> posTexVertData;//(D3DFVF_XYZ | D3DFVF_TEX1, &fontTexture);
 // need to rework font rendering, 4096 is just horrid
 //extern VertexData<PosColTexVert, 3 * 4096 * 2> posColTexVertData;// (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
-extern VertexData<PosColTexVert, 3 * 4096 * 16> posColTexVertData;// (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+extern VertexData<PosColTexVert, 3 * 4096 * 4> posColTexVertData;// (D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+extern VertexData<PosColTexVert, 3 * 4096 * 4> uiVertData;
 
-extern VertexData<MeltyVert, 3 * 4096 * 2> meltyVertData;// (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
-extern VertexData<MeltyVert, 2 * 16384, D3DPT_LINELIST> meltyLineData;// (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty); // 8192 is overkill
+extern VertexData<MeltyVert, 3 * 4096> meltyVertData;// (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty);
+extern VertexData<MeltyVert, 2 * 4096, D3DPT_LINELIST> meltyLineData;// (D3DFVF_XYZRHW | D3DFVF_DIFFUSE | D3DFVF_TEX1, &fontTextureMelty); // 8192 is overkill
 
 // ----
 
@@ -637,15 +670,7 @@ inline unsigned scaleNextPow2(unsigned v) {
 
 bool loadResource(int id, BYTE*& buffer, unsigned& bufferSize);
 
-void _initDefaultFont(IDirect3DTexture9*& resTexture);
-
-IDirect3DPixelShader9* getFontOutlinePixelShader();
-
-IDirect3DVertexShader9* getFontOutlineVertexShader();
-
-void _initDefaultFontOutline(IDirect3DTexture9*& fontTex);
-
-void _initMeltyFont();
+void initTextureResource(int resourceID, IDirect3DTexture9*& resTexture);
 
 void _initFontFirstLoad();
 
@@ -780,6 +805,10 @@ extern "C" {
 __attribute__((naked, noinline, cdecl)) void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer);
 
 void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
+
+void UIDraw(const Rect& texRect, const Rect& screenRect, DWORD ARGB);
+
+void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB);
 
 // -----
 
