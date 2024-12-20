@@ -240,12 +240,12 @@ void battleResetCallback() {
     for ( const Asm& hack : patch2v2 )
         WRITE_ASM_HACK ( hack );
 
-    log("BATTLERESETCALLBACK");
+    //log("BATTLERESETCALLBACK");
 
     naked_charTurnAroundState[0] = 0;
-    naked_charTurnAroundState[0] = 0;
-    naked_charTurnAroundState[0] = 1;
-    naked_charTurnAroundState[0] = 1;
+    naked_charTurnAroundState[1] = 0;
+    naked_charTurnAroundState[2] = 1;
+    naked_charTurnAroundState[3] = 1;
 
 }
 
@@ -402,11 +402,35 @@ void charTurnAround() {
     
 }
 
+void charTurnAround2() {
+
+    for(int i=0; i<4; i++) {
+        int goal = naked_charTurnAroundState[i];
+        goal <<= 1;
+        if((i & 1) == 0) {
+            goal += 1;
+        }
+
+        int ourXPos = *(int*)(0x00555130 + 0x108 + (i * 0xAFC));
+        int otherXPos = *(int*)(0x00555130 + 0x108 + (goal * 0xAFC));
+
+        *(BYTE*)(0x00555130 + 0x315 + (i * 0xAFC)) = otherXPos < ourXPos;
+
+    }
+
+    naked_charTurnAroundStateRes = 0;
+
+}
+
 void _naked_charTurnAround2() {
 
     PUSH_ALL;
-
+    charTurnAround2();
     POP_ALL;
+
+    __asmStart R"(
+        mov eax, _naked_charTurnAroundStateRes;
+    )" __asmEnd
 
     ASMRET;
 }

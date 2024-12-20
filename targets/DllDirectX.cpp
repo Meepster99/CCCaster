@@ -1275,6 +1275,7 @@ struct Smooth {
        
 	   	T delta = std::abs(current - goal);
         if(delta < rate) {
+			current = goal;
             return current;   
         }
 
@@ -1301,7 +1302,7 @@ typedef struct HealthBar {
 } HealthBar;
 
 void drawNewUI() {
-
+	
 	shouldReverseDraws = false;
 
     for(int i=0; i<4; i++) {
@@ -1320,7 +1321,7 @@ void drawNewUI() {
 		fn1 &= 0b1;
 
 		if(!FN1States[i] && fn1) {
-			log("P%d: %d", i, fn1);
+			//log("P%d: %d", i, fn1);
 			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
 		}		
 		
@@ -1358,7 +1359,7 @@ void drawNewUI() {
 
 		UIDraw(topBars[i], Point(0, 0), 2.0f, 0xFFFFFFFF);
 
-		UIDraw(meterBars[i], Point(0, 480 - 2 * meterBars[i].h()), 2.0f, 0xFFFFFFFF);
+		UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), 2.0f, 0xFFFFFFFF);
 
 	}
 
