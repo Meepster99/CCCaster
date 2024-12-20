@@ -1299,6 +1299,7 @@ const float healthBarSmoothValue = 0.005f;
 typedef struct HealthBar {
 	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
 	Smooth<float> redHealth = Smooth<float>(1.0f, healthBarSmoothValue);
+	Smooth<float> meter = Smooth<float>(1.0f, healthBarSmoothValue);
 } HealthBar;
 
 void drawNewUI() {
@@ -1369,8 +1370,16 @@ void drawNewUI() {
 		hasYOffset = (i >= 2);
 
 		healthBars[i].yellowHealth = ((float)*(DWORD*)(0x005551EC + (i * 0xAFC))) / 11400.0f;
+		healthBars[i].redHealth = ((float)*(DWORD*)(0x005551F0 + (i * 0xAFC))) / 11400.0f;
+		float meterDivisor =  *(DWORD*)(0x0055513C + (i * 0xAFC)) == 2 ? 20000.0f : 30000.0f;
+		healthBars[i].meter = ((float)*(DWORD*)(0x00555210 + (i * 0xAFC))) / meterDivisor;
 
-		RectDraw(0, i * 100, 300 * (*healthBars[i].yellowHealth), 10, 0xFF0000FF);
+		RectDraw(0, hasYOffset * 100, 300 * (*healthBars[i].redHealth),    10, 0xFFFF0000);
+		RectDraw(0, hasYOffset * 100, 300 * (*healthBars[i].yellowHealth), 10, 0xFFFFFF00);
+
+		RectDraw(0, 438 + hasYOffset * 11, 300 * (*healthBars[i].meter), 10, 0xFF00FF00); // go move the code from uioverlay!
+
+
 
 		DWORD facing = AsmHacks::naked_charTurnAroundState[i];
 		if((i & 1) == 0) {
@@ -1378,7 +1387,6 @@ void drawNewUI() {
 		}
 
 		TextDraw(0, 200 + (hasYOffset * 32), 16, 0xFFFFFFFF, "P%d: facing %d", displayInts[i], facing + 1);
-
 
 	}
 

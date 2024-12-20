@@ -682,6 +682,7 @@ static const AsmList initPatch2v2 =
     todo specific:
 
         remove the meter bar flashes. maybe just patch the draw for them instead of the jank shit you normally do
+        i removed some? make sure max into blood heat is ok though??
 
         weird thing where you can lose your jump if your teamate is comboing?
 

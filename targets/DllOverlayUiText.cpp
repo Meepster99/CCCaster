@@ -986,7 +986,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
 #endif // RELEASE
 
-    if(*((uint8_t*) ) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
+    if(*((uint8_t*) 0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
         updateScaleParams(device);
         updateCSSStuff(device);
     }

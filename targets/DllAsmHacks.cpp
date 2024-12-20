@@ -620,14 +620,14 @@ void _naked_checkRoundDone() {
 
         // something in here should check for double KO
 
-        mov bl, byte ptr [0x005552A8 + (0 * 0xAFC)]; // P0 
-        add bl, byte ptr [0x005552A8 + (2 * 0xAFC)]; // P2 
-        cmp bl, 2;
+        mov ebx, byte ptr [0x005552A8 + (0 * 0xAFC)]; // P0 
+        add ebx, byte ptr [0x005552A8 + (2 * 0xAFC)]; // P2 
+        cmp ebx, 2;
         JGE FAIL;
 
-        mov bl, byte ptr [0x005552A8 + (1 * 0xAFC)]; // P1 
-        add bl, byte ptr [0x005552A8 + (3 * 0xAFC)]; // P3 
-        cmp bl, 2;
+        mov ebx, byte ptr [0x005552A8 + (1 * 0xAFC)]; // P1 
+        add ebx, byte ptr [0x005552A8 + (3 * 0xAFC)]; // P3 
+        cmp ebx, 2;
         JGE FAIL;
 
         mov eax, 0; // OK        
