@@ -862,7 +862,13 @@ void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD t
 
 }
 
-void UIDraw(const Rect& texRect, const Rect& screenRect, DWORD ARGB) {
+void UIDraw(const Rect& texRect, Rect screenRect, DWORD ARGB) {
+
+	if(shouldReverseDraws) { // is this ok? or are triangles being backfaced here
+		screenRect.x1 = 640.0f - screenRect.x1;
+		screenRect.x2 = 640.0f - screenRect.x2;
+		std::swap(screenRect.x1, screenRect.x2);
+	}
 
 	// ill take in the screen rect in normal coords. 	
 
@@ -894,6 +900,14 @@ void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB) {
 
 	//Rect tempRect(p, 480.0f * texRect.w(), 480.0f * tempRect.h()); // how is this legal, compiling, syntax.
 	Rect tempRect(p, 480.0f * texRect.w(), 480.0f * texRect.h()); 
+
+	UIDraw(texRect, tempRect, ARGB);
+
+}
+
+void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB) {
+
+	Rect tempRect(p, scale * 480.0f * texRect.w(), scale * 480.0f * texRect.h()); 
 
 	UIDraw(texRect, tempRect, ARGB);
 
@@ -1242,10 +1256,132 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 
 // -----
 
+template <typename T>
+struct Smooth {
+    
+    Smooth(T v) : current(v), goal(v), rate(T(1)) {}
+
+	Smooth(T v, T r) : current(v), goal(v), rate(r) {}
+    
+    void operator=(const T& other) {
+        goal = other;
+    }
+    
+    T operator*() {
+        
+        // could (maybe should) use if constexpr (std::is_floating_point<T>::value)
+        // std::abs aparently avoids unneccessary casting!
+        // tbh, i dont even need any sort of type check with std::abs at all
+       
+	   	T delta = std::abs(current - goal);
+        if(delta < rate) {
+            return current;   
+        }
+
+		T temp = rate;
+	
+		temp *= MIN(delta / rate, 10.0f);
+
+        current += (current < goal) ? temp : -temp;
+        
+        return current;
+    }
+    
+	// todo, add arithmetic overloads
+
+    T current;
+    T goal;
+    T rate; // how much to alter value on every access. would be a template param, but c++ doesnt allow floats as template values
+}; 
+
+const float healthBarSmoothValue = 0.005f;
+typedef struct HealthBar {
+	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
+	Smooth<float> redHealth = Smooth<float>(1.0f, healthBarSmoothValue);
+} HealthBar;
+
 void drawNewUI() {
 
-	UIDraw(UI::test, Point(0, 0), 0xFFFFFFFF);
+	shouldReverseDraws = false;
 
+    for(int i=0; i<4; i++) {
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+        }
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+    }
+
+	// this code needs a refactor. but i am tired
+	static DWORD FN1States[4] = {0, 0, 0, 0}; 
+	DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+	for(int i=0; i<4; i++) {
+		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
+		fn1 &= 0b1;
+
+		if(!FN1States[i] && fn1) {
+			log("P%d: %d", i, fn1);
+			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
+		}		
+		
+		FN1States[i] = fn1;
+	}
+
+	for(int i=0; i<4; i++) {
+		if(i & 1) { // team 2
+			if(*(BYTE*)(0x00555130 + 0x1B6 + (0 * 0xAFC)) != 0) {
+				AsmHacks::naked_charTurnAroundState[i] = 1;
+			} else if(*(BYTE*)(0x00555130 + 0x1B6 + (2 * 0xAFC)) != 0) {
+				AsmHacks::naked_charTurnAroundState[i] = 0;
+			}
+		} else { // team 1
+			if(*(BYTE*)(0x00555130 + 0x1B6 + (1 * 0xAFC)) != 0) {
+				AsmHacks::naked_charTurnAroundState[i] = 1;
+			} else if(*(BYTE*)(0x00555130 + 0x1B6 + (3 * 0xAFC)) != 0) {
+				AsmHacks::naked_charTurnAroundState[i] = 0;
+			}
+		}
+	}
+
+	shouldReverseDraws = false;
+	bool hasYOffset = false;
+
+	static HealthBar healthBars[4];
+
+	constexpr Rect topBars[2] = { UI::P0TopBar, UI::P1TopBar };
+	constexpr Rect meterBars[2] = { UI::P0Meter, UI::P1Meter };
+
+	constexpr int displayInts[4] = {1, 3, 2, 4};
+
+	for(int i=0; i<2; i++) {
+		shouldReverseDraws = (i == 1); 
+
+		UIDraw(topBars[i], Point(0, 0), 2.0f, 0xFFFFFFFF);
+
+		UIDraw(meterBars[i], Point(0, 480 - 2 * meterBars[i].h()), 2.0f, 0xFFFFFFFF);
+
+	}
+
+	for(int i=0; i<4; i++) {
+
+		shouldReverseDraws = (i & 1);
+		hasYOffset = (i >= 2);
+
+		healthBars[i].yellowHealth = ((float)*(DWORD*)(0x005551EC + (i * 0xAFC))) / 11400.0f;
+
+		RectDraw(0, i * 100, 300 * (*healthBars[i].yellowHealth), 10, 0xFF0000FF);
+
+		DWORD facing = AsmHacks::naked_charTurnAroundState[i];
+		if((i & 1) == 0) {
+			facing += 2;
+		}
+
+		TextDraw(0, 200 + (hasYOffset * 32), 16, 0xFFFFFFFF, "P%d: facing %d", displayInts[i], facing + 1);
+
+
+	}
+
+	
 }
 
 // -----
@@ -1268,8 +1404,11 @@ void _drawGeneralCalls() {
 
 	posColVertData.draw();
 
-	posColTexVertData.draw();
 	uiVertData.draw();
+
+	posColTexVertData.draw();
+
+	
 
 	posTexVertData.draw();
 

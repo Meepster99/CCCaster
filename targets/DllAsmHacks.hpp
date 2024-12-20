@@ -613,7 +613,13 @@ __attribute__((noinline)) void fileLoadHook();
 
 __attribute__((naked, noinline)) void _naked_battleResetCallback();
 
+extern "C" {
+    extern DWORD naked_charTurnAroundState[4];
+}
+
 __attribute__((naked, noinline)) void _naked_charTurnAround();
+
+__attribute__((naked, noinline)) void _naked_charTurnAround2();
 
 __attribute__((naked, noinline)) void _naked_hitBoxConnect1();
 
@@ -675,6 +681,8 @@ static const AsmList initPatch2v2 =
 
     todo specific:
 
+        remove the meter bar flashes. maybe just patch the draw for them instead of the jank shit you normally do
+
         weird thing where you can lose your jump if your teamate is comboing?
 
         hime aad fuckin,, targets closest player? and not closest enemy
@@ -705,7 +713,9 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x004234e4, _naked_battleResetCallback),
 
     // patch the port comparison for chars turning around
-    PATCHJUMP(0x0047587b, _naked_charTurnAround),
+    //PATCHJUMP(0x0047587b, _naked_charTurnAround),
+
+    PATCHJUMP(0x00475820, _naked_charTurnAround2),
 
     // i quite literally, do not know what these two patches do!
     // im keeping them here, but pleaes keep that in mind
@@ -744,7 +754,9 @@ static const AsmList initPatch2v2 =
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
     { ( void *) (0x00449069 + 2), { 0x04 }},
 
-    // HUD patches
+    // HUD patches. tbh, most patches here should be removed
+
+    { ( void *) (0x0046040a), INLINE_NOP_FIVE_TIMES }, // this eventually causes the flicker when in not normal meter state. i should look into where it interacts with the linked list, or with the effects array
 
     // todo, fix this!
     
@@ -760,7 +772,7 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x00426c67, _naked_drawWinCount),
 
-    PATCHCALL(0x0042485b, _naked_newDrawResourcesHud),
+    PATCHCALL(0x0042485b, _naked_newDrawResourcesHud), 
 
     //PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
 

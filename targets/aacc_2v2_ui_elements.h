@@ -16,9 +16,13 @@ namespace UI {
 
     constexpr float size = 1024.0f;
 
-    #define MAKEUILABEL(name, x, y, w, h) constexpr Rect name(Point(x, y), w, h)
+    #define MAKEUILABEL(name, x, y, w, h) constexpr Rect name(Point((x) / size, (y) / size), (w) / size, (h) / size)
 
-    MAKEUILABEL(test, 0, 0, 0.5, 0.5);
+    MAKEUILABEL(P0TopBar, 0, 0, 322, 82);
+    MAKEUILABEL(P1TopBar, 0, 85, 322, 82);
+
+    MAKEUILABEL(P0Meter, 325,   0, 565-325, 50);
+    MAKEUILABEL(P1Meter, 325, 223, 565-325, 50);
 
 
 

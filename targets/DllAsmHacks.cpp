@@ -227,10 +227,25 @@ int Asm::revert() const
     return memwrite ( addr, &backup[0], backup.size() );
 }
 
+extern "C" {
+    DWORD naked_charTurnAroundStateRes = 0;
+    DWORD naked_charTurnAroundState[4] = { 0, 0, 1, 1 };
+    DWORD charTurnAround_ECX;
+    DWORD charTurnAround_EBP;
+    void charTurnAround();
+}
+
 void battleResetCallback() {
 
     for ( const Asm& hack : patch2v2 )
         WRITE_ASM_HACK ( hack );
+
+    log("BATTLERESETCALLBACK");
+
+    naked_charTurnAroundState[0] = 0;
+    naked_charTurnAroundState[0] = 0;
+    naked_charTurnAroundState[0] = 1;
+    naked_charTurnAroundState[0] = 1;
 
 }
 
@@ -334,24 +349,84 @@ void _naked_fileLoad() {
 
 }
 
+void charTurnAround() {
+
+    BYTE al;
+
+    BYTE a = *(BYTE*)(charTurnAround_ECX + 0x000001EC);
+    BYTE b = *(BYTE*)(charTurnAround_EBP + 0x000002F0);
+
+    al = a;
+    al ^= b;
+    al &= 1;
+
+    //naked_charTurnAroundStateRes = 1;
+    //return;
+
+    if(al == 0) { // this face check is friendly. dip early.
+        naked_charTurnAroundStateRes = 0;
+        return;
+    }
+
+    log("%d %d", a, b);
+
+    /*
+    naked_charTurnAroundStateRes = 0;
+
+    if(a == 1 && b == 3) {
+        naked_charTurnAroundStateRes = 1;
+    } else if(a == 0 && b == 2) {
+        naked_charTurnAroundStateRes = 1;
+    }
+
+    */
+
+    if(a > b) {
+        std::swap(a, b);
+    }
+
+    
+    if(a & 1) {
+        if(naked_charTurnAroundState[a] && b == 2) {
+            naked_charTurnAroundStateRes = 1;
+        } else if(!naked_charTurnAroundState[a] && b == 0) {
+            naked_charTurnAroundStateRes = 1;
+        }
+    } else {
+        if(naked_charTurnAroundState[a] && b == 3) {
+            naked_charTurnAroundStateRes = 1;
+        } else if(!naked_charTurnAroundState[a] && b == 1) {
+            naked_charTurnAroundStateRes = 1;
+        }
+    }
+    
+}
+
+void _naked_charTurnAround2() {
+
+    PUSH_ALL;
+
+    POP_ALL;
+
+    ASMRET;
+}
+
 void _naked_charTurnAround() {
 
     // patched in at  0x0047587b
     // need to ret to 0x00475887
 
     __asmStart R"(
+        mov _charTurnAround_ECX, ecx;
+        mov _charTurnAround_EBP, ebp;
+    )" __asmEnd
 
-        // unsure if this modifies flags in the same manner as cmp
-        // worst case tho, its inverted, so i can always just flip the z flag ig
-        mov al, byte ptr[ecx + 0x000001EC];
-        xor al, byte ptr[ebp + 0x000002F0];
-        and al, 0x01;
-        test al, al;
+    PUSH_ALL;
+    charTurnAround();
+    POP_ALL;
 
-        // sync up al for the rest of this bs, if needed
-        //mov al, byte ptr[ecx + 0x000001EC];
-        //cmp byte ptr[ebp + 0x000002F0], al;
-    
+    __asmStart R"(
+        mov eax, _naked_charTurnAroundStateRes;
     )" __asmEnd
 
     emitJump(0x00475887);
@@ -521,14 +596,14 @@ void _naked_checkRoundDone() {
 
         // something in here should check for double KO
 
-        mov ebx, byte ptr [0x005552A8 + (0 * 0xAFC)]; // P0 
-        add ebx, byte ptr [0x005552A8 + (2 * 0xAFC)]; // P2 
-        cmp ebx, 2;
+        mov bl, byte ptr [0x005552A8 + (0 * 0xAFC)]; // P0 
+        add bl, byte ptr [0x005552A8 + (2 * 0xAFC)]; // P2 
+        cmp bl, 2;
         JGE FAIL;
 
-        mov ebx, byte ptr [0x005552A8 + (1 * 0xAFC)]; // P1 
-        add ebx, byte ptr [0x005552A8 + (3 * 0xAFC)]; // P3 
-        cmp ebx, 2;
+        mov bl, byte ptr [0x005552A8 + (1 * 0xAFC)]; // P1 
+        add bl, byte ptr [0x005552A8 + (3 * 0xAFC)]; // P3 
+        cmp bl, 2;
         JGE FAIL;
 
         mov eax, 0; // OK        
@@ -872,6 +947,8 @@ void drawMoonsAndPalette(int playerIndex) {
 }
 
 void newDrawResourcesHud() {
+
+    return;
 
     newDrawResourcesHud_playerIndex = 0;
 

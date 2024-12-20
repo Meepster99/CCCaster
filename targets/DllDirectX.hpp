@@ -806,9 +806,11 @@ __attribute__((naked, noinline, cdecl)) void meltyDrawTextureDirect(DWORD EDXVAL
 
 void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
 
-void UIDraw(const Rect& texRect, const Rect& screenRect, DWORD ARGB);
+void UIDraw(const Rect& texRect, Rect screenRect, DWORD ARGB);
 
 void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB);
+
+void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB);
 
 // -----
 
