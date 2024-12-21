@@ -6,6 +6,7 @@
 #include "DllDirectX.hpp"
 #include "resource.h"
 #include "DllAsmHacks.hpp"
+#include "DllOverlayUi.hpp"
 #include "aacc_2v2_ui_elements.h"
 #include <regex>
 #include <optional>
@@ -1817,29 +1818,29 @@ void drawPlayerInfo() {
 	for(int i=0; i<4; i++) {
 		charIDs[i] = *(BYTE*)(0x00555130 + 0x5 + (i * 0xAFC));
 		moons[i] = *(BYTE*)(0x00555130 + 0xC + (i * 0xAFC));
-		palettes[i] = *(BYTE*)(0x00555130 + 0xB + (i * 0xAFC));
+		palettes[i] = *(BYTE*)(0x00555130 + 0xA + (i * 0xAFC));
 	}
 
 	static Point base(-30, -5);
 	static Point offset(5, 30);
 	static float scale = 1.5f;
-	UIManager::add("baseX", &base.x);
-	UIManager::add("baseY", &base.y);
-	UIManager::add("offX", &offset.x);
-	UIManager::add("offY", &offset.y);
-	UIManager::add("portraitScale", &scale);
+	//UIManager::add("baseX", &base.x);
+	//UIManager::add("baseY", &base.y);
+	//UIManager::add("offX", &offset.x);
+	//UIManager::add("offY", &offset.y);
+	//UIManager::add("portraitScale", &scale);
 	static Point moonOffset(40, 30);
 	static float moonScale = 2.0;
-	UIManager::add("moonOff", &moonOffset);
-	UIManager::add("moonScale", &moonScale);
+	//UIManager::add("moonOff", &moonOffset);
+	//UIManager::add("moonScale", &moonScale);
 	static Point paletteOffset(40, 48);
 	static float palleteSize = 8.0f;
-	UIManager::add("paletteOff", &paletteOffset);
-	UIManager::add("paletteSize", &palleteSize);
-	static Point lockOffset(75, 25);
-	static Point lockOffset2(0, 10);
-	UIManager::add("lock", &lockOffset);
-	UIManager::add("lock2", &lockOffset2);
+	//UIManager::add("paletteOff", &paletteOffset);
+	//UIManager::add("paletteSize", &palleteSize);
+	static Point lockOffset(75, 20);
+	static Point lockOffset2(0, 15);
+	//UIManager::add("lock", &lockOffset);
+	//UIManager::add("lock2", &lockOffset2);
 
 	for(int i=0; i<4; i++) {
 
@@ -1920,8 +1921,8 @@ void drawNewUI() {
         *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
     }
 
-	//if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
-	if(true) {
+	if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+	//if(true) {
 
 	} else {
 		return;
@@ -1998,22 +1999,24 @@ void drawNewUI() {
 	static Point winsPoint(190, 78);
 	//UIManager::add("wins", &winsPoint);
 
-	for(int i=0; i<2; i++) {
-		shouldReverseDraws = (i == 1); 
-
-		UIDraw(topBars[i], topBarsPoint, topBarsScale, 0xFFFFFFFF);
-
-		UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), meterScale, 0xFFFFFFFF);
-
-		int winCount = *(int*)(0x0077497c + (i * 4));
-		TextDraw(winsPoint, 8, 0xFFFFFFFF, "%d %s", winCount, (winCount != 1) ? "WINS" : "WIN");
-	}
-
-	// above are texture draws. below is the bar draws
-
-	#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
-
 	if(*(BYTE*)(0x0055D203) != 0x01) {
+
+		for(int i=0; i<2; i++) {
+			shouldReverseDraws = (i == 1); 
+
+			UIDraw(topBars[i], topBarsPoint, topBarsScale, 0xFFFFFFFF);
+
+			UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), meterScale, 0xFFFFFFFF);
+
+			int winCount = *(int*)(0x0077497c + (i * 4));
+			TextDraw(winsPoint, 8, 0xFFFFFFFF, "%d %s", winCount, (winCount != 1) ? "WINS" : "WIN");
+		}
+
+		// above are texture draws. below is the bar draws
+
+		#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
+
+	
 		drawPlayerInfo();
 		LOOP4(drawMeterBar);
 		LOOP4(drawHealthBar);
@@ -2046,8 +2049,6 @@ void _drawGeneralCalls() {
 	uiVertData.draw();
 
 	posColTexVertData.draw();
-
-	
 
 	posTexVertData.draw();
 
