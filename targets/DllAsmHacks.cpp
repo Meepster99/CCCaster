@@ -557,7 +557,6 @@ void _naked_throwConnect2() {
 
 }
 
-
 void _naked_proxyGuard() {
 
     // patch at 00462b87
@@ -689,50 +688,24 @@ void _naked_checkWhoWon() {
 
 }   
 
+void cameraMod() {
+
+    float* zoom = (float*)0x0054eb70;
+
+    *zoom = (*zoom * 0.90f); // i reallllly hope this var is regenerated every frame so this doesnt go to 0 :3
+
+}
+
+void _naked_cameraMod() {
+
+    PUSH_ALL;
+    cameraMod();
+    POP_ALL;
+
+    ASMRET;
+}
+
 // -----
-
-extern "C" {
-    DWORD naked_fixPortriatLoadSide_loadCount = 0;
-}
-
-void _naked_fixPortriatLoadSide() { // this solution is not the most elegant, but it works.
-
-    // patched at 004263b6
-    // emit overwritten asm
-
-    // mov ecx, [esp + 0x128];
-    // has 0,1,0,0
-    // but,,, 12c? has char id,,,
-    /*emitByte(0x8B);
-    emitByte(0x8C);
-    emitByte(0x24);
-
-    emitByte(0x28);
-    emitByte(0x01);
-    emitByte(0x00);
-    emitByte(0x00);*/
-
-    __asmStart R"(
-        mov ecx, 1;
-        add _naked_fixPortriatLoadSide_loadCount, ecx;
-
-        //mov ecx, [esp + 0x12C];
-    )" __asmEnd
-
-    // and the resulting load by one to load the correct file?
-    __asmStart R"(
-        mov ecx, _naked_fixPortriatLoadSide_loadCount;
-        and ecx, 0x01;
-        xor ecx, 0x01;
-    )" __asmEnd
-
-    emitJump(0x004263bd);
-
-}
-
-extern "C" {
-    int newDrawResourcesHud_playerIndex = 0; // is this because,,, i need this to not be in a register where it could be messed up
-}
 
 const Point hudAnchors[4] = { // i could/should maybe add a xscale and yscale param here? but god linking everything together,,
     Point(0, 0),
@@ -740,283 +713,6 @@ const Point hudAnchors[4] = { // i could/should maybe add a xscale and yscale pa
     Point(0, 48),
     Point(640, 48)
 };
-
-void drawAllPortriats(int playerIndex) {
-
-    DWORD texture = *(DWORD*)(0x005642c8 + (playerIndex * 0x20));
-    if(texture == 0) {
-        return;
-    }
-    
-    /*
-    DWORD xPos = (playerIndex & 1) ? 384 : 0;
-    DWORD yPos = 100;//0;
-    DWORD width = 0x100;
-    DWORD height = 0x60;
-    DWORD layer = 0x2C0; //0x2C1
-    if(playerIndex >= 2) {
-        xPos += (playerIndex & 1) ? 25 : 100;
-        width /= 2;
-        height /= 2;
-        layer |= 1;
-    }
-    */
-
-    /*
-    DWORD xPos = (playerIndex & 1) ? 384 : 0;
-    DWORD yPos = (playerIndex >= 2) ? 0x60 : 0;
-    DWORD width = 0x100;
-    DWORD height = 0x60;
-    DWORD layer = (playerIndex >= 2) ? 0x2C1 : 0x2C0;
-    */
-
-    //DWORD xPos = (playerIndex & 1) ? 384 + 128 : 0;
-    //DWORD yPos = (playerIndex >= 2) ? 0x60 / 2 : 0;
-
-    DWORD xPos = hudAnchors[playerIndex].x;
-    if(playerIndex & 1) {
-        xPos -= 128;
-    }
-
-    DWORD yPos = hudAnchors[playerIndex].y;
-
-    DWORD width = 0x100 / 2;
-    DWORD height = 0x60 / 2;
-    DWORD layer = (playerIndex >= 2) ? 0x2C1 : 0x2C0;
-
-    meltyDrawTexture(texture, 0, 0, 0x100, 0x60, xPos, yPos, width, height, 0xFFFFFFFF, layer);
-
-}
-
-void drawHealthBars(int playerIndex) {
-
-
-    // edx is w
-    // 0 tex x y h texX texY texW texH
-
-    /*
-
-    x: (iVar1 - iVar2) + 0x111
-    y: 0x28
-    w: is a fuckass float, go grab it
-    h: 10
-
-    texX: 0 
-    texY: 0x176
-    texW: 0xd4
-    texH: 10
-
-    */
-
-    //melty only tracks anims for 2/4 players. need to do this on my own
-
-    const DWORD maxHealthBarWidth = 200;
-    const DWORD healthBarHeight = 5;
-
-    DWORD texture = *(DWORD*)0x005550f8;
-
-    DWORD health =       *(DWORD*)(0x005551EC + (playerIndex * 0xAFC));
-    DWORD redHealth =    *(DWORD*)(0x005551F0 + (playerIndex * 0xAFC));
-
-    const int x = 30; // switch this to anchor when you refactor this please!
-    
-    //DWORD yPos = playerIndex >= 2 ? 68 : 20;
-    DWORD yPos = hudAnchors[playerIndex].y + 20;  
-    
-    DWORD yWidth = maxHealthBarWidth * (((float)health) / 11400.0f);
-    DWORD rWidth = maxHealthBarWidth * (((float)redHealth) / 11400.0f);
-
-
-    DWORD redHealthColor = 0xFF990b0b;
-
-    if(playerIndex & 1) {
-        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
-        meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, rWidth, healthBarHeight, redHealthColor, 0x2C2);
-        //meltyDrawTexture(texture, 0, 0x196, 0xd4, 10, 640 - maxHealthBarWidth - x, yPos, maxHealthBarWidth, healthBarHeight, 0xFFc89664, 0x2C2);
-    } else {        
-        meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - yWidth, yPos, yWidth, healthBarHeight, 0xFFFFFFFF, 0x2C2);
-        meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - rWidth, yPos, rWidth, healthBarHeight, redHealthColor, 0x2C2); 
-        //meltyDrawTexture(texture, 0, 0x176, 0xd4, 10, x + maxHealthBarWidth - maxHealthBarWidth, yPos, maxHealthBarWidth, healthBarHeight, 0xFFc89664, 0x2C2); // background darkened highlight?
-    }
-
-}
-
-void drawMeterBars(int playerIndex) {
-
-    // i am not the happiest with this method of tweaking things, but it should work
-    // or well actually i have no guarentee it will work now that i think about it, bc im not sure if the animations are even tracked for other chars
-    // it doesnt. ill have to remake it
-  
-    /*
-    DWORD xPos = hudAnchors[playerIndex].x;
-    DWORD yPos = hudAnchors[playerIndex].y;
-
-    //y += 200;
-
-    __asmStart R"(
-        
-
-    )" __asmEnd
-
-    emitCall(0x0041d9e0);
-
-    __asmStart R"(
-        add esp, 0x0C;
-    )" __asmEnd
-
-    */
-
-    // i am going to explode.
-
-    DWORD moon =         *(DWORD*)(0x0055513C + (playerIndex * 0xAFC));
-    DWORD meter =        *(DWORD*)(0x00555210 + (playerIndex * 0xAFC));
-    DWORD heatTime =     *(DWORD*)(0x00555214 + (playerIndex * 0xAFC));
-    DWORD circuitState = *(WORD*) (0x00555218 + (playerIndex * 0xAFC));
-    DWORD circuitBreakTimer;
-    
-    // im not confident with any of this
-    if(*(WORD*)(0x00555234 + (playerIndex * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
-        circuitBreakTimer = 0;
-    } else {
-        circuitBreakTimer = *(WORD*)(0x00555230 + (playerIndex * 0xAFC));
-    }
-
-    shouldReverseDraws = (playerIndex & 1);
-
-    // draw meter bars
-    const int meterWidth = 200;
-    const float meterSize = 15.0f;
-    
-    float x = 30;
-    float y = (playerIndex >= 2) ? 428 + 20 : 428;
-
-    float currentMeterWidth = 0.0f;
-    DWORD meterCol = 0xFF000000;
-
-    std::string meterString = "";
-
-    if(circuitBreakTimer == 0) {
-        switch(circuitState) {
-            case 0:
-                if(moon == 2) { // half
-                    currentMeterWidth = ((float)meter) / 20000.0f;
-                    meterCol = (meter >= 15000) ? 0xFF00FF00 : ((meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-                } else { // full/crescent
-                    currentMeterWidth = ((float)meter) / 30000.0f;
-                    meterCol = (meter >= 20000) ? 0xFF00FF00 : ((meter >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
-                } 
-
-                meterString = std::to_string(meter / 100) + "." + std::to_string((meter / 10) % 10) + "%";
-
-                break;
-            case 1:
-                currentMeterWidth = ((float)heatTime) / 600.0f;
-                meterCol = 0xFF0000FF;
-                meterString = "HEAT";
-                break;
-            case 2:
-                currentMeterWidth = ((float)heatTime) / 600.0f;
-                meterCol = 0xFFFFA500;
-                meterString = "MAX";
-                break;
-            case 3:
-                currentMeterWidth = ((float)heatTime) / 600.0f;
-                meterCol = 0xFFDDDDDD;
-                meterString = "BLOOD HEAT";
-                break;
-            default:
-                break;
-        }
-    } else {
-        currentMeterWidth = ((float)circuitBreakTimer) / 600.0f;
-        meterCol = 0xFF800080;
-        meterString = "BREAK";
-    }
-
-    currentMeterWidth = MIN(1.0f, currentMeterWidth);
-    RectDraw(x, y, (meterWidth * currentMeterWidth), meterSize, meterCol);//, i == 3);
-    BorderDraw(x, y, meterWidth, meterSize, 0xFFFFFFFF);//, i == 3);
-    TextDraw(x, y, meterSize, 0xFFFFFFFF, meterString.c_str());//, i == 3); // meter string
-
-    
-}
-
-void drawGuardBars(int playerIndex) {
-
-}
-
-void drawMoonsAndPalette(int playerIndex) {
-
-    BYTE moon =    *(BYTE*)(0x0055513C + (playerIndex * 0xAFC));
-    BYTE palette = *(BYTE*)(0x0055513B + (playerIndex * 0xAFC));
-
-    moon = CLAMP(moon, 0, 3); // 3 is here,,, since thats eclipse moons
-
-    DWORD texture = *(DWORD*)0x00555110;
-
-    const DWORD width = 0x30 / 2;
-    const DWORD xOffset = 12;
-
-    DWORD xPos = hudAnchors[playerIndex].x;
-    if(playerIndex & 1) {
-        xPos -= width;
-    }
-
-    xPos += playerIndex & 1 ? -xOffset : xOffset;
-
-    DWORD yPos = hudAnchors[playerIndex].y + 32;
-
-    meltyDrawTexture(texture, moon * 0x30, 0, 0x30, 0x30, xPos, yPos, width, width, 0xFFFFFFFF, 0x2c3);
-
-}
-
-void newDrawResourcesHud() {
-
-    return;
-
-    newDrawResourcesHud_playerIndex = 0;
-
-    while(newDrawResourcesHud_playerIndex < 4) {
-
-        drawHealthBars(newDrawResourcesHud_playerIndex);
-        drawMeterBars(newDrawResourcesHud_playerIndex);
-        drawGuardBars(newDrawResourcesHud_playerIndex);
-        drawMoonsAndPalette(newDrawResourcesHud_playerIndex);
-        drawAllPortriats(newDrawResourcesHud_playerIndex);
-
-        // im not exactly happy to be writing this in asm, but its the only way i can without my registers getting fucked up
-        // or,,, i could just,, trace all the textures and do all the draws myself?
-
-        /*
-        pushVar(_newDrawResourcesHud_playerIndex);
-        emitCall(0x00425260); // draw guard guages
-        addStack(0x04);
-
-        pushVar(_newDrawResourcesHud_playerIndex);
-        emitCall(0x004253c0); // draw meter guages
-        addStack(0x04);
-
-        setRegister(ecx, _newDrawResourcesHud_playerIndex);
-        emitCall(0x004258e0); // draw moons and palettes
-
-        setRegister(eax, _newDrawResourcesHud_playerIndex);
-        emitCall(0x00425a80); // draw portriats
-        */
-
-        newDrawResourcesHud_playerIndex++;
-    }
-}
-
-void _naked_newDrawResourcesHud() {
-
-    // patched at 0042485b
-
-    PUSH_ALL;
-    newDrawResourcesHud();
-    POP_ALL;
-
-    ASMRET;
-}
 
 void _naked_drawWinCount() {
 
@@ -1051,8 +747,11 @@ void _naked_drawWinCount() {
 void _naked_drawRoundDots() {
 
     __asmStart R"(
-        mov eax, 84;
-        sub [esp + 0xC], eax;    
+        mov eax, 10;
+        sub [esp + 0xC], eax; // yVal
+        mov eax, 0;
+        sub [esp + 0x8], eax; // xVal
+        
     )" __asmEnd
 
     emitCall(0x00415580);

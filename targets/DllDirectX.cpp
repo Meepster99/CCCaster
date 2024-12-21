@@ -7,6 +7,8 @@
 #include "resource.h"
 #include "DllAsmHacks.hpp"
 #include "aacc_2v2_ui_elements.h"
+#include <regex>
+#include <optional>
 
 /*
 
@@ -68,6 +70,69 @@ void log(const char* format, ...) {
 void __stdcall printDirectXError(HRESULT hr) {
 
 }
+
+const char* getCharName(int id) {
+
+	int lookup = -1;
+
+	switch (id) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+		lookup = id;
+		break;
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+		lookup = id - 1;
+		break;
+	case 17:
+	case 18:
+	case 19:
+	case 20:
+		lookup = id - 2;
+		break;
+	case 22:
+	case 23:
+		lookup = id - 3; 
+		break;
+	case 25:
+		lookup = id - 4;
+		break;
+	case 28:
+	case 29:
+	case 30:
+	case 31:
+		lookup = id - 6;
+		break;
+	case 33:
+		lookup = id - 7;
+		break;
+	case 51:
+		lookup = 27; 
+	case 4: // maids
+	case 34: // NecoMech
+	case 35: // KohaMech
+	default:
+		break;
+	}
+
+	if(lookup < 0 || lookup >= (sizeof(charIDNames) / sizeof(charIDNames[0]))) {
+		return "???";
+	}
+
+	return charIDNames[lookup];
+}
+
 
 void debugLinkedList();
 void displayDebugInfo();
@@ -644,6 +709,88 @@ void __stdcall restoreRenderState() {
 
 // -----
 
+namespace UIManager {
+
+	typedef struct UIPair {
+		std::string name = "";
+		float* f = NULL;
+	} UIPair;
+
+	std::map<float*, UIPair> UIFloatMap;
+	std::map<std::string, UIPair> UIStringMap;
+
+	std::string strip(const std::string& s) {
+		std::string res = s;
+		std::regex trim_re("^\\s+|\\s+$");
+		res = std::regex_replace(res, trim_re, "");
+		return res;
+	}
+
+	float safeStof(const std::string& s) {
+		float res = -1;
+		try {
+			res = std::stof(s);
+		} catch (...) {
+			return -1;
+		}
+		return res;
+	}
+
+	void add(const std::string& name, float* f) {
+		// blah blah blah set.
+		
+		if(UIFloatMap.contains(f)) {
+			return;
+		}
+
+		if(UIStringMap.contains(name)) {
+			return;
+		}
+
+		UIPair temp = { name, f };
+
+		UIFloatMap.insert({f, temp});
+		UIStringMap.insert({name, temp});
+	}
+
+	void add(const std::string& name, Point* p) {
+		add(name + "X", &(p->x));
+		add(name + "Y", &(p->y));
+	}
+
+	void reload() {
+
+		log("reload called");
+
+		std::ifstream inFile("UIData.txt");
+		if (!inFile.is_open()) {
+			log("couldnt find UIData.txt");
+			return;
+		}
+
+		std::string line;
+		while (std::getline(inFile, line)) {
+			line = UIManager::strip(line);
+			std::regex removeDupleWhitespaceRe(R"(^\s+|\s+$|\s+(?=\s))");
+			line = std::regex_replace(line, removeDupleWhitespaceRe, "");
+				
+			std::regex re(R"(^(\S+)(?:\s?)(\S*)?$)");
+			std::smatch match;
+			if (std::regex_match(line, match, re)) {
+				std::string name = match[1].matched ? match[1].str() : "";
+				std::string value = match[2].matched ? match[2].str() : "";
+
+				log("%s -> %s", name.c_str(), value.c_str());
+
+				if(UIStringMap.contains(name)) {
+					*(UIStringMap[name].f) = safeStof(value);
+				}
+			}
+		}
+	}
+
+};
+
 void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
 
 	x1 /= 480.0f;
@@ -755,6 +902,31 @@ void RectDraw(const Rect& rect, DWORD ARGB) {
 	RectDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
 }
 
+void RectDrawPrio(float x, float y, float w, float h, DWORD ARGB) {
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
+	MeltyVert v1 = { x,     y,     ARGB };
+	MeltyVert v2 = { x + w, y,     ARGB };
+	MeltyVert v3 = { x,     y + h, ARGB };
+	MeltyVert v4 = { x + w, y + h, ARGB };
+
+	scaleVertex(v1);
+	scaleVertex(v2);
+	scaleVertex(v3);
+	scaleVertex(v4);
+
+	meltyVertData.add(v1, v2, v3);
+	meltyVertData.add(v2, v3, v4);
+}
+
+void RectDrawPrio(const Rect& rect, DWORD ARGB) {
+	RectDrawPrio(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
+}
+
 void BorderDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	if(shouldReverseDraws) {
@@ -790,84 +962,16 @@ void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 }
 
-DWORD naked_meltyDrawTexture_ret;
-void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer) {
-
-
-	// this func is hacky, and not worth using.
-	return;
-
-	/*
-	
-	edx: displayWidth
-	something: something
-	texture
-	xpos
-	ypos
-	he
-	
-	
-	
-	*/
-
-	// having inline asm read in the vars here,,, would have been cleaner.
-	// but it is less readable, and a massive pain
-	// 9 pushes, along with one extra as the ret
-	//,, i could extern c this thing, but edx is a param!
-	// i could fuck with the stack, save the ret, 
-	// that might not be the worst idea
-
-	__asmStart R"(
-		pop _naked_meltyDrawTexture_ret; // save ret addr in variable
-		pop edx; // instead of doing a mov edx, [esp+4], this can be done, and prevent needing another global
-	)" __asmEnd
-
-	// the stack is now in such a way as if we,,, were actually calling the function.
-	emitCall(0x00415580);
-
-	__asmStart R"(
-		// under normal circumstances, we would add esp, 0x30; // above func is cdecl. clean up after it.
-		// but these circumstances are weird. the CALLER of this func will clean up the stack for us!
-		// but, we popped off an extra edx. we need to put something back.
-		push 0x00000000;
-		push _naked_meltyDrawTexture_ret;
-		ret;
-	)" __asmEnd
-
-}
-
-void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer) {
-	
-	/*
-	
-	texture, texWidth, texHeight, x, y, width, height
-
-	uVar5: texHeight
-	uVar4: texWidth
-
-	edx: drawWidth
-	uVar1: drawHeight	
-
-
-	
-	*/
-
-	// edx is w
-	// 0 tex x y h texX texY texW texH
-
-	//meltyDrawTexture(width, 0, texture, x, y, height, xOff, yOff, width, height, ARGB, 0, layer);
-
-	// xOFF and yOFF might be needed for,,, scaling down a tex properly!
-	meltyDrawTextureDirect(w, 0, texture, x, y, h, texX, texY, texW, texH, ARGB, 0, layer);
-
-}
-
-void UIDraw(const Rect& texRect, Rect screenRect, DWORD ARGB) {
+void UIDraw(Rect texRect, Rect screenRect, DWORD ARGB, bool mirror) {
 
 	if(shouldReverseDraws) { // is this ok? or are triangles being backfaced here
 		screenRect.x1 = 640.0f - screenRect.x1;
 		screenRect.x2 = 640.0f - screenRect.x2;
 		std::swap(screenRect.x1, screenRect.x2);
+	}
+
+	if(mirror) {
+		std::swap(texRect.x1, texRect.x2);
 	}
 
 	// ill take in the screen rect in normal coords. 	
@@ -894,22 +998,88 @@ void UIDraw(const Rect& texRect, Rect screenRect, DWORD ARGB) {
 
 }
 
-void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB) {
+void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB, bool mirror) {
 
 	// create a screen rect based on the scale of the texture being draw.
 
 	//Rect tempRect(p, 480.0f * texRect.w(), 480.0f * tempRect.h()); // how is this legal, compiling, syntax.
 	Rect tempRect(p, 480.0f * texRect.w(), 480.0f * texRect.h()); 
 
-	UIDraw(texRect, tempRect, ARGB);
+	UIDraw(texRect, tempRect, ARGB, mirror);
 
 }
 
-void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB) {
+void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB, bool mirror) {
 
 	Rect tempRect(p, scale * 480.0f * texRect.w(), scale * 480.0f * texRect.h()); 
 
-	UIDraw(texRect, tempRect, ARGB);
+	UIDraw(texRect, tempRect, ARGB, mirror);
+
+}
+
+void drawChevron(Point p, int i) {
+
+	constexpr const Rect* chevronRects[] = {
+		&UI::P0Chevron,
+		&UI::P1Chevron,
+		&UI::P2Chevron,
+		&UI::P3Chevron
+	};
+
+	if(i < 0 || i > 3) {
+		return;
+	}
+
+	static float chevronScale = 4.0f;
+	//UIManager::add("chevScale", &chevronScale);
+	
+	p.x -= ((*chevronRects[i]).w() * (UI::size / 2.0f));
+	p.y -= ((*chevronRects[i]).h() * UI::size * (chevronScale / 4.0));
+
+	bool shouldReverseDrawsBackup = shouldReverseDraws;
+	shouldReverseDraws = false;
+	UIDraw(*chevronRects[i], p, chevronScale, 0xFFFFFFFF);
+	shouldReverseDraws = shouldReverseDrawsBackup;
+}
+
+void drawChevronOnPlayer(int p, int c) {
+
+	// p is the player, c is the chevron 
+
+	int xPos = *(int*)(0x00555130 + 0x108 + (p * 0xAFC));
+	int yPos = *(int*)(0x00555130 + 0x10C + (p * 0xAFC));
+
+	float windowWidth = *(uint32_t*)0x0054d048;
+	float windowHeight = *(uint32_t*)0x0054d04c;
+
+	int cameraX = *(int*)(0x0055dec4);
+	int cameraY = *(int*)(0x0055dec8);
+	float cameraZoom = *(float*)(0x0054eb70);
+
+	float xCamTemp = ((((float)(xPos - cameraX) * cameraZoom) / 128.0f) * (windowWidth / 640.0f) + windowWidth / 2.0f);	
+	float yCamTemp = ((((float)(yPos - cameraY) * cameraZoom) / 128.0f - 49.0f) * (windowHeight / 480.0f) + windowHeight);
+	
+	xCamTemp = floor(xCamTemp);
+	yCamTemp = floor(yCamTemp);
+
+	float x1Cord, x2Cord, y1Cord, y2Cord;
+
+	x1Cord = ((float)xCamTemp - (windowWidth / 640.0f) * cameraZoom * 5.0f);
+	x2Cord = ((windowWidth / 640.0f) * cameraZoom * 5.0f + (float)xCamTemp);
+	y1Cord = ((float)yCamTemp - (windowWidth / 640.0f) * cameraZoom * 5.0f);
+	y2Cord = yCamTemp;
+
+	x1Cord = ((float)x1Cord * (640.0f / windowWidth));
+	x2Cord = ((float)x2Cord * (640.0f / windowWidth));
+	y1Cord = ((float)y1Cord * (480.0f / windowHeight));
+	y2Cord = ((float)y2Cord * (480.0f / windowHeight));
+
+	Point point( (x1Cord + x2Cord) * 0.5, (y1Cord + y2Cord) * 0.5 );
+
+	// i really,,,, i would/maybe should go through all hurtboxes, find the max height,, ugh. doing this for now
+	point.y -= 175;
+
+	drawChevron(point, c);
 
 }
 
@@ -1296,11 +1466,447 @@ struct Smooth {
 }; 
 
 const float healthBarSmoothValue = 0.005f;
-typedef struct HealthBar {
+typedef struct Bar {
 	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
 	Smooth<float> redHealth = Smooth<float>(1.0f, healthBarSmoothValue);
 	Smooth<float> meter = Smooth<float>(1.0f, healthBarSmoothValue);
-} HealthBar;
+} Bar;
+
+constexpr int displayInts[4] = {1, 3, 2, 4};
+
+void drawHealthBar(int i, Bar& bar) {
+	bool hasYOffset = false;
+
+	shouldReverseDraws = (i & 1);
+	hasYOffset = (i >= 2);
+
+	bar.yellowHealth = ((float)*(DWORD*)(0x005551EC + (i * 0xAFC))) / 11400.0f;
+	bar.redHealth = ((float)*(DWORD*)(0x005551F0 + (i * 0xAFC))) / 11400.0f;
+
+	constexpr Rect yellowBars[2] = { UI::P0HealthShade, UI::P1HealthShade };
+	constexpr Rect redBars[2] = { UI::P0RedHealthShade, UI::P1RedHealthShade };
+
+	static Point base(90, 8);
+	static Point offset(90, 25);
+
+	static float height = 12.0f;
+
+	static float maxHealthWidth = 186;
+
+	//UIManager::add("base", &base);
+	//UIManager::add("off", &offset);
+	//UIManager::add("height", &height);
+	//UIManager::add("max", &maxHealthWidth);
+
+	float tempMaxHealthWidth = maxHealthWidth;
+	Point p = hasYOffset ? offset : base;
+	if(shouldReverseDraws) {
+		// unsure why this is needed
+		p.x += 1; 
+		p.y -= 1; 
+		//tempMaxHealthWidth += 1;
+	}
+
+	Rect drawRect;
+	drawRect.p1 = p;
+	drawRect.p2 = p;
+	drawRect.p2.x += tempMaxHealthWidth;
+	drawRect.p2.y += height;
+
+	drawRect.p1.x = drawRect.p2.x - (tempMaxHealthWidth * (*bar.redHealth));
+	UIDraw(redBars[shouldReverseDraws], drawRect, 0xFFFFFFFF);
+
+	drawRect.p1.x = drawRect.p2.x - (tempMaxHealthWidth * (*bar.yellowHealth));
+	UIDraw(yellowBars[shouldReverseDraws], drawRect, 0xFFFFFFFF);
+
+}
+
+void drawMeterBar(int i, Bar& bar) {
+
+	bool hasYOffset = false;
+
+	shouldReverseDraws = (i & 1);
+	hasYOffset = (i >= 2);
+
+	float meterDivisor = *(DWORD*)(0x0055513C + (i * 0xAFC)) == 2 ? 20000.0f : 30000.0f;
+	DWORD meterRaw = *(DWORD*)(0x00555210 + (i * 0xAFC));
+	float meterVal = ((float)*(DWORD*)(0x00555210 + (i * 0xAFC))) / meterDivisor;
+	bar.meter = meterVal;
+
+	float currentMeterWidth = 0.0f;
+	DWORD meterCol = 0xFF000000;
+
+	std::string meterString = "";
+
+	DWORD circuitState = *(WORD*)(0x00555218 + (i * 0xAFC));
+	DWORD heatTime = *(DWORD*)(0x00555214 + (i * 0xAFC));
+	DWORD moon = *(DWORD*)(0x0055513C + (i * 0xAFC));
+	DWORD circuitBreakTimer = 0;
+
+	if(*(WORD*)(0x00555234 + (i * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
+		circuitBreakTimer = 0;
+	} else {
+		circuitBreakTimer = *(WORD*)(0x00555230 + (i * 0xAFC));
+	}
+
+	bool useNormalMeter = false;
+
+	if(circuitBreakTimer == 0) {
+		switch(circuitState) {
+			case 0:
+				useNormalMeter = true;
+				if(moon == 2) { // half
+					//currentMeterWidth = ((float)meterRaw) / 20000.0f;
+					meterCol = (meterRaw >= 15000) ? 0xFF00FF00 : ((meterRaw >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+				} else { // full/crescent
+					//currentMeterWidth = ((float)meterRaw) / 30000.0f;
+					meterCol = (meterRaw >= 20000) ? 0xFF00FF00 : ((meterRaw>= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+				}
+				meterString = std::to_string(meterRaw / 100) + "." + std::to_string((meterRaw / 10) % 10) + "%";
+				break;
+			case 1:
+				currentMeterWidth = ((float)heatTime) / 600.0f;
+				meterCol = 0xFF0000FF;
+				meterString = "HEAT";
+				break;
+			case 2:
+				currentMeterWidth = ((float)heatTime) / 600.0f;
+				meterCol = 0xFFFFA500;
+				meterString = "MAX";
+				break;
+			case 3:
+				currentMeterWidth = ((float)heatTime) / 600.0f;
+				meterCol = 0xFFDDDDDD;
+				meterString = "BLOOD HEAT"; 
+				break;
+			default:
+				break;
+		}
+	} else {
+		currentMeterWidth = ((float)circuitBreakTimer) / 600.0f;
+		meterCol = 0xFF800080;
+		meterString = "BREAK";
+	}
+	
+	static float meterWidth = 194;
+	static float meterSize = 10.0f;
+	static Point pBase(32.0f, 436);
+	static Point pOffset(32.0f, 449);
+
+	//UIManager::add("meterSize", &meterSize);
+	//UIManager::add("meterX", &pBase.x);
+	//UIManager::add("meterY", &pBase.y);	
+	//UIManager::add("meterXOffset", &pOffset.x);
+	//UIManager::add("meterYOffset", &pOffset.y);
+	//UIManager::add("meterMax", &meterWidth);
+
+	Point p = hasYOffset ? pOffset : pBase;
+	Point textPoint = p;
+
+	if(shouldReverseDraws) {
+		p.x += 3.0f;
+		textPoint.x += 7.0f;
+	}
+
+	float displayWidth = *bar.meter;
+	if(!useNormalMeter) {
+		displayWidth = currentMeterWidth;
+	}
+	displayWidth = MIN(1.0f, displayWidth);
+	displayWidth *= meterWidth;
+
+	Rect drawRect;
+	drawRect.p1 = p;
+	drawRect.p2 = p;
+	drawRect.p2.y += meterSize;
+	
+	drawRect.p2.x += displayWidth;	
+
+	UIDraw(UI::CircuitShade, drawRect, meterCol);
+	TextDraw(textPoint, meterSize, 0xFFFFFFFF, meterString.c_str());
+
+}
+
+void drawGuardBar(int i, Bar& bar) {
+
+}
+
+std::optional<Rect> getCharProfile(int id) {
+
+	/*
+	0: Sion
+	1: Arc
+	2: Ciel
+	3: Akiha
+		4: Maids
+	5: Hisui
+	6: Kohaku
+	7: Tohno
+	8: Miyako
+	9: Wara
+	10: Nero
+	11: V. Sion
+	12: Warc
+	13: V. Akiha
+	14: Mech
+	15: Nanaya
+	17: Satsuki
+	18: Len
+	19: P. Ciel
+	20: Neco
+	22: Aoko
+	23: W. Len
+	25: NAC
+	28: Kouma
+	29: Sei
+	30: Ries
+	31: Roa
+	33: Ryougi
+		34: NecoMech
+		35: KohaMech
+	51: Hime
+	*/
+
+	int lookup = -1;
+
+
+	switch (id) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+		lookup = id;
+		break;
+	case 5:
+	case 6:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+		lookup = id - 1;
+		break;
+	case 17:
+	case 18:
+	case 19:
+	case 20:
+		lookup = id - 2;
+		break;
+	case 22:
+	case 23:
+		lookup = id - 3; 
+		break;
+	case 25:
+		lookup = id - 4;
+		break;
+	case 28:
+	case 29:
+	case 30:
+	case 31:
+		lookup = id - 6;
+		break;
+	case 33:
+		lookup = id - 7;
+		break;
+	case 51:
+		lookup = 27; 
+	case 4: // maids
+	case 34: // NecoMech
+	case 35: // KohaMech
+	default:
+		break;
+	}
+
+	// im not sure if this array is correct.
+	constexpr const Rect* CSSChars[] = {
+		&UI::CSSion, 
+		&UI::CSArc,  
+		&UI::CSCiel, 
+		&UI::CSAki,  
+		&UI::CSHisui,
+		&UI::CSKoha, 
+		&UI::CSTohno,
+		&UI::CSMiya, 
+		&UI::CSWara, 
+		&UI::CSNero, 
+		&UI::CSVSion,
+		&UI::CSWarc, 
+		&UI::CSVaki, 
+		&UI::CSMech, 
+		&UI::CSNanaya,
+		&UI::CSSats, 
+		&UI::CSLen,  
+		&UI::CSPCiel,
+		&UI::CSNeco, 
+		&UI::CSAoko, 
+		&UI::CSWLen, 
+		&UI::CSNac,  
+		&UI::CSKouma,
+		&UI::CSSei,  
+		&UI::CSRies, 
+		&UI::CSRoa,  
+		&UI::CSRyougi, // i need hime 
+		&UI::CSHime
+	};
+
+	
+	if(lookup < 0 || lookup >= (sizeof(CSSChars) / sizeof(CSSChars[0])))  {
+		return std::optional<Rect>();
+	}
+	
+	return std::optional<Rect>(*CSSChars[lookup]);
+}
+
+std::optional<Rect> getMoonTex(int id) {
+
+	constexpr const Rect* moonRects[] = {
+		&UI::MoonCrescent,
+		&UI::MoonFull,
+		&UI::MoonHalf,
+		&UI::MoonEclipse
+	};
+
+	id = CLAMP(id, 0, 3);
+
+	return std::optional<Rect>(*moonRects[id]);
+}
+
+void drawFacing(int i, Bar& bar) {
+	shouldReverseDraws = (i & 1);
+	bool hasYOffset = (i >= 2);
+
+	static int displayCooldown[4] = {0, 0, 0, 0};
+	static DWORD prevTurnAroundState[4] = {0, 0, 1, 1};
+
+	if((displayCooldown[i] == 0) && (AsmHacks::naked_charTurnAroundState[i] == prevTurnAroundState[i])) {
+		return;
+	}
+
+	if(AsmHacks::naked_charTurnAroundState[i] != prevTurnAroundState[i]) {
+		displayCooldown[i] = 60;
+	}
+	prevTurnAroundState[i] = AsmHacks::naked_charTurnAroundState[i];
+	
+	// this is going to handle,,, portraits, lock on bs,,, moons, palettes once im less tired.
+	DWORD facing = AsmHacks::naked_charTurnAroundState[i];
+	facing <<= 1;
+	if((i & 1) == 0) {
+		facing++;
+	}
+
+	if(displayCooldown[i] > 15 || (displayCooldown[i] & 1)) {
+		int displayVal = displayInts[i] - 1;
+		drawChevronOnPlayer(facing, displayVal);
+	}
+	
+	if(displayCooldown[i] > 0) {
+		displayCooldown[i]--;
+	}
+}
+
+void drawPlayerInfo() {
+
+	BYTE charIDs[4];
+	BYTE moons[4];
+	BYTE palettes[4];
+
+	for(int i=0; i<4; i++) {
+		charIDs[i] = *(BYTE*)(0x00555130 + 0x5 + (i * 0xAFC));
+		moons[i] = *(BYTE*)(0x00555130 + 0xC + (i * 0xAFC));
+		palettes[i] = *(BYTE*)(0x00555130 + 0xB + (i * 0xAFC));
+	}
+
+	static Point base(-30, -5);
+	static Point offset(5, 30);
+	static float scale = 1.5f;
+	UIManager::add("baseX", &base.x);
+	UIManager::add("baseY", &base.y);
+	UIManager::add("offX", &offset.x);
+	UIManager::add("offY", &offset.y);
+	UIManager::add("portraitScale", &scale);
+	static Point moonOffset(40, 30);
+	static float moonScale = 2.0;
+	UIManager::add("moonOff", &moonOffset);
+	UIManager::add("moonScale", &moonScale);
+	static Point paletteOffset(40, 48);
+	static float palleteSize = 8.0f;
+	UIManager::add("paletteOff", &paletteOffset);
+	UIManager::add("paletteSize", &palleteSize);
+	static Point lockOffset(75, 25);
+	static Point lockOffset2(0, 10);
+	UIManager::add("lock", &lockOffset);
+	UIManager::add("lock2", &lockOffset2);
+
+	for(int i=0; i<4; i++) {
+
+		shouldReverseDraws = (i & 1);
+		bool hasYOffset = (i >= 2);
+
+		Point p = hasYOffset ? base : offset;
+		
+		std::optional<Rect> charRect = getCharProfile(charIDs[i]);
+		if(charRect.has_value()) {
+			UIDraw(charRect.value(), p, scale, 0xFFFFFFFF, shouldReverseDraws);
+		}
+	}
+
+	for(int i=0; i<4; i++) {
+
+		shouldReverseDraws = (i & 1);
+		bool hasYOffset = (i >= 2);
+
+		Point p = hasYOffset ? base : offset;
+
+		std::optional<Rect> moonRect = getMoonTex(moons[i]);
+		if(moonRect.has_value()) {
+			UIDraw(moonRect.value(), p + moonOffset, moonScale, 0xFFFFFFFF, shouldReverseDraws);
+		}
+
+		TextDraw(p + paletteOffset, palleteSize, 0xFFFFFFFF, "%02d", palettes[i] + 1);
+
+	}
+
+	for(int i=0; i<4; i++) {
+
+		shouldReverseDraws = (i & 1);
+		bool hasYOffset = (i >= 2);
+
+		Point p = hasYOffset ? base : offset;
+
+		/*
+		
+		0: 1,3
+		1: 0,2
+		2: 1,3
+		3: 0,2
+
+		
+		*/
+
+		DWORD facing = AsmHacks::naked_charTurnAroundState[i];
+		facing <<= 1;
+		if((i & 1) == 0) {
+			facing++;
+		}
+		
+		const char* charString = getCharName(charIDs[facing]);
+		int palNum = palettes[facing] + 1;
+
+		Point lockOnPoint = lockOffset;
+		if(!hasYOffset) {
+			lockOnPoint += lockOffset2;
+		}
+
+		TextDraw(p + lockOnPoint - Point(0, palleteSize), palleteSize, 0xFFFFFFFF, "Lock");
+		TextDraw(p + lockOnPoint, palleteSize, 0xFFFFFFFF, "%s", charString);
+		TextDraw(p + lockOnPoint + Point(0, palleteSize), palleteSize, 0xFFFFFFFF, "%02d", palNum);
+
+	}
+}
 
 void drawNewUI() {
 	
@@ -1313,6 +1919,13 @@ void drawNewUI() {
         // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
         *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
     }
+
+	//if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+	if(true) {
+
+	} else {
+		return;
+	}
 
 	// this code needs a refactor. but i am tired
 	static DWORD FN1States[4] = {0, 0, 0, 0}; 
@@ -1329,68 +1942,85 @@ void drawNewUI() {
 		FN1States[i] = fn1;
 	}
 
+	bool deadState[4];
+	for(int i=0; i<4; i++) {
+		deadState[i] = (*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0);
+	}
+
 	for(int i=0; i<4; i++) {
 		if(i & 1) { // team 2
-			if(*(BYTE*)(0x00555130 + 0x1B6 + (0 * 0xAFC)) != 0) {
+			// todo, have it not switch looking at when both die. this needs to be tested!!!!!!!!
+			if(deadState[0] && !deadState[2]) {
 				AsmHacks::naked_charTurnAroundState[i] = 1;
-			} else if(*(BYTE*)(0x00555130 + 0x1B6 + (2 * 0xAFC)) != 0) {
+			} else if(deadState[2] && !deadState[0]) {
 				AsmHacks::naked_charTurnAroundState[i] = 0;
 			}
 		} else { // team 1
-			if(*(BYTE*)(0x00555130 + 0x1B6 + (1 * 0xAFC)) != 0) {
+			if(deadState[1] && !deadState[3]) { 
 				AsmHacks::naked_charTurnAroundState[i] = 1;
-			} else if(*(BYTE*)(0x00555130 + 0x1B6 + (3 * 0xAFC)) != 0) {
+			} else if(deadState[3] && !deadState[1]) {
 				AsmHacks::naked_charTurnAroundState[i] = 0;
 			}
 		}
 	}
 
-	shouldReverseDraws = false;
-	bool hasYOffset = false;
+	for(int i=0; i<4; i++) {
 
-	static HealthBar healthBars[4];
+		DWORD target = AsmHacks::naked_charTurnAroundState[i];
+		target <<= 1;
+		if((i & 1) == 0) {
+			target++;
+		}
+
+		// i wonder if this could have solved all port problems earlier. im not even going to test to see though
+		// todo, what is this number by default and does it matter
+		// todo, does this have horrendous consequences
+		
+		//*(DWORD*)(0x00555130 + 0x2C0 + (i * 0xAFC)) = 0x00555130 + 0x4 + (target * 0xAFC);
+	}
+
+	shouldReverseDraws = false;
+
+	static Bar bars[4];
 
 	constexpr Rect topBars[2] = { UI::P0TopBar, UI::P1TopBar };
-	constexpr Rect meterBars[2] = { UI::P0Meter, UI::P1Meter };
+	constexpr Rect meterBars[2] = { UI::P0BottomBar, UI::P1BottomBar };
 
-	constexpr int displayInts[4] = {1, 3, 2, 4};
+	static Point topBarsPoint(0.0, 0.0);
+	static float topBarsScale = 4.25f;
+	//UIManager::add("topBarsX", &topBarsPoint.x);
+	//UIManager::add("topBarsY", &topBarsPoint.y);
+	//UIManager::add("topBarsScale", &topBarsScale);
+
+	static float meterScale = 4.25f;
+	//UIManager::add("meterScale", &meterScale);
+
+	static Point winsPoint(190, 78);
+	//UIManager::add("wins", &winsPoint);
 
 	for(int i=0; i<2; i++) {
 		shouldReverseDraws = (i == 1); 
 
-		UIDraw(topBars[i], Point(0, 0), 2.0f, 0xFFFFFFFF);
+		UIDraw(topBars[i], topBarsPoint, topBarsScale, 0xFFFFFFFF);
 
-		UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), 2.0f, 0xFFFFFFFF);
+		UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), meterScale, 0xFFFFFFFF);
 
+		int winCount = *(int*)(0x0077497c + (i * 4));
+		TextDraw(winsPoint, 8, 0xFFFFFFFF, "%d %s", winCount, (winCount != 1) ? "WINS" : "WIN");
 	}
 
-	for(int i=0; i<4; i++) {
+	// above are texture draws. below is the bar draws
 
-		shouldReverseDraws = (i & 1);
-		hasYOffset = (i >= 2);
+	#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
 
-		healthBars[i].yellowHealth = ((float)*(DWORD*)(0x005551EC + (i * 0xAFC))) / 11400.0f;
-		healthBars[i].redHealth = ((float)*(DWORD*)(0x005551F0 + (i * 0xAFC))) / 11400.0f;
-		float meterDivisor =  *(DWORD*)(0x0055513C + (i * 0xAFC)) == 2 ? 20000.0f : 30000.0f;
-		healthBars[i].meter = ((float)*(DWORD*)(0x00555210 + (i * 0xAFC))) / meterDivisor;
-
-		RectDraw(0, hasYOffset * 100, 300 * (*healthBars[i].redHealth),    10, 0xFFFF0000);
-		RectDraw(0, hasYOffset * 100, 300 * (*healthBars[i].yellowHealth), 10, 0xFFFFFF00);
-
-		RectDraw(0, 438 + hasYOffset * 11, 300 * (*healthBars[i].meter), 10, 0xFF00FF00); // go move the code from uioverlay!
-
-
-
-		DWORD facing = AsmHacks::naked_charTurnAroundState[i];
-		if((i & 1) == 0) {
-			facing += 2;
-		}
-
-		TextDraw(0, 200 + (hasYOffset * 32), 16, 0xFFFFFFFF, "P%d: facing %d", displayInts[i], facing + 1);
-
+	if(*(BYTE*)(0x0055D203) != 0x01) {
+		drawPlayerInfo();
+		LOOP4(drawMeterBar);
+		LOOP4(drawHealthBar);
+		LOOP4(drawGuardBar);
+		LOOP4(drawFacing);
 	}
 
-	
 }
 
 // -----
@@ -1452,6 +2082,11 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 
 	//UIDraw(Rect(Point(0, 0), 1, 1), Point(0, 0), 0xFFFFFFFF);
 	//UIDraw(UI::test, Point(0, 0), 0xFFFFFFFF);
+	
+	if(SHIFTHELD && UPPRESS) {
+		UIManager::reload();
+	}
+
 	
 	drawNewUI();
 

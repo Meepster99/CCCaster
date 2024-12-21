@@ -21,6 +21,11 @@
 
 static IDirect3DDevice9* device = NULL;
 
+constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
+constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
+
+const char* getCharName(int id);
+
 void __stdcall ___log(const char* msg);
 
 void __stdcall log(const char* format, ...);
@@ -793,24 +798,21 @@ void RectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
 void RectDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
+void RectDrawPrio(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
+
+void RectDrawPrio(const Rect& rect, DWORD ARGB = 0x8042e5f4);
+
 void BorderDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
 void BorderDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
 void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
-extern "C" {
-	extern DWORD naked_meltyDrawTexture_ret;
-}
-__attribute__((naked, noinline, cdecl)) void meltyDrawTextureDirect(DWORD EDXVAL, DWORD something1, DWORD texture, DWORD xPos, DWORD yPos, DWORD height, DWORD uVar2, DWORD uVar3, DWORD uVar4, DWORD uVar5, DWORD ARGB, DWORD uVar7, DWORD layer);
+void UIDraw(Rect texRect, Rect screenRect, DWORD ARGB, bool mirror = false);
 
-void meltyDrawTexture(DWORD texture, DWORD texX, DWORD texY, DWORD texW, DWORD texH, DWORD x, DWORD y, DWORD w, DWORD h, DWORD ARGB, DWORD layer);
+void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB, bool mirror = false);
 
-void UIDraw(const Rect& texRect, Rect screenRect, DWORD ARGB);
-
-void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB);
-
-void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB);
+void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB, bool mirror = false);
 
 // -----
 

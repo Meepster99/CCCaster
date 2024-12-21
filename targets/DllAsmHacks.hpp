@@ -9,6 +9,7 @@
 #include <array>
 #include <windows.h>
 
+#define SHIFTHELD    (GetAsyncKeyState(VK_SHIFT)    & 0x8000)
 #define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
@@ -643,27 +644,11 @@ __attribute__((naked, noinline)) void _naked_checkRoundDone2();
 
 __attribute__((naked, noinline)) void _naked_checkWhoWon();
 
+__attribute__((noinline)) void cameraMod();
+
+__attribute__((naked, noinline)) void _naked_cameraMod();
+
 // -----
-
-__attribute__((noinline)) void drawAllPortriats();
-
-//__attribute__((naked, noinline)) void _naked_drawAllPortriats();
-
-__attribute__((naked, noinline)) void _naked_fixPortriatLoadSide();
-
-__attribute__((noinline)) void newDrawResourcesHud();
-
-__attribute__((naked, noinline)) void _naked_newDrawResourcesHud();
-
-__attribute__((noinline)) void drawAllPortriats(int playerIndex);
-
-__attribute__((noinline)) void drawHealthBars(int playerIndex);
-
-__attribute__((noinline)) void drawMeterBars(int playerIndex);
-
-__attribute__((noinline)) void drawGuardBars(int playerIndex);
-
-__attribute__((noinline)) void drawMoonsAndPalette(int playerIndex);
 
 __attribute__((naked, noinline)) void _naked_drawWinCount();
 
@@ -687,6 +672,15 @@ static const AsmList initPatch2v2 =
         weird thing where you can lose your jump if your teamate is comboing?
 
         hime aad fuckin,, targets closest player? and not closest enemy
+            00462E22 (and that whole func )
+            00462EE5 
+
+        things that should turn around( roa bs ) are sure as hell not
+            00475993 
+
+        say "char name(color)" ugh
+
+        patch out the draw which does roa charge/sion bullet/fmaids hearts, and do them yourself(and for both players)
 
         fix round ends, re add timer back in
         character facing: one of the two following ways
@@ -720,9 +714,9 @@ static const AsmList initPatch2v2 =
 
     // i quite literally, do not know what these two patches do!
     // im keeping them here, but pleaes keep that in mind
-    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
+    //PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
 
-    PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
+    //PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
 
@@ -755,6 +749,8 @@ static const AsmList initPatch2v2 =
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
     { ( void *) (0x00449069 + 2), { 0x04 }},
 
+    //PATCHJUMP(0x0044b834, _naked_cameraMod),
+
     // HUD patches. tbh, most patches here should be removed
 
     { ( void *) (0x0046040a), INLINE_NOP_FIVE_TIMES }, // this eventually causes the flicker when in not normal meter state. i should look into where it interacts with the linked list, or with the effects array
@@ -766,18 +762,15 @@ static const AsmList initPatch2v2 =
     
     //{ ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
     
-    PATCHJUMP(0x0042494c, _naked_drawRoundDots),
+    PATCHJUMP(0x0042494c, _naked_drawRoundDots), // leaving this one in, tired
 
     //{ ( void *) (0x00424bde), INLINE_NOP_FIVE_TIMES }, // draw win count
     //{ ( void *) (0x00424bdb), { 0x90 } }, // push for above
 
-    PATCHJUMP(0x00426c67, _naked_drawWinCount),
-
-    PATCHCALL(0x0042485b, _naked_newDrawResourcesHud), 
-
-    //PATCHJUMP(0x00425a98, _naked_drawAllPortriats),
-
-    PATCHJUMP(0x004263b6, _naked_fixPortriatLoadSide),
+    //PATCHJUMP(0x00426c67, _naked_drawWinCount), // needs to be remade!
+    { ( void *) (0x00426c67), INLINE_NOP_FIVE_TIMES }, 
+    
+    { ( void *) (0x0042485b), INLINE_NOP_FIVE_TIMES}, // patch out draws.
 
     { ( void * ) (0x004253e6 + 1), { 0x04 }},// allow for 4 calls in meter bar draw.
 

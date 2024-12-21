@@ -88,8 +88,8 @@
 #define CC_P3_OFFSET_BUTTONS        ( 0x38 + (0x14 * 1))
 #define CC_P3_OFFSET_FN1            ( 0x38 + (0x14 * 1) + 1)
 #define CC_P4_OFFSET_DIRECTION      ( 0x2C + (0x14 * 2))
-#define CC_P4_OFFSET_BUTTONS        ( 0x38 + (0x14 * 1))
-#define CC_P4_OFFSET_FN1            ( 0x38 + (0x14 * 1) + 1)
+#define CC_P4_OFFSET_BUTTONS        ( 0x38 + (0x14 * 2))
+#define CC_P4_OFFSET_FN1            ( 0x38 + (0x14 * 2) + 1)
 
 // Directions are just written in numpad format, EXCEPT neutral is 0
 #define CC_BUTTON_A                 ( 0x0010 )
@@ -322,7 +322,7 @@ const std::vector<std::pair<std::string, uint32_t>> gameInputBits =
     { "D",           CC_BUTTON_D << 8 },
     { "E",           CC_BUTTON_E << 8 },
     { "Start",       CC_BUTTON_START << 8 },
-    { "FN1",         CC_BUTTON_FN1 << 8 },
+    { "FN1(Swap Lock)",         CC_BUTTON_FN1 << 8 },
     { "FN2",         CC_BUTTON_FN2 << 8 },
     { "A+B",         CC_BUTTON_AB << 8 },
 };
