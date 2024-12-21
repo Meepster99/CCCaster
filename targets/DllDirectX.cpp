@@ -1976,7 +1976,7 @@ void drawNewUI() {
 		// todo, what is this number by default and does it matter
 		// todo, does this have horrendous consequences
 		
-		//*(DWORD*)(0x00555130 + 0x2C0 + (i * 0xAFC)) = 0x00555130 + 0x4 + (target * 0xAFC);
+		*(DWORD*)(0x00555130 + 0x2C0 + (i * 0xAFC)) = 0x00555130 + 0x4 + (target * 0xAFC);
 	}
 
 	shouldReverseDraws = false;

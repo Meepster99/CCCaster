@@ -229,6 +229,8 @@ int Asm::revert() const
 
 extern "C" {
     DWORD naked_charTurnAroundStateRes = 0;
+    DWORD naked_charTurnAroundParam1 = 0;
+    DWORD naked_charTurnAroundParam2 = 0;
     DWORD naked_charTurnAroundState[4] = { 0, 0, 1, 1 };
     DWORD charTurnAround_ECX;
     DWORD charTurnAround_EBP;
@@ -404,25 +406,40 @@ void charTurnAround() {
 
 void charTurnAround2() {
 
-    for(int i=0; i<4; i++) {
-        int goal = naked_charTurnAroundState[i];
-        goal <<= 1;
-        if((i & 1) == 0) {
-            goal += 1;
-        }
+    //log("%08X %08X", naked_charTurnAroundParam1, naked_charTurnAroundParam2);
 
-        int ourXPos = *(int*)(0x00555130 + 0x108 + (i * 0xAFC));
-        int otherXPos = *(int*)(0x00555130 + 0x108 + (goal * 0xAFC));
-
-        *(BYTE*)(0x00555130 + 0x315 + (i * 0xAFC)) = otherXPos < ourXPos;
-
+    if(naked_charTurnAroundParam1 == 0) {
+        return;
     }
+
+    BYTE owner = *(BYTE*)(naked_charTurnAroundParam1 + 0x2F0);
+
+    int goal = naked_charTurnAroundState[owner];
+    goal <<= 1;
+    if((owner & 1) == 0) {
+        goal += 1;
+    }
+
+    int ourXPos = *(int*)(naked_charTurnAroundParam1 + 0x104);
+    int otherXPos = *(int*)(0x00555130 + 0x4 + 0x104 + (goal * 0xAFC));
+
+    *(BYTE*)(naked_charTurnAroundParam1 + 0x311) = otherXPos < ourXPos;
 
     naked_charTurnAroundStateRes = 0;
 
 }
 
 void _naked_charTurnAround2() {
+
+    __asmStart R"(
+
+        mov eax, [esp + 4];
+        mov _naked_charTurnAroundParam1, eax;
+
+        mov eax, [esp + 8];
+        mov _naked_charTurnAroundParam2, eax;
+    
+    )" __asmEnd
 
     PUSH_ALL;
     charTurnAround2();
@@ -706,13 +723,6 @@ void _naked_cameraMod() {
 }
 
 // -----
-
-const Point hudAnchors[4] = { // i could/should maybe add a xscale and yscale param here? but god linking everything together,,
-    Point(0, 0),
-    Point(640, 0),
-    Point(0, 48),
-    Point(640, 48)
-};
 
 void _naked_drawWinCount() {
 
