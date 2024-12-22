@@ -903,6 +903,21 @@ void RectDraw(const Rect& rect, DWORD ARGB) {
 	RectDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
 }
 
+void LineDrawPrio(float x1, float y1, float x2, float y2, DWORD ARGB) {
+
+	MeltyVert v1 = { x1, y1, ARGB };
+	MeltyVert v2 = { x2, y2, ARGB };
+
+	scaleVertex(v1);
+	scaleVertex(v2);
+
+	meltyLineData.add(v1, v2);
+}
+
+void LineDrawPrio(const Point& a, const Point& b, DWORD ARGB) {
+	LineDrawPrio(a.x, a.y, b.x, b.y, ARGB);
+}
+
 void RectDrawPrio(float x, float y, float w, float h, DWORD ARGB) {
 
 	if(shouldReverseDraws) {
@@ -1471,6 +1486,8 @@ typedef struct Bar {
 	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
 	Smooth<float> redHealth = Smooth<float>(1.0f, healthBarSmoothValue);
 	Smooth<float> meter = Smooth<float>(1.0f, healthBarSmoothValue);
+	Smooth<float> guardQuantity = Smooth<float>(1.0f, healthBarSmoothValue); 
+	//Smooth<float> guardQuality = Smooth<float>(1.0f, healthBarSmoothValue); // is this needed?
 } Bar;
 
 constexpr int displayInts[4] = {1, 3, 2, 4};
@@ -1481,8 +1498,9 @@ void drawHealthBar(int i, Bar& bar) {
 	shouldReverseDraws = (i & 1);
 	hasYOffset = (i >= 2);
 
-	bar.yellowHealth = ((float)*(DWORD*)(0x005551EC + (i * 0xAFC))) / 11400.0f;
-	bar.redHealth = ((float)*(DWORD*)(0x005551F0 + (i * 0xAFC))) / 11400.0f;
+	// i,,, ugh. was originally reading health as a dword,,, but it goes negative sometimes?
+	bar.yellowHealth = MAX( ((float)*(int*)(0x005551EC + (i * 0xAFC))) / 11400.0f, 0.0f);
+	bar.redHealth =    MAX( ((float)*(int*)(0x005551F0 + (i * 0xAFC))) / 11400.0f, 0.0f);
 
 	constexpr Rect yellowBars[2] = { UI::P0HealthShade, UI::P1HealthShade };
 	constexpr Rect redBars[2] = { UI::P0RedHealthShade, UI::P1RedHealthShade };
@@ -1500,7 +1518,7 @@ void drawHealthBar(int i, Bar& bar) {
 	//UIManager::add("max", &maxHealthWidth);
 
 	float tempMaxHealthWidth = maxHealthWidth;
-	Point p = hasYOffset ? offset : base;
+	Point p = hasYOffset ? base : offset;
 	if(shouldReverseDraws) {
 		// unsure why this is needed
 		p.x += 1; 
@@ -1544,6 +1562,23 @@ void drawMeterBar(int i, Bar& bar) {
 	DWORD moon = *(DWORD*)(0x0055513C + (i * 0xAFC));
 	DWORD circuitBreakTimer = 0;
 
+	#define DARKEN(b, d) ( (BYTE)(((float)(b)) / (d)) )
+	#define DARKENCOLOR(c, d) ( \
+		(c & 0xFF000000) | \
+		( DARKEN( ((c & 0x00FF0000) >> 16), d ) << 16 ) | \
+		( DARKEN( ((c & 0x0000FF00) >> 8), d ) << 8 ) | \
+		( DARKEN( ((c & 0x000000FF) >> 0), d ) << 0 )   \
+	)
+
+	// there are contrast issues with these vs the white border line spliting 100/200/300/100
+	const DWORD meterRedCol =    0xFFFF0000;
+	const DWORD meterYellowCol = 0xFFFFFF00; // it might just be my eye issues, but is this yellow like,, is it horrid to see the white meter lines?
+	const DWORD meterGreenCol =  0xFF00FF00;
+	const DWORD meterHeatCol =   0xFF0000FF;
+	const DWORD meterMaxCol =    0xFFFFA500;
+	const DWORD meterBloodCol =  0xFFDDDDDD;
+	const DWORD meterBreakCol =  0xFF800080;
+
 	if(*(WORD*)(0x00555234 + (i * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
 		circuitBreakTimer = 0;
 	} else {
@@ -1558,26 +1593,26 @@ void drawMeterBar(int i, Bar& bar) {
 				useNormalMeter = true;
 				if(moon == 2) { // half
 					//currentMeterWidth = ((float)meterRaw) / 20000.0f;
-					meterCol = (meterRaw >= 15000) ? 0xFF00FF00 : ((meterRaw >= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+					meterCol = (meterRaw >= 15000) ? meterGreenCol : ((meterRaw >= 10000) ? meterYellowCol : meterRedCol);
 				} else { // full/crescent
 					//currentMeterWidth = ((float)meterRaw) / 30000.0f;
-					meterCol = (meterRaw >= 20000) ? 0xFF00FF00 : ((meterRaw>= 10000) ? 0xFFFFFF00 : 0xFFFF0000);
+					meterCol = (meterRaw >= 20000) ? meterGreenCol : ((meterRaw>= 10000) ? meterYellowCol : meterRedCol);
 				}
 				meterString = std::to_string(meterRaw / 100) + "." + std::to_string((meterRaw / 10) % 10) + "%";
 				break;
 			case 1:
 				currentMeterWidth = ((float)heatTime) / 600.0f;
-				meterCol = 0xFF0000FF;
+				meterCol = meterHeatCol;
 				meterString = "HEAT";
 				break;
 			case 2:
 				currentMeterWidth = ((float)heatTime) / 600.0f;
-				meterCol = 0xFFFFA500;
+				meterCol = meterMaxCol;
 				meterString = "MAX";
 				break;
 			case 3:
 				currentMeterWidth = ((float)heatTime) / 600.0f;
-				meterCol = 0xFFDDDDDD;
+				meterCol = meterBloodCol;
 				meterString = "BLOOD HEAT"; 
 				break;
 			default:
@@ -1585,7 +1620,7 @@ void drawMeterBar(int i, Bar& bar) {
 		}
 	} else {
 		currentMeterWidth = ((float)circuitBreakTimer) / 600.0f;
-		meterCol = 0xFF800080;
+		meterCol = meterBreakCol;
 		meterString = "BREAK";
 	}
 	
@@ -1601,7 +1636,7 @@ void drawMeterBar(int i, Bar& bar) {
 	//UIManager::add("meterYOffset", &pOffset.y);
 	//UIManager::add("meterMax", &meterWidth);
 
-	Point p = hasYOffset ? pOffset : pBase;
+	Point p = hasYOffset ? pBase : pOffset;
 	Point textPoint = p;
 
 	if(shouldReverseDraws) {
@@ -1624,11 +1659,145 @@ void drawMeterBar(int i, Bar& bar) {
 	drawRect.p2.x += displayWidth;	
 
 	UIDraw(UI::CircuitShade, drawRect, meterCol);
+
+	if(moon == 2) {
+		float midX = drawRect.x1 + (meterWidth * 0.5f);
+		//LineDrawPrio(midX, drawRect.y1, midX, drawRect.y2, 0xFFFFFFFF);
+		RectDrawPrio(midX - 1, drawRect.y1, 2, meterSize, 0xFFFFFFFF);
+	} else {	
+		float onethird = drawRect.x1 + (meterWidth * 0.333f);
+		float twothird = drawRect.x1 + (meterWidth * 0.666f);
+		//LineDrawPrio(onethird, drawRect.y1, onethird, drawRect.y2, 0xFFFFFFFF);
+		//LineDrawPrio(twothird, drawRect.y1, twothird, drawRect.y2, 0xFFFFFFFF);
+		RectDrawPrio(onethird - 1, drawRect.y1, 2, meterSize, 0xFFFFFFFF);
+		RectDrawPrio(twothird - 1, drawRect.y1, 2, meterSize, 0xFFFFFFFF);
+	}
+
 	TextDraw(textPoint, meterSize, 0xFFFFFFFF, meterString.c_str());
 
 }
 
 void drawGuardBar(int i, Bar& bar) {
+
+	// i should have used my debuginfo bs
+	DWORD moon = *(DWORD*)(0x0055513C + (i * 0xAFC));
+	float quantity = *(float*)(0x00555130 + 0xC4 + (i * 0xAFC)); // dont hmoons have a different max? f: 7000 h: 10500 c: 8000
+	float state = *(float*)(0x00555130 + 0xCC + (i * 0xAFC)); // 1 when,,, "normal", 2 when broken. when broken, quantity is still accurate
+	float quality = *(float*)(0x00555130 + 0xD8 + (i * 0xAFC)); // float from 0-2, where 0 is blue, red is 2. the gradient is a bit weird
+
+	DWORD maxQuantity = (moon == 2) ? 10500 : ((moon == 1) ? 7000 : 8000);
+	bar.guardQuantity = ((float)quantity) / ((float)maxQuantity);
+
+	static Point base(164, 41);
+	static Point offset(164, 51);
+
+	static Point reverseOffset(3, -1);
+	
+	static float barWidth = 118;
+	static float barHeight = 13;
+
+	//UIManager::add("baseGuard", &base);
+	//UIManager::add("offsetGuard", &offset);
+	//UIManager::add("guardWidth", &barWidth);
+	//UIManager::add("guardHeight", &barHeight);
+	//UIManager::add("guardReverse", &reverseOffset);
+	
+	float drawQuantity = (*bar.guardQuantity);
+
+	/*
+	static float temp = 0.0f;
+	temp += 0.001f;
+	if(temp > 1.0f) {
+		temp = 0.0f;
+	}
+	drawQuantity = temp;
+	*/
+
+	// are these bars named right
+	constexpr const Rect* blueGuardBars[4] = {
+		&UI::P2GuardShadeBlue,
+		&UI::P3GuardShadeBlue,
+		&UI::P0GuardShadeBlue,
+		&UI::P1GuardShadeBlue
+	};
+
+	constexpr const Rect* whiteGuardBars[4] = {
+		&UI::P2GuardShadeWhite,
+		&UI::P3GuardShadeWhite,
+		&UI::P0GuardShadeWhite,
+		&UI::P1GuardShadeWhite
+	};
+
+	constexpr const Rect* breakGuardBars[4] = {
+		&UI::P2BrokenGuard,
+		&UI::P3BrokenGuard,
+		&UI::P0BrokenGuard,
+		&UI::P1BrokenGuard
+	};
+
+	Rect blueGuard = *(blueGuardBars[i]);
+	Rect whiteGuard = *(whiteGuardBars[i]);
+	Rect breakGuard = *(breakGuardBars[i]);
+
+	shouldReverseDraws = (i & 1); // this is offseting textures in a bad way. i would fix it but i have already accounted for it in the other draws
+	bool hasYOffset = (i >= 2);
+
+	Point p = hasYOffset ? base : offset;
+
+	if(shouldReverseDraws) {
+		p += reverseOffset;
+	}
+
+	Rect drawRect;
+	drawRect.p1 = p;
+	drawRect.p2 = p;
+	drawRect.y2 += barHeight;
+
+	if(!hasYOffset) {
+		drawRect.x1 += barWidth - (drawQuantity * barWidth);
+		drawRect.x2 += barWidth;
+		if(shouldReverseDraws) {
+			whiteGuard.x2 = whiteGuard.x1 + (whiteGuard.w() * drawQuantity);
+			blueGuard.x2 = blueGuard.x1 + (blueGuard.w() * drawQuantity);
+		} else {
+			whiteGuard.x1 = whiteGuard.x2 - (whiteGuard.w() * drawQuantity);
+			blueGuard.x1 = blueGuard.x2 - (blueGuard.w() * drawQuantity);
+		}
+	} else {
+		drawRect.x2 += (drawQuantity * barWidth);
+		if(shouldReverseDraws) {
+			whiteGuard.x1 = whiteGuard.x2 - (whiteGuard.w() * drawQuantity);
+			blueGuard.x1 = blueGuard.x2 - (blueGuard.w() * drawQuantity);
+		} else {
+			whiteGuard.x2 = whiteGuard.x1 + (whiteGuard.w() * drawQuantity);
+			blueGuard.x2 = blueGuard.x1 + (blueGuard.w() * drawQuantity);
+		}
+	}
+
+	DWORD barCol = 0xFF000000;
+	
+	if(state != 2) { // not broken
+
+		if(quality > 1.0f) { // red
+			// BYTE red = quality < 1.0f ? 0x00 : ((quality - 1.0f) * ((float)0xFF));
+		} else { // blue
+			// BYTE blue = quality > 1.0f ? 0x00 : ((1.0f - quality) * ((float)0xFF));
+		}
+
+		
+		
+	} else {
+		Rect breakDrawRect;
+		breakDrawRect.p1 = p;
+		breakDrawRect.p2 = p;
+		breakDrawRect.x2 += barWidth;
+		breakDrawRect.y2 += barHeight;
+		barCol = 0xFF808080;
+		UIDraw(breakGuard, breakDrawRect, 0x80808080);
+	}
+
+	UIDraw(whiteGuard, drawRect, barCol);
+	UIDraw(blueGuard, drawRect, (0x00FFFFFF & barCol) | 0x80000000);
 
 }
 
@@ -1921,12 +2090,15 @@ void drawNewUI() {
         *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
     }
 
+	/*
 	if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
 	//if(true) {
 
 	} else {
 		return;
 	}
+
+	*/
 
 	// this code needs a refactor. but i am tired
 	static DWORD FN1States[4] = {0, 0, 0, 0}; 
@@ -1999,7 +2171,8 @@ void drawNewUI() {
 	static Point winsPoint(190, 78);
 	//UIManager::add("wins", &winsPoint);
 
-	if(*(BYTE*)(0x0055D203) != 0x01) {
+	if(*(BYTE*)(0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) {
+	//if(true) {
 
 		for(int i=0; i<2; i++) {
 			shouldReverseDraws = (i == 1); 
@@ -2016,7 +2189,6 @@ void drawNewUI() {
 
 		#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
 
-	
 		drawPlayerInfo();
 		LOOP4(drawMeterBar);
 		LOOP4(drawHealthBar);

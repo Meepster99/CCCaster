@@ -17,6 +17,7 @@
 #include "ReplayManager.hpp"
 #include "DllRollbackManager.hpp"
 #include "DllTrialManager.hpp"
+#include "DllDirectX.hpp"
 
 #include <windows.h>
 
@@ -2090,6 +2091,7 @@ extern "C" BOOL APIENTRY DllMain ( HMODULE, DWORD reason, LPVOID )
     {
         case DLL_PROCESS_ATTACH:
         {
+            log("HOOK.DLL ATTACH");
             ProcessManager::gameDir.clear();
 
             char buffer[4096];
@@ -2142,6 +2144,7 @@ extern "C" BOOL APIENTRY DllMain ( HMODULE, DWORD reason, LPVOID )
         }
 
         case DLL_PROCESS_DETACH:
+            log("HOOK.DLL DETATCH");
             LOG ( "DLL_PROCESS_DETACH" );
 
             SetThreadExecutionState ( ES_CONTINUOUS );

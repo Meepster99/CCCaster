@@ -663,36 +663,42 @@ static const AsmList initPatch2v2 =
         make hud and everything ingame nicer
         make CSS nicer
         explain new controller input screen in a way that doesnt confuse everyone
+        "reading the screen explains the screen"
+        auto updates.
+            i could have it be a seperate caster install? but people will explode
+            hook.dll might be better, i would have to download an updater, run it, uninject the dll, pray that it works somehow, kill melty
+            i could, upon injection, check for another dll named,, idk hookUpdate.dll, and then call loadlib on that one instead?
+            but then how do i get rid of them?
+            windows had some jank allowing me to rename injected bs,,, 
+            yup, thats it
+            no point in excess pain
+                on dll injection:
+                    check for hookOld.dll, delete it
+                    check for update
+                        if update
+                            rename hook.dll -> hookOld.dll
+                            download recent hook.dll
 
     todo specific:
 
-        remove the meter bar flashes. maybe just patch the draw for them instead of the jank shit you normally do
-        i removed some? make sure max into blood heat is ok though??
+        corner priority is suuuuper fucked up, look into it
+
+        clash boxes can clash with your teammate
+
+        proximity stuff is an issue! fnero 214B (all use the purple trigger boxes?)
+        arc walkthrough
+
+        blood heat still causes the meter bar flash
 
         weird thing where you can lose your jump if your teamate is comboing?
-
-        hime aad fuckin,, targets closest player? and not closest enemy
-            00462E22 (and that whole func )
-            00462EE5 
-
-        things that should turn around( roa bs ) are sure as hell not
-            00475993 
-
-        say "char name(color)" ugh
 
         patch out the draw which does roa charge/sion bullet/fmaids hearts, and do them yourself(and for both players)
 
         fix round ends, re add timer back in
-        character facing: one of the two following ways
-            one: 
-                manual idea
-                press a button, locked on one player, press it again and it alternates
-                // you know the 1p2p arrow thats above roog knife? use that!
-                if P3 was targeting P2, P2 would have a P3 above their heads
-            two:
-                automatic idea
-                automatic, except always PRIO the person you are comboing
-    
+
+        allow for p2/p3 combo count, reduce, etc
+        reverse,,, all the sauce.
+
     */
 
     // i actually prefer this patch method(with a lil modification) tbh. its very well done

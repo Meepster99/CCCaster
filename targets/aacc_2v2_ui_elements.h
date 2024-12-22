@@ -45,7 +45,8 @@ namespace UI {
     MAKEUILABEL(P0RedHealthShade, 0, 308, 186, 10);
     MAKEUILABEL(P1HealthShade,    0, 324, 186, 10);
     MAKEUILABEL(P1RedHealthShade, 0, 340, 186, 10);
-       // Should be player agnostic, use for everyone.
+    
+    // Should be player agnostic, use for everyone.
     MAKEUILABEL(CircuitShade,     0, 356, 192,  8);
     
     // Guard bars are Player specific. Do not substitute.
