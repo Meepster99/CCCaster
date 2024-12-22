@@ -17,7 +17,7 @@ DLL = hook$(DOT_TAG).dll
 LAUNCHER = launcher.exe
 UPDATER = updater.exe
 DEBUGGER = debugger.exe
-GENERATOR = generator.exe
+GENERATOR = generator
 PALETTES = palettes.exe
 MBAA_EXE = MBAA.exe
 README = README.md
@@ -205,7 +205,9 @@ $(FOLDER):
 res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
-else ifeq ($(UNAME),Linux) # this may or not need wine even on two fresh installs of the same ubuntu vers with the same package?!
+else ifeq ($(UNAME),Linux) 
+	# this may or not need wine even on two fresh installs of the same ubuntu vers with the same package?!
+	# same linux verion, same installations on everything, i crash with wine, and github doesnt.
 	tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@

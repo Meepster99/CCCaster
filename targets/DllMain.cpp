@@ -20,14 +20,6 @@
 #include "DllDirectX.hpp"
 
 #include <windows.h>
-#include <string>
-#include <regex>
-#include <sstream>
-#include <ctime>
-#include <iomanip>
-#include <wininet.h>
-#include <fstream>
-#include <time.h>
 
 #include <vector>
 #include <memory>
@@ -2093,83 +2085,6 @@ static void deinitialize()
     appState = AppState::Deinitialized;
 }
 
-time_t toTimestamp(const std::string& dateTimeStr) {
-	std::tm tm = {};
-	std::istringstream ss(dateTimeStr);
-	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%SZ");
-
-
-	time_t timestamp = mktime(&tm);
-
-	return timestamp;
-}
-
-int needUpdate() {
-
-	HINTERNET hInternet = InternetOpenW(L"GitHubAPI", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
-	if (hInternet == NULL) {
-		log("InternetOpen failed: % d", GetLastError());
-		return -1;
-	}
-
-	HINTERNET hConnect = InternetOpenUrlW(hInternet, L"https://api.github.com/repos/Meepster99/CCCaster/releases/tags/bleeding-edge", NULL, 0, INTERNET_FLAG_RELOAD, 0);
-	if (hConnect == NULL) {
-		log("InternetOpenUrlW failed: %d", GetLastError());
-		InternetCloseHandle(hInternet);
-		return -1;
-	}
-
-	char buffer[8192];
-	DWORD bytesRead;
-	std::string response;
-
-	while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-		response.append(buffer, bytesRead);
-	}
-
-	InternetCloseHandle(hConnect);
-	InternetCloseHandle(hInternet);
-
-	std::regex pattern(R"("published_at"\s*:\s*"[^"]*")");
-
-	std::smatch match;
-	if (!std::regex_search(response, match, pattern)) {
-		log("couldnt find published_at in json: %s", response.c_str());
-	}
-
-	std::string temp = match.str();
-
-	pattern = std::regex(R"(\"published_at\":\"(.*?)\")");
-
-	if (!std::regex_search(temp, match, pattern)) {
-		log("couldnt find datetime in json: %s", response.c_str());
-	}
-
-	std::string githubTimestamp = match[1].str();
-
-	githubTimestamp[10] = ' ';
-
-	time_t compileTime = toTimestamp(COMPILETIMESTAMP);
-
-	time_t releaseTime = toTimestamp(githubTimestamp);
-
-	log("release time: %lld", releaseTime);
-	log("compile time: %lld", compileTime);
-
-	//return true;
-	return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
-}
-
-void updateDLL() {
-
-    // this time, im not doing this bs with a script
-
-
-    int res = needUpdate();
-    log("needupdate res was %d", res);
-
-}
-
 extern "C" BOOL APIENTRY DllMain ( HMODULE, DWORD reason, LPVOID )
 {
     switch ( reason )
@@ -2177,7 +2092,7 @@ extern "C" BOOL APIENTRY DllMain ( HMODULE, DWORD reason, LPVOID )
         case DLL_PROCESS_ATTACH:
         {
             log("HOOK.DLL ATTACH");
-            updateDLL();
+            //updateDLL();
             ProcessManager::gameDir.clear();
 
             char buffer[4096];
