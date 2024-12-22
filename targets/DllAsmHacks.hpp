@@ -681,7 +681,16 @@ static const AsmList initPatch2v2 =
 
     todo specific:
 
+        double pushback
+
+        koha and hisui just,,, doesnt have some specials? is it because im not clearing some flag setting her as assist properly?
+            it works when they are in the alt player slot tho??!
+
         corner priority is suuuuper fucked up, look into it
+            happens in right corner, doesnt in left?
+            only happens for the first player????
+                if only one person can have the corner, does that mean one enemy has it, other doesnt,,, wat
+            in the left corner, the player jumping will instead turn around??!
 
         clash boxes can clash with your teammate
 
@@ -696,8 +705,7 @@ static const AsmList initPatch2v2 =
 
         fix round ends, re add timer back in
 
-        allow for p2/p3 combo count, reduce, etc
-        reverse,,, all the sauce.
+        allow for p2/p3 combo count, reduce, counter, etc
 
     */
 
