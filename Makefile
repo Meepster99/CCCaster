@@ -205,14 +205,14 @@ res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
 else ifeq ($(UNAME),Linux)
-	tools/$(GENERATOR) $@
+	wine tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@
 endif
 	@echo
 
 res/rollback.o: res/rollback.bin
-ifeq ($(UNAME),Darwin)
+ifeq ($(UNAME),Linux)
 	$(PREFIX)objcopy -I binary -O elf32-i386 -B i386 $< $@
 else
 	objcopy -I binary -O elf32-i386 -B i386 $< $@
