@@ -4,6 +4,7 @@
 #include "StringUtils.hpp"
 
 #include <cstring>
+#include <cstdint>
 
 
 // Windows GUID type forward declaration
