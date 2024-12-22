@@ -1,0 +1,55 @@
+name: Hook Autobuilder
+
+on:
+  push:
+    branches: [ "4v4" ]
+  pull_request:
+    branches: [ "4v4" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: setup
+      run: |
+        git submodule update --init --recursive
+        sudo apt update
+        sudo apt upgrade
+        sudo apt install make
+        sudo apt install g++-mingw-w64
+        sudo dpkg --add-architecture i386 
+        sudo apt update
+        sudo apt install wine32
+        sudo apt install zip
+
+    - name: make
+      run: make main-build release
+
+    - name: Delete tag and release
+      uses: dev-drprasad/delete-tag-and-release@v1.1
+      with:
+        delete_release: true 
+        tag_name: bleeding-edge 
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload files
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: bleeding-edge
+        name: Bleeding Edge
+        prerelease: true
+        fail_on_unmatched_files: true
+        files: |
+          ./cccaster/hook.dll
+        body: | 
+          I am going to explode.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
