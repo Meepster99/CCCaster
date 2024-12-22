@@ -1,4 +1,4 @@
-Netplay tool for Melty Blood Actress Again Current Code
+Tool for 2v2 Melty Blood Actress Again Current Code
 
     Public domain, no license, no warranty. Here be dragons.
 

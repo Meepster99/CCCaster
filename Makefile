@@ -205,8 +205,8 @@ $(FOLDER):
 res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
-else ifeq ($(UNAME),Linux)
-	wine tools/$(GENERATOR) $@
+else ifeq ($(UNAME),Linux) # this may or not need wine even on two fresh installs of the same ubuntu vers with the same package?!
+	tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@
 endif
