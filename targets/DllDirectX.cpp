@@ -11,6 +11,7 @@
 #include <regex>
 #include <optional>
 
+#include <iostream>
 #include <string>
 #include <sstream>
 #include <ctime>
@@ -18,6 +19,8 @@
 #include <wininet.h>
 #include <fstream>
 #include <time.h>
+#include <fstream>
+#include <cstdio> 
 
 /*
 
@@ -142,6 +145,26 @@ const char* getCharName(int id) {
 	return charIDNames[lookup];
 }
 
+bool updateOccured = false;
+
+std::wstring getPath() {
+	wchar_t pathBuffer[1024];
+	GetModuleFileNameW(NULL, pathBuffer, 1024);
+	std::wstring path = std::wstring(pathBuffer);
+
+	size_t lastSlashPos = path.find_last_of(L"/\\");
+	if (lastSlashPos != std::wstring::npos) {
+		return path.substr(0, lastSlashPos);
+	}
+
+	return path;
+}
+
+bool fileExists(const std::string& filename) {
+    std::ifstream file(filename);
+    return file.good();  // Returns true if file exists
+}
+
 std::string getReleaseInfo() {
 	// https://api.github.com/repos/fangdreth/MBAACC-Extended-Training-Mode/releases/tags/bleeding-edge
 
@@ -177,60 +200,157 @@ std::string getReleaseInfo() {
 		return "";
 	}
 
-	std::string temp = match[2].str();
+	std::string temp = match.str();
 
 	return temp;
 }
 
-time_t toTimestamp(const std::string& dateTimeStr) {
-	std::tm tm = {};
-	std::istringstream ss(dateTimeStr);
-	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%SZ");
+long long safeStoll(const std::string& s) {
+	long long res = -1;
+	try {
+		res = std::stoll(s);
+	} catch (...) {
+		return -1;
+	}
+	return res;
+}
 
+long long toTimestamp(const std::string& t) {
+	
+	// this isnt exactly a UTC timestamp, but c++ is horrid with stuff like this
+	// 2024-12-24T17:22:35Z
 
-	time_t timestamp = mktime(&tm);
+	long long res;
 
-	return timestamp;
+	res += (safeStoll(t.substr(0, 4)) - 1970) * (12 * 31 * 24 * 60 * 60 * 1); // year
+	res += (safeStoll(t.substr(5, 2)) - 1) * (31 * 24 * 60 * 60 * 1); // month
+	res += (safeStoll(t.substr(8, 2)) - 1) * (24 * 60 * 60 * 1); // day
+
+	res += (safeStoll(t.substr(11, 2)) - 0) * (60 * 60 * 1); // hour
+	res += (safeStoll(t.substr(14, 2)) - 0) * (60 * 1); // minute
+	res += (safeStoll(t.substr(17, 2)) - 0) * (1); // second
+
+	return res;
 }
 
 bool needUpdate() {
 
-	std::string omfg = getReleaseInfo();
+	std::string releaseInfo = getReleaseInfo();
 
-	log("something worked %s", omfg.c_str());
-
-	if(omfg == "") {
+	if(releaseInfo == "") {
+		log("something went wrong when checking github. returning");
 		return false;
 	}
 
-	std::string githubTimestamp = "fdlkjahfjdshfljdshflkdsahflkjdsahfaf";
-	
+	std::regex pattern = std::regex(R"(\"published_at\":\"(.*?)\")");
+	std::smatch match;
+	if (!std::regex_search(releaseInfo, match, pattern)) {
+		log("couldnt find datetime in json: %s", releaseInfo.c_str());
+	}
+	std::string githubTimestamp = match[1].str();
 
-	time_t compileTime = std::stoll(COMPILETIMESTAMP);
+	if(githubTimestamp.size() > 10) { // this should always be the case.
+		githubTimestamp[10] = ' ';
+	}
 
 	log("gh timestamp: %s", githubTimestamp.c_str());
+	log("comp timestamp: %s", COMPILETIMESTAMP);
 	
-	/*
-	time_t releaseTime = toTimestamp(githubTimestamp);
+	long long releaseTime = toTimestamp(githubTimestamp);
+	long long compileTime = toTimestamp(COMPILETIMESTAMP);
 
-	log("release time: %lld", releaseTime);
-	log("compile time: %lld", compileTime);
-	*/
+	//log("sizeof(time_t) == %d", sizeof(time_t));
 
-	return false;
+	log("release time: %0*X %lld", 2 * sizeof(time_t), releaseTime, releaseTime);
+	log("compile time: %0*X %lld", 2 * sizeof(time_t), compileTime, compileTime);
+	
+	return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
+}
 
-	//return true;
-	//return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
+bool downloadUpdate() {
+	//const wchar_t* path = L"./ccaster/hook.dll";
+	//const wchar_t* newPath = L"./ccaster/hook.dll.old";
 
+	//std::wstring path = getFilePath() + L"./ccaster/hook.dll";
+	//std::wstring newPath = getFilePath() + L"./ccaster/hook.dll.old";
+
+	std::wstring path = L"./cccaster/hook.dll";
+	std::wstring newPath = L"./cccaster/hook.dll.old";
+
+	log("path    %ls", path.c_str());
+	log("newpath %ls", newPath.c_str());
+
+	if (!MoveFileW(path.c_str(), newPath.c_str())) {
+		log("failed to rename file err: %d\n", GetLastError());
+		return false;
+	}
+
+	// download the file 
+	// https://github.com/Meepster99/CCCaster/releases/download/bleeding-edge/hook.dll
+
+	HINTERNET hInternet = InternetOpenW(L"Downloader", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+	if (hInternet == NULL) {
+		log("InternetOpen failed: %d", GetLastError());
+		return false;
+	}
+
+	HINTERNET hConnect = InternetOpenUrlW(hInternet, L"https://github.com/Meepster99/CCCaster/releases/download/bleeding-edge/hook.dll", NULL, 0, INTERNET_FLAG_RELOAD, 0);
+	if (hConnect == NULL) {
+		log("InternetOpenUrlW failed: %d", GetLastError());
+		InternetCloseHandle(hInternet);
+		return false;
+	}
+
+	std::ofstream outFile(path.c_str(), std::ios::binary);
+	if (!outFile.is_open()) {
+		log("failed to open updated file for writing");
+		InternetCloseHandle(hConnect);
+		InternetCloseHandle(hInternet);
+		return false;
+	}
+
+	size_t bufferSize = 4096;
+	std::vector<char> buffer(bufferSize);
+
+	DWORD bytesRead;
+	while (InternetReadFile(hConnect, buffer.data(), bufferSize, &bytesRead) && bytesRead > 0) {
+		if (bytesRead == bufferSize) {
+			bufferSize *= 2;
+			buffer.resize(bufferSize);
+		}
+		outFile.write(buffer.data(), bytesRead);
+	}
+
+	outFile.close();
+	InternetCloseHandle(hConnect);
+	InternetCloseHandle(hInternet);
+
+	return true;
 }
 
 void updateDLL() {
 
     // this time, im not doing this bs with a script
 
+	// if hookOld.dll exists, delete it
+
+	if (fileExists("./cccaster/hook.dll.old")) {
+		if (remove("./cccaster/hook.dll.old") != 0) {
+			log("error deleting hook.dll.old");
+		} else {
+			log("deleted hook.dll.old");
+		}
+	}
+
 	log("trying to update");
     int res = needUpdate();
-    log("needupdate res was %d", res);
+    log("!!!needupdate res was %d", res);
+	if(res) {
+	//if(true) { 
+		res = downloadUpdate();
+		log("downloadUpdate result: %d", res);
+		updateOccured = true;
+	}
 
 }
 
