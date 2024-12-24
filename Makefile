@@ -17,7 +17,7 @@ DLL = hook$(DOT_TAG).dll
 LAUNCHER = launcher.exe
 UPDATER = updater.exe
 DEBUGGER = debugger.exe
-GENERATOR = generator
+GENERATOR = generator.exe
 PALETTES = palettes.exe
 MBAA_EXE = MBAA.exe
 README = README.md
@@ -243,6 +243,9 @@ GENERATOR_LIB_OBJECTS = \
 
 tools/$(GENERATOR): tools/Generator.cpp $(GENERATOR_LIB_OBJECTS)
 	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
+# wine throws so many fits over this that i feel i should just compile this with base g++
+# another stupid dependency for the books
+#g++ -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
