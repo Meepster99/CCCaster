@@ -206,6 +206,7 @@ res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
 else ifeq ($(UNAME),Linux)
+	chmod +x tools/$(GENERATOR)
 	tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@
@@ -243,6 +244,8 @@ GENERATOR_LIB_OBJECTS = \
 
 tools/$(GENERATOR): tools/Generator.cpp $(GENERATOR_LIB_OBJECTS)
 	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
+	chmod +x tools/$(GENERATOR)
+
 # wine throws so many fits over this that i feel i should just compile this with base g++
 # another stupid dependency for the books
 #g++ -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)

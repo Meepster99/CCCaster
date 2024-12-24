@@ -28,6 +28,7 @@ jobs:
         sudo apt update
         sudo apt install wine32
         sudo apt install zip
+        sudo apt install wine-binfmt
 
     - name: make
       run: make main-build release -j3
