@@ -55,7 +55,7 @@ jobs:
           # Install Instructions
           In your cccaster folder, please backup your existing hook.dll file, and replace it with this one.
           If you want to play normal melty, switch them back please.
-          I am going to explode.
+          I am going to explode. 💥
 
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

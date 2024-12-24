@@ -261,8 +261,8 @@ bool needUpdate() {
 
 	//log("sizeof(time_t) == %d", sizeof(time_t));
 
-	log("release time: %0*X %lld", 2 * sizeof(time_t), releaseTime, releaseTime);
-	log("compile time: %0*X %lld", 2 * sizeof(time_t), compileTime, compileTime);
+	log("release time: %0*X", 2 * sizeof(time_t), releaseTime);
+	log("compile time: %0*X", 2 * sizeof(time_t), compileTime);
 	
 	return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
 }
@@ -345,12 +345,14 @@ void updateDLL() {
 	log("trying to update");
     int res = needUpdate();
     log("!!!needupdate res was %d", res);
-	if(res) {
-	//if(true) { 
+	
+	if(res) {	 
 		res = downloadUpdate();
 		log("downloadUpdate result: %d", res);
 		updateOccured = true;
 	}
+
+	log("exiting updateDLL");
 
 }
 
@@ -2246,6 +2248,21 @@ void drawPlayerInfo() {
 	//UIManager::add("lock", &lockOffset);
 	//UIManager::add("lock2", &lockOffset2);
 
+	static Point bulletOffset(0, 8);
+	static Point chargeOffset(0, 8);
+	static float bulletScale = 3.75;
+	static float chargeScale = 3.75;
+	static float bulletFontSize = 8;
+	static float chargeFontSize = 8;
+	static float bulletDistFactor = 0.90;
+	//UIManager::add("bOffset", &bulletOffset);
+	//UIManager::add("cOffset", &chargeOffset);
+	//UIManager::add("bScale", &bulletScale);
+	//UIManager::add("cScale", &chargeScale);
+	//UIManager::add("bFont", &bulletFontSize);
+	//UIManager::add("cFont", &chargeFontSize);
+	//UIManager::add("bDist", &bulletDistFactor);
+
 	for(int i=0; i<4; i++) {
 
 		shouldReverseDraws = (i & 1);
@@ -2272,6 +2289,35 @@ void drawPlayerInfo() {
 		}
 
 		TextDraw(p + paletteOffset, palleteSize, 0xFFFFFFFF, "%02d", palettes[i] + 1);
+
+		// if we are a croa/sion, draw their shit here.
+
+		if(charIDs[i] == 0) { // sion
+
+			Point specialPoint = p + paletteOffset + bulletOffset;
+
+			WORD val = *(WORD*)(0x005552F6 + (i * 0xAFC));
+			TextDraw(specialPoint + Point(0, bulletFontSize * 0.5), bulletFontSize, 0xFFFFFFFF, "%02d", 13 - val);
+
+			Point bulletPoint = specialPoint + Point(2 * bulletFontSize, 0);
+
+			for(int b=12; b>=0; b--) {
+				DWORD col = b >= val ? 0xFFFFFFFF : 0xFF808080;
+				UIDraw(UI::SionBullet, bulletPoint, bulletScale, col);
+				bulletPoint.x += ((UI::size * UI::SionBullet.w()) * bulletDistFactor);
+			}
+
+		} else if(charIDs[i] == 31 && moons[i] == 0) { // croa
+
+			Point specialPoint = p + paletteOffset + chargeOffset;
+
+			WORD val = *(WORD*)(0x00555302 + (i * 0xAFC));
+			TextDraw(specialPoint + Point(0, chargeFontSize * 0.5), chargeFontSize, 0xFFFFFFFF, "%02d", val);
+
+			Point specialTexPoint = specialPoint + Point(2 * chargeFontSize, 0);
+
+			UIDraw(UI::RoaLightning, specialTexPoint, chargeScale, 0xFFFFFFFF);
+		}
 
 	}
 
@@ -2311,6 +2357,8 @@ void drawPlayerInfo() {
 		TextDraw(p + lockOnPoint + Point(0, palleteSize), palleteSize, 0xFFFFFFFF, "%02d", palNum);
 
 	}
+
+
 }
 
 void drawNewUI() {

@@ -660,26 +660,16 @@ static const AsmList initPatch2v2 =
     /*
     
     todo general:
+    
         make hud and everything ingame nicer
         make CSS nicer
         explain new controller input screen in a way that doesnt confuse everyone
-        "reading the screen explains the screen"
-        auto updates.
-            i could have it be a seperate caster install? but people will explode
-            hook.dll might be better, i would have to download an updater, run it, uninject the dll, pray that it works somehow, kill melty
-            i could, upon injection, check for another dll named,, idk hookUpdate.dll, and then call loadlib on that one instead?
-            but then how do i get rid of them?
-            windows had some jank allowing me to rename injected bs,,, 
-            yup, thats it
-            no point in excess pain
-                on dll injection:
-                    check for hookOld.dll, delete it
-                    check for update
-                        if update
-                            rename hook.dll -> hookOld.dll
-                            download recent hook.dll
+            "reading the screen explains the screen"
+        netplay???
 
     todo specific:
+
+        roog needs new knife sprites
 
         double pushback
 
@@ -771,9 +761,14 @@ static const AsmList initPatch2v2 =
 
     // todo, fix this!
     
-    { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // draws the count for the char specific resource
-    { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // draws the actual char specific texture 
+    { ( void *) (0x00424a60), INLINE_NOP_FIVE_TIMES }, // sion bullets count
+    { ( void *) (0x00424abc), INLINE_NOP_FIVE_TIMES }, // sion bullets
     
+    { ( void *) (0x004249f7), INLINE_NOP_FIVE_TIMES }, // roa charge count
+    { ( void *) (0x004249cd), INLINE_NOP_FIVE_TIMES }, // roa charge
+
+    // maids are unsupported. so i dont care
+
     //{ ( void *) (0x0042494c), INLINE_NOP_FIVE_TIMES }, // round tracking dots 
     
     PATCHJUMP(0x0042494c, _naked_drawRoundDots), // leaving this one in, tired
