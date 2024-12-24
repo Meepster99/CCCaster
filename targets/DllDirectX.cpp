@@ -142,33 +142,20 @@ const char* getCharName(int id) {
 	return charIDNames[lookup];
 }
 
-time_t toTimestamp(const std::string& dateTimeStr) {
-	std::tm tm = {};
-	std::istringstream ss(dateTimeStr);
-	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%SZ");
+std::string getReleaseInfo() {
+	// https://api.github.com/repos/fangdreth/MBAACC-Extended-Training-Mode/releases/tags/bleeding-edge
 
-
-	time_t timestamp = mktime(&tm);
-
-	return timestamp;
-}
-
-int needUpdate() {
-
-	// i am modifing this area of code. which is not even being called. and it is SOMEHOW causing crashes!?
-
-	/*
-	HINTERNET hInternet = InternetOpen("GitHubAPI", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+	HINTERNET hInternet = InternetOpenW(L"GitHubAPI", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
 	if (hInternet == NULL) {
 		log("InternetOpen failed: % d", GetLastError());
-		return -1;
+		return "";
 	}
 
-	HINTERNET hConnect = InternetOpenUrl(hInternet, "https://api.github.com/repos/Meepster99/CCCaster/releases/tags/bleeding-edge", NULL, 0, INTERNET_FLAG_RELOAD, 0);
+	HINTERNET hConnect = InternetOpenUrlW(hInternet, L"https://api.github.com/repos/Meepster99/CCCaster/releases/tags/bleeding-edge", NULL, 0, INTERNET_FLAG_RELOAD, 0);
 	if (hConnect == NULL) {
 		log("InternetOpenUrlW failed: %d", GetLastError());
 		InternetCloseHandle(hInternet);
-		return -1;
+		return "";
 	}
 
 	char buffer[8192];
@@ -187,21 +174,30 @@ int needUpdate() {
 	std::smatch match;
 	if (!std::regex_search(response, match, pattern)) {
 		log("couldnt find published_at in json: %s", response.c_str());
+		return "";
 	}
 
-	std::string temp = match.str();
+	std::string temp = match[2].str();
 
-	pattern = std::regex(R"(\"published_at\":\"(.*?)\")");
+	return temp;
+}
 
-	if (!std::regex_search(temp, match, pattern)) {
-		log("couldnt find datetime in json: %s", response.c_str());
-	}
+time_t toTimestamp(const std::string& dateTimeStr) {
+	std::tm tm = {};
+	std::istringstream ss(dateTimeStr);
+	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%SZ");
 
-	std::string githubTimestamp = match[1].str();
 
-	githubTimestamp[10] = ' '; 
+	time_t timestamp = mktime(&tm);
 
-	*/
+	return timestamp;
+}
+
+int needUpdate() {
+
+	std::string omfg = getReleaseInfo();
+
+	log("something worked %s", omfg.c_str());
 
 	std::string githubTimestamp = "fdlkjahfjdshfljdshflkdsahflkjdsahfaf";
 	
@@ -240,18 +236,13 @@ void doUpdate() {
 	// something about this code causes everything to crash and burn??
 	// i am going to need to rewrite all my code for some reason
 
-	// this delay is needed, and i am not sure why
-	static int timer = 60 * 1;
-
-	if(timer < 0) {
+	static bool hasUpdated = false;
+	if(hasUpdated) {
 		return;
 	}
+	hasUpdated = true;
 
-	if(timer == 0) {
-		updateDLL();
-	}
-
-	timer--;	
+	updateDLL();
 	
 }
 

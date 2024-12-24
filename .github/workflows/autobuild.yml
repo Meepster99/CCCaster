@@ -49,7 +49,7 @@ jobs:
         prerelease: true
         fail_on_unmatched_files: true
         files: |
-          ./cccaster/README.md
+          ./README.md
         body: | 
           I am going to explode.
       env:
