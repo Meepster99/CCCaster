@@ -787,6 +787,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
     TextDraw(10, 10 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
     TextDraw(10, 10 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
     TextDraw(10, 10 + (2 * 8), 8, 0xFFFFFFFF, ":3");
+    TextDraw(10, 10 + (3 * 8), 8, 0xFFFFFFFF, "send bug reports in https://discord.gg/vzvyjz775r");
+    
     shouldReverseDraws = false;
 
 }

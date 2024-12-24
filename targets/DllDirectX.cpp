@@ -193,11 +193,15 @@ time_t toTimestamp(const std::string& dateTimeStr) {
 	return timestamp;
 }
 
-int needUpdate() {
+bool needUpdate() {
 
 	std::string omfg = getReleaseInfo();
 
 	log("something worked %s", omfg.c_str());
+
+	if(omfg == "") {
+		return false;
+	}
 
 	std::string githubTimestamp = "fdlkjahfjdshfljdshflkdsahflkjdsahfaf";
 	
@@ -213,7 +217,7 @@ int needUpdate() {
 	log("compile time: %lld", compileTime);
 	*/
 
-	return -99;
+	return false;
 
 	//return true;
 	//return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
