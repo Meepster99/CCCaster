@@ -87,7 +87,7 @@ DEFINES += -DMBAA_EXE='"$(MBAA_EXE)"' -DBINARY='"$(BINARY)"' -DFOLDER='"$(FOLDER
 DEFINES += -DHOOK_DLL='"$(FOLDER)\\$(DLL)"' -DLAUNCHER='"$(FOLDER)\\$(LAUNCHER)"' -DUPDATER='"$(UPDATER)"'
 DEFINES += -DRELAY_LIST='"$(RELAY_LIST)"' -DTAG='"$(TAG)"'
 DEFINES += -DLOBBY_LIST='"$(LOBBY_LIST)"'
-DEFINES += -DCOMPILETIMESTAMP='"$(date +%s)"'
+DEFINES += -DCOMPILETIMESTAMP='"$(shell date +%s)"'
 INCLUDES = -I$(CURDIR) -I$(CURDIR)/netplay -I$(CURDIR)/lib -I$(CURDIR)/tests -I$(CURDIR)/3rdparty -I$(CURDIR)/sequences
 INCLUDES += -I$(CURDIR)/3rdparty/cereal/include -I$(CURDIR)/3rdparty/gtest/include -I$(CURDIR)/3rdparty/minhook/include
 INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(CURDIR)/3rdparty/imgui -I$(CURDIR)/3rdparty/imgui/backends
@@ -205,9 +205,7 @@ $(FOLDER):
 res/rollback.bin: tools/$(GENERATOR)
 ifeq ($(UNAME),Darwin)
 	wine tools/$(GENERATOR) $@
-else ifeq ($(UNAME),Linux) 
-	# this may or not need wine even on two fresh installs of the same ubuntu vers with the same package?!
-	# same linux verion, same installations on everything, i crash with wine, and github doesnt.
+else ifeq ($(UNAME),Linux)
 	tools/$(GENERATOR) $@
 else
 	tools/$(GENERATOR) $@

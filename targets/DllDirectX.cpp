@@ -11,6 +11,14 @@
 #include <regex>
 #include <optional>
 
+#include <string>
+#include <sstream>
+#include <ctime>
+#include <iomanip>
+#include <wininet.h>
+#include <fstream>
+#include <time.h>
+
 /*
 
 todo, a lot of this code is either legacy, deprecated, only needed for training mode, or just plain stupid
@@ -134,6 +142,118 @@ const char* getCharName(int id) {
 	return charIDNames[lookup];
 }
 
+time_t toTimestamp(const std::string& dateTimeStr) {
+	std::tm tm = {};
+	std::istringstream ss(dateTimeStr);
+	ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%SZ");
+
+
+	time_t timestamp = mktime(&tm);
+
+	return timestamp;
+}
+
+int needUpdate() {
+
+	// i am modifing this area of code. which is not even being called. and it is SOMEHOW causing crashes!?
+
+	/*
+	HINTERNET hInternet = InternetOpen("GitHubAPI", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+	if (hInternet == NULL) {
+		log("InternetOpen failed: % d", GetLastError());
+		return -1;
+	}
+
+	HINTERNET hConnect = InternetOpenUrl(hInternet, "https://api.github.com/repos/Meepster99/CCCaster/releases/tags/bleeding-edge", NULL, 0, INTERNET_FLAG_RELOAD, 0);
+	if (hConnect == NULL) {
+		log("InternetOpenUrlW failed: %d", GetLastError());
+		InternetCloseHandle(hInternet);
+		return -1;
+	}
+
+	char buffer[8192];
+	DWORD bytesRead;
+	std::string response;
+
+	while (InternetReadFile(hConnect, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
+		response.append(buffer, bytesRead);
+	}
+
+	InternetCloseHandle(hConnect);
+	InternetCloseHandle(hInternet);
+
+	std::regex pattern(R"("published_at"\s*:\s*"[^"]*")");
+
+	std::smatch match;
+	if (!std::regex_search(response, match, pattern)) {
+		log("couldnt find published_at in json: %s", response.c_str());
+	}
+
+	std::string temp = match.str();
+
+	pattern = std::regex(R"(\"published_at\":\"(.*?)\")");
+
+	if (!std::regex_search(temp, match, pattern)) {
+		log("couldnt find datetime in json: %s", response.c_str());
+	}
+
+	std::string githubTimestamp = match[1].str();
+
+	githubTimestamp[10] = ' '; 
+
+	*/
+
+	std::string githubTimestamp = "fdlkjahfjdshfljdshflkdsahflkjdsahfaf";
+	
+
+	time_t compileTime = std::stoll(COMPILETIMESTAMP);
+
+	log("gh timestamp: %s", githubTimestamp.c_str());
+	
+	/*
+	time_t releaseTime = toTimestamp(githubTimestamp);
+
+	log("release time: %lld", releaseTime);
+	log("compile time: %lld", compileTime);
+	*/
+
+	return -99;
+
+	//return true;
+	//return releaseTime > compileTime + (60 * 15); // 15 min offset bc, caster takes a while to compile
+
+}
+
+void updateDLL() {
+
+    // this time, im not doing this bs with a script
+
+	log("trying to update");
+    int res = needUpdate();
+    log("needupdate res was %d", res);
+
+}
+
+void doUpdate() {
+
+	// i tried doing this upon dll inject, but i think that is a very bad move
+	// something about this code causes everything to crash and burn??
+	// i am going to need to rewrite all my code for some reason
+
+	// this delay is needed, and i am not sure why
+	static int timer = 60 * 1;
+
+	if(timer < 0) {
+		return;
+	}
+
+	if(timer == 0) {
+		updateDLL();
+	}
+
+	timer--;	
+	
+}
 
 void debugLinkedList();
 void displayDebugInfo();
@@ -2260,7 +2380,7 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 		UIManager::reload();
 	}
 
-	
+	doUpdate();
 	drawNewUI();
 
 	//UIDraw(Rect(Point(0, 0), 1, 1), Rect(Point(100, 100), 100, 100), 0xFFFFFFFF);

@@ -32,6 +32,8 @@ void __stdcall log(const char* format, ...);
 
 void __stdcall printDirectXError(HRESULT hr);
 
+void doUpdate();
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))
