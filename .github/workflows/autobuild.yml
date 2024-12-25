@@ -4,8 +4,6 @@ on:
   workflow_dispatch: 
   push:
     branches: [ "4v4" ]
-  pull_request:
-    branches: [ "4v4" ]
 
 env:
   BLEEDING: 1
@@ -49,7 +47,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: bleeding-edge
-        name: Bleeding Edge
+        name: 2v2 Bleeding Edge
         prerelease: true
         fail_on_unmatched_files: true
         draft: false
@@ -62,6 +60,5 @@ jobs:
           Want to play multiplayer? Use parsec. This mod doesnt have multiplayer.
           Please bind FN1, to allow you to toggle which opponent you target.
           I am going to explode. 💥
-
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
