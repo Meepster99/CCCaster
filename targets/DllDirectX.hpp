@@ -48,7 +48,7 @@ typedef struct COLOR {
 		};
 		DWORD col;
 	};
-	operator DWORD() const { return col; }
+	operator DWORD() const { return col; } // this is super nice syntax. i wonder if i could have defined it with enums? would have saved a lot of casting back with GBAStranger
 } COLOR;
  
 static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");

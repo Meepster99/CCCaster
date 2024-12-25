@@ -696,8 +696,6 @@ static const AsmList initPatch2v2 =
 
         allow for p2/p3 combo count, reduce, counter, etc
 
-        p2/p3 controller binds dont auto go down
-
     */
 
     // i actually prefer this patch method(with a lil modification) tbh. its very well done
@@ -808,10 +806,10 @@ static const AsmList patch2v2 =
     { ( void * ) (0x005552A8 + (3 * 0xAFC)), { 0x00 }},
 
     // im not sure what this ref is to, but i think it has to do with duo characters?
-    { ( void * ) (0x0055545C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x0055545C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x0055545C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x0055545C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
+    { ( void * ) (0x00555130 + 0x32C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00555130 + 0x32C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00555130 + 0x32C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00555130 + 0x32C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
 
 };
 

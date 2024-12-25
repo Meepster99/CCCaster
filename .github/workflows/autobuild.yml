@@ -1,6 +1,7 @@
 name: Hook Autobuilder
 
 on:
+  workflow_dispatch: 
   push:
     branches: [ "4v4" ]
   pull_request:
