@@ -752,7 +752,7 @@ static const AsmList initPatch2v2 =
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
     { ( void *) (0x00449069 + 2), { 0x04 }},
 
-    PATCHJUMP(0x0044b834, _naked_cameraMod),
+    //PATCHJUMP(0x0044b834, _naked_cameraMod),
 
     // HUD patches. tbh, most patches here should be removed
 
