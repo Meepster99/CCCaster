@@ -1914,6 +1914,37 @@ void drawMeterBar(int i, Bar& bar) {
 
 }
 
+typedef struct COLOR {
+	COLOR() {}
+	COLOR(DWORD d) : col(d) {}
+	union {
+		struct {
+			BYTE a = 0xFF;
+			BYTE r = 0;
+			BYTE g = 0;
+			BYTE b = 0;
+		};
+		DWORD col;
+	};
+	operator DWORD() const { return col; }
+} COLOR;
+ 
+static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");
+
+COLOR avgColors(COLOR col1, COLOR col2, float f) {
+	
+	f = CLAMP(f, 0.0f, 1.0f);
+
+	COLOR res = 0;
+
+	res.a = (col1.a * (1 - f)) + (col2.a * f);
+	res.r = (col1.r * (1 - f)) + (col2.r * f);
+	res.g = (col1.g * (1 - f)) + (col2.g * f);
+	res.b = (col1.b * (1 - f)) + (col2.b * f);
+
+	return res;
+}
+
 void drawGuardBar(int i, Bar& bar) {
 
 	// i should have used my debuginfo bs
@@ -2015,10 +2046,16 @@ void drawGuardBar(int i, Bar& bar) {
 	
 	if(state != 2) { // not broken
 
+		// 0088e6  00bee6
+		// 4e4878  736478
+		// 9c070a  e60a0a
+
 		if(quality > 1.0f) { // red
 			// BYTE red = quality < 1.0f ? 0x00 : ((quality - 1.0f) * ((float)0xFF));
+			barCol = avgColors(0xFF4e4878, 0xFF9c070a, quality - 1.0f);
 		} else { // blue
 			// BYTE blue = quality > 1.0f ? 0x00 : ((1.0f - quality) * ((float)0xFF));
+			barCol = avgColors(0xFF0088e6, 0xFF4e4878, quality);
 		}
 
 		
@@ -2033,8 +2070,9 @@ void drawGuardBar(int i, Bar& bar) {
 		UIDraw(breakGuard, breakDrawRect, 0x80808080);
 	}
 
-	UIDraw(whiteGuard, drawRect, barCol);
-	UIDraw(blueGuard, drawRect, (0x00FFFFFF & barCol) | 0x80000000);
+	//UIDraw(whiteGuard, drawRect, barCol);
+	//UIDraw(blueGuard, drawRect, (0x00FFFFFF & barCol) | 0x80000000);
+	UIDraw(blueGuard, drawRect, barCol);
 
 }
 
