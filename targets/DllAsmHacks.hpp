@@ -634,6 +634,8 @@ __attribute__((naked, noinline)) void _naked_throwConnect2();
 
 __attribute__((naked, noinline)) void _naked_proxyGuard();
 
+__attribute__((naked, noinline)) void _naked_dashThrough();
+
 __attribute__((naked, noinline)) void _naked_fileLoad();
 
 __attribute__((naked, noinline)) void _naked_collisionConnect();
@@ -691,8 +693,6 @@ static const AsmList initPatch2v2 =
 
         weird thing where you can lose your jump if your teamate is comboing?
 
-        patch out the draw which does roa charge/sion bullet/fmaids hearts, and do them yourself(and for both players)
-
         fix round ends, re add timer back in
 
         allow for p2/p3 combo count, reduce, counter, etc
@@ -731,6 +731,8 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x0046fa65, _naked_throwConnect2), // patches hit/cmd grabs
 
     PATCHJUMP(0x00462b87, _naked_proxyGuard),
+
+    PATCHJUMP(0x0046e8c9, _naked_dashThrough),
 
     // zombies are most likely called by me cutting off execution in right at 00474643. something after it must do something to disable it?
 

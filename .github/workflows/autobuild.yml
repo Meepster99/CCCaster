@@ -56,6 +56,7 @@ jobs:
           In your cccaster folder, please backup your existing hook.dll file, and replace it with this one.
           If you want to play normal melty, switch them back please.
           Want to play multiplayer? Use parsec. This mod doesnt have multiplayer.
+          Please bind FN1, to allow you to toggle which opponent you target.
           I am going to explode. 💥
 
       env:

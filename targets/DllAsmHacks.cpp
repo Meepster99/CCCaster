@@ -587,9 +587,25 @@ void _naked_proxyGuard() {
 
     )" __asmEnd
 
-
     emitJump(0x00462b93);
     
+}
+
+void _naked_dashThrough() {
+
+    // patch at 0046e8c9
+
+    __asmStart R"(
+
+        mov al, [edi + 0x2F0];
+        xor al, [ebx + 0x2F0];
+        and al, 0x01;
+        test al, al;
+
+    )" __asmEnd
+
+    emitJump(0x0046e8d5);
+
 }
 
 void _naked_collisionConnect() {
