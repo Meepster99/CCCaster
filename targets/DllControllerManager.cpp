@@ -817,7 +817,8 @@ void DllControllerManager::handleMappingOverlay()
     array<string, 5> text; // 3 cols
 
     // Display all controllers
-    text[0] = "Controllers\n";
+    text[0] = "Controllers\nPLEASE BIND FN1 TO TOGGLE LOCK ON\n";
+
     for ( const Controller *controller : _allControllers )
         //if ( controller != _playerControllers[0] && controller != _playerControllers[1] )
         if ( std::find(_playerControllers.begin(), _playerControllers.end(), controller) == _playerControllers.end() )
@@ -1124,7 +1125,7 @@ void DllControllerManager::controllerKeyMapped ( Controller *controller, uint32_
     {
         saveMappings ( controller );
 
-        for ( uint8_t i = 0; i < 2; ++i )
+        for ( uint8_t i = 0; i < 4; ++i )
         {
             if ( controller == _playerControllers[i]
                     && _overlayPositions[i] >= 1 && _overlayPositions[i] < gameInputBits.size() + 1  )

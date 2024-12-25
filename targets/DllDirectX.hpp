@@ -36,6 +36,25 @@ void __stdcall printDirectXError(HRESULT hr);
 
 void doUpdate();
 
+typedef struct COLOR {
+	COLOR() {}
+	COLOR(DWORD d) : col(d) {}
+	union {
+		struct {
+			BYTE a = 0xFF;
+			BYTE r = 0;
+			BYTE g = 0;
+			BYTE b = 0;
+		};
+		DWORD col;
+	};
+	operator DWORD() const { return col; }
+} COLOR;
+ 
+static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");
+
+COLOR avgColors(COLOR col1, COLOR col2, float f);
+
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #define CLAMP(value, min_val, max_val) MAX(MIN((value), (max_val)), (min_val))

@@ -395,200 +395,6 @@ void invalidateOverlayText()
 
 #define SAFEMOD(a, b) (((b) + ((a) % (b))) % (b))
 
-D3DXVECTOR2 scalePosTopLeft = { 0.0f, 0.0f };
-D3DXVECTOR2 scalePosRenderFactor = { 0.0f, 0.0f };
-
-void updateScaleParams(IDirect3DDevice9 *device) {
-
-    return;
-
-    // this should only be called on resize.
-
-    float vWidth = 640;
-    float vHeight = 480;
-    float wWidth = 640;
-    float wHeight = 480;
-    bool isWide = false;
-
-    D3DVIEWPORT9 viewport;
-	device->GetViewport(&viewport);
-	vWidth = viewport.Width;
-	vHeight = viewport.Height;
-
-    HWND hwnd = (HWND) * (DWORD*)(0x0074dfac);
-
-	if (hwnd != NULL) {
-		RECT rect;
-		if (GetClientRect(hwnd, &rect)) {
-			wWidth = rect.right - rect.left;
-			wHeight = rect.bottom - rect.top;
-		}
-	}
-
-    const float ratio = 4.0f / 3.0f;
-
-	isWide = wWidth / wHeight > ratio;
-
-    D3DXVECTOR2 factor;
-	factor.x = 1.0f;
-	factor.y = 1.0f;
-
-	if (isWide) {
-		factor.x = (wHeight * ratio) / wWidth;
-	} else {
-		factor.y = (wWidth / ratio) / wHeight;
-	}
-
-	scalePosRenderFactor.x = 1.0f;
-	scalePosRenderFactor.y = 1.0f;
-
-	scalePosRenderFactor.x = (vHeight * (vWidth / vHeight)) / 640.0f;
-	scalePosRenderFactor.y = (vWidth / (vWidth / vHeight)) / 480.0f;
-
-	scalePosRenderFactor.x *= factor.x;
-	scalePosRenderFactor.y *= factor.y;
-
-	scalePosTopLeft.x = 0.0f;
-	scalePosTopLeft.y = 0.0f;
-
-	if (isWide) {
-		scalePosTopLeft.x = 640.0f / factor.x;
-		scalePosTopLeft.x *= (wWidth - (wHeight * ratio)) / (2.0f * wWidth);
-    } else {
-		scalePosTopLeft.y = 480.0f / factor.y;
-		scalePosTopLeft.y *= (wHeight - (wWidth / ratio)) / (2.0f * wHeight);
-	}
-
-}
-
-void scalePoint(float& x, float& y) {
-    x += scalePosTopLeft.x;
-    y += scalePosTopLeft.y;
-
-    x *= scalePosRenderFactor.x;
-    y *= scalePosRenderFactor.y;
-}
-
-void DrawRectScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, const DWORD ARGB, bool mirror) {
-
-    if(mirror) {
-        x1 = 640 - x1;
-        x2 = 640 - x2;
-    }
-    
-    if(x1 > x2) {
-        std::swap(x1, x2);
-    }
-
-    if(y1 > y2) {
-        std::swap(y1, y2);
-    }
-  
-    scalePoint(x1, y1);
-    scalePoint(x2, y2);
-
-    const D3DRECT rect = { (long)x1, (long)y1, (long)x2, (long)y2 };
-    device->Clear ( 1, &rect, D3DCLEAR_TARGET, ARGB, 0, 0 );
-}
-
-void DrawBorderScaled( IDirect3DDevice9 *device, float x1, float y1, float x2, float y2, float w, const DWORD ARGB, bool mirror) {
-
-    if(mirror) {
-        x1 = 640 - x1;
-        x2 = 640 - x2;
-    }
-
-    if(x1 > x2) {
-        std::swap(x1, x2);
-    }
-
-    if(y1 > y2) {
-        std::swap(y1, y2);
-    }
-
-    DrawRectScaled(device, x1, y1, x2, y1 + w, ARGB );
-    DrawRectScaled(device, x1, y2 - w, x2, y2, ARGB );
-    
-    DrawRectScaled(device, x1, y1, x1 + w, y2, ARGB );
-    DrawRectScaled(device, x2 - w, y1, x2, y2, ARGB );
-
-}
-
-void tempLog(const std::string& s) {
-    std::ofstream outfile("log.txt", std::ios_base::app);
-    outfile << s << "\n";
-}
-
-void DrawTextScaled( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, bool mirror) {
-
-    DWORD format = DT_WORDBREAK | DT_LEFT;
-    if(mirror) {
-        x1 = 640.0f - x1;
-        format = DT_WORDBREAK | DT_RIGHT;
-    }
-
-    scalePoint(x1, y1);
-
-    RECT temp;
-    temp.top  = temp.bottom = (long)y1;
-    temp.left = temp.right  = (long)x1;
-
-    DrawText(font, text, temp, format, ARGB);
-
-}
-
-void DrawTextScaledWithBG( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
-
-    DWORD format = DT_WORDBREAK | DT_LEFT;
-    if(mirror) {
-        format = DT_WORDBREAK | DT_RIGHT;
-    }
-
-    RECT rect = {0, 0, 0, 0};
-    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
-    //long height = abs(rect.top - rect.bottom);
-    //long width = abs(rect.left - rect.right);
-
-    long height = (size / 2);
-    long width = (strlen(text) * size) / 4;
-
-    rect.top = (long)y1;
-    rect.bottom = (long)(y1 + height);
-
-    rect.left = (long)x1;
-    rect.right = (long)(x1 + width);
-    
-    DrawRectScaled( device, INLINE_RECT(rect), bgARGB, mirror);
-    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
-
-}
-
-void DrawTextScaledWithBGBorder( IDirect3DDevice9 *device, ID3DXFont *font, float x1, float y1, float size, const char* text, const DWORD ARGB, const DWORD bgARGB, bool mirror) {
-
-    DWORD format = DT_WORDBREAK | DT_LEFT;
-    if(mirror) {
-        format = DT_WORDBREAK | DT_RIGHT;
-    }
-
-    RECT rect = {0, 0, 0, 0};
-    //font->DrawText(0, &text[0], strlen(text), &rect, DT_CALCRECT | format, 0); // this method is ass, should probs import own directx lib
-    //long height = abs(rect.top - rect.bottom);
-    //long width = abs(rect.left - rect.right); 
-
-    long height = (size / 2);
-    long width = (strlen(text) * size) / 2;
-
-    rect.top = (long)y1;
-    rect.bottom = (long)(y1 + height);
-
-    rect.left = (long)x1;
-    rect.right = (long)(x1 + width);
-    
-    DrawBorderScaled( device, INLINE_RECT(rect), bgARGB, mirror);
-    DrawTextScaled( device, font, x1, y1, size, text, ARGB, mirror);
-
-}
-
 typedef struct RawInput {
     BYTE dir = 0;
     BYTE btn = 0;
@@ -848,7 +654,6 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 #endif // RELEASE
 
     if(*((uint8_t*) 0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled()) { // check if in css
-        updateScaleParams(device);
         updateCSSStuff(device);
     }
 
@@ -957,6 +762,8 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
     if ( ! ( text[0].empty() && text[1].empty() && text[2].empty() && text[3].empty() && text[4].empty() ) )
     {
 
+        static unsigned frameCounter = 0;
+
         /*
         const int centerX = viewport.Width / 2;
 
@@ -1030,6 +837,15 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
                 DWORD textCol = 0xFFFFFFFF;
                 if(j == 0) {
                     textCol = 0xFF42e5f4;
+                }
+
+                if(j == 1 && i == 0) {
+                   
+                    frameCounter++;
+                    float f = std::abs((int)(frameCounter & 0b111111) - 32);
+                    f = ((-1.0f / 32.0f) * f) + 1.0f;
+
+                    textCol = avgColors(0xFFbd1a0b, 0xFF42e5f4, f);
                 }
 
                 if(i > 0 && shouldDrawSelector[i - 1] && j == selectorIndex[i - 1]) {

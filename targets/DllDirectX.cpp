@@ -377,6 +377,21 @@ void doUpdate() {
 	
 }
 
+COLOR avgColors(COLOR col1, COLOR col2, float f) {
+	
+	f = CLAMP(f, 0.0f, 1.0f);
+
+	COLOR res = 0;
+
+	res.a = (col1.a * (1 - f)) + (col2.a * f);
+	res.r = (col1.r * (1 - f)) + (col2.r * f);
+	res.g = (col1.g * (1 - f)) + (col2.g * f);
+	res.b = (col1.b * (1 - f)) + (col2.b * f);
+
+	return res;
+}
+
+
 void debugLinkedList();
 void displayDebugInfo();
 void debugImportantDraw();
@@ -1917,37 +1932,6 @@ void drawMeterBar(int i, Bar& bar) {
 
 	TextDraw(textPoint, meterSize, 0xFFFFFFFF, meterString.c_str());
 
-}
-
-typedef struct COLOR {
-	COLOR() {}
-	COLOR(DWORD d) : col(d) {}
-	union {
-		struct {
-			BYTE a = 0xFF;
-			BYTE r = 0;
-			BYTE g = 0;
-			BYTE b = 0;
-		};
-		DWORD col;
-	};
-	operator DWORD() const { return col; }
-} COLOR;
- 
-static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");
-
-COLOR avgColors(COLOR col1, COLOR col2, float f) {
-	
-	f = CLAMP(f, 0.0f, 1.0f);
-
-	COLOR res = 0;
-
-	res.a = (col1.a * (1 - f)) + (col2.a * f);
-	res.r = (col1.r * (1 - f)) + (col2.r * f);
-	res.g = (col1.g * (1 - f)) + (col2.g * f);
-	res.b = (col1.b * (1 - f)) + (col2.b * f);
-
-	return res;
 }
 
 void drawGuardBar(int i, Bar& bar) {

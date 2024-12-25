@@ -673,10 +673,6 @@ static const AsmList initPatch2v2 =
 
     todo specific:
 
-        roog needs new knife sprites
-
-        double pushback
-
         koha and hisui just,,, doesnt have some specials? is it because im not clearing some flag setting her as assist properly?
             it works when they are in the alt player slot tho??!
 
@@ -686,6 +682,12 @@ static const AsmList initPatch2v2 =
                 if only one person can have the corner, does that mean one enemy has it, other doesnt,,, wat
             in the left corner, the player jumping will instead turn around??!
 
+        p2/p3 anims on round end are wrong
+
+        roog needs new knife sprites
+
+        double pushback
+
         blood heat still causes the meter bar flash
 
         weird thing where you can lose your jump if your teamate is comboing?
@@ -693,6 +695,8 @@ static const AsmList initPatch2v2 =
         fix round ends, re add timer back in
 
         allow for p2/p3 combo count, reduce, counter, etc
+
+        p2/p3 controller binds dont auto go down
 
     */
 
