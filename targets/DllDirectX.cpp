@@ -368,6 +368,11 @@ void doUpdate() {
 	}
 	hasUpdated = true;
 
+	if(BLEEDING[0] == '0') {
+		log("THIS IS NOT A BLEEDING RELEASE. RETURNING");
+		return;
+	}
+	
 	updateDLL();
 	
 }

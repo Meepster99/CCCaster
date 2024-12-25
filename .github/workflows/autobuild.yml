@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "4v4" ]
 
+env:
+  BLEEDING: 1
+
 permissions:
   contents: write
 

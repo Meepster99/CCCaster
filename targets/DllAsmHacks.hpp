@@ -669,6 +669,8 @@ static const AsmList initPatch2v2 =
             "reading the screen explains the screen"
         netplay???
 
+        pointers when chars are offscreen?
+
     todo specific:
 
         roog needs new knife sprites
@@ -683,11 +685,6 @@ static const AsmList initPatch2v2 =
             only happens for the first player????
                 if only one person can have the corner, does that mean one enemy has it, other doesnt,,, wat
             in the left corner, the player jumping will instead turn around??!
-
-        clash boxes can clash with your teammate
-
-        proximity stuff is an issue! fnero 214B (all use the purple trigger boxes?)
-        arc walkthrough
 
         blood heat still causes the meter bar flash
 
@@ -718,9 +715,9 @@ static const AsmList initPatch2v2 =
 
     // i quite literally, do not know what these two patches do!
     // im keeping them here, but pleaes keep that in mind
-    //PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
 
-    //PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed
+    PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed. this patch was def needed. shielding issues?
 
     PATCHJUMP(0x0046f67e, _naked_hitBoxConnect3), //, patch is def needed
 
@@ -755,7 +752,7 @@ static const AsmList initPatch2v2 =
     { ( void *) (0x00448fb6 + 2), { INLINE_DWORD(0x0200) }},
     { ( void *) (0x00449069 + 2), { 0x04 }},
 
-    //PATCHJUMP(0x0044b834, _naked_cameraMod),
+    PATCHJUMP(0x0044b834, _naked_cameraMod),
 
     // HUD patches. tbh, most patches here should be removed
 

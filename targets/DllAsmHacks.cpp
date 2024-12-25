@@ -725,7 +725,7 @@ void cameraMod() {
 
     float* zoom = (float*)0x0054eb70;
 
-    *zoom = (*zoom * 0.90f); // i reallllly hope this var is regenerated every frame so this doesnt go to 0 :3
+    *zoom = (*zoom * 0.75f); // i reallllly hope this var is regenerated every frame so this doesnt go to 0 :3
 
 }
 
