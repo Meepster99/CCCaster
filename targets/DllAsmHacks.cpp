@@ -422,9 +422,11 @@ void charTurnAround2() {
 
     int ourXPos = *(int*)(naked_charTurnAroundParam1 + 0x104);
     int otherXPos = *(int*)(0x00555130 + 0x4 + 0x104 + (goal * 0xAFC));
-
-    *(BYTE*)(naked_charTurnAroundParam1 + 0x311) = otherXPos < ourXPos;
-
+    
+    if(otherXPos != ourXPos) { // this,,, might fix some issues in corner? should this comparison also check if the xval is actually in the corner?
+        *(BYTE*)(naked_charTurnAroundParam1 + 0x311) = otherXPos < ourXPos;
+    }
+    
     naked_charTurnAroundStateRes = 0;
 
 }

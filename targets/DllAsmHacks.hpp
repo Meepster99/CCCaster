@@ -675,14 +675,14 @@ static const AsmList initPatch2v2 =
 
         pointers when chars are offscreen?
 
+        maybe camera changes?
+
     todo specific:
 
-        require FN1 to be bound on all players, flash a color, blah blah yea
+        proration is stored in the attacker, not defender.
+            this is not an easy fix, unless i do some super weird things
 
-        koha and hisui just,,, doesnt have some specials? is it because im not clearing some flag setting her as assist properly?
-            it works when they are in the alt player slot tho??!
-            changing port fixes this!!! its a hard port comparison
-            comboData + C fixes this. comparison at 0046dbf1
+        require FN1 to be bound on all players, flash a color, blah blah yea
 
         corner priority is suuuuper fucked up, look into it
             happens in right corner, doesnt in left?
@@ -705,7 +705,7 @@ static const AsmList initPatch2v2 =
         allow for p2/p3 combo count, reduce, counter, etc
 
 
-    notes:
+    notes for if i ever do css. ugh check the other branch too:
 
         patch 00489d78 to 770
         patch 00489f99 to 770
