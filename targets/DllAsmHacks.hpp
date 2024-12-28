@@ -656,6 +656,10 @@ __attribute__((naked, noinline)) void _naked_drawWinCount();
 
 __attribute__((naked, noinline)) void _naked_drawRoundDots();
 
+// -----
+
+__attribute__((naked, noinline)) void _naked_cssTest();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -673,8 +677,12 @@ static const AsmList initPatch2v2 =
 
     todo specific:
 
+        require FN1 to be bound on all players, flash a color, blah blah yea
+
         koha and hisui just,,, doesnt have some specials? is it because im not clearing some flag setting her as assist properly?
             it works when they are in the alt player slot tho??!
+            changing port fixes this!!! its a hard port comparison
+            comboData + C fixes this. comparison at 0046dbf1
 
         corner priority is suuuuper fucked up, look into it
             happens in right corner, doesnt in left?
@@ -695,6 +703,25 @@ static const AsmList initPatch2v2 =
         fix round ends, re add timer back in
 
         allow for p2/p3 combo count, reduce, counter, etc
+
+
+    notes:
+
+        patch 00489d78 to 770
+        patch 00489f99 to 770
+        PATCH 0048aae1 TO 4 NOW WORKS
+        im so good with it
+
+        if you remove the write at 0048A552, +4 can actually load their names!!!
+        patch 0048a6d0 to 0x74d994
+
+        patch 00427b38 to 0x74d978 
+
+        [0074d808] + 1dc + 1dc + 170
+
+        [0074d808] + 1dc + 1dc + 1b0
+
+
 
     */
 
@@ -786,7 +813,11 @@ static const AsmList initPatch2v2 =
 
     { ( void * ) (0x00425a84 + 2), { 0x04 }}, // allow for 4 draw calls to occur in the drawPortraitsAndNames loop
 
-    { ( void * ) (0x00425907 + 2), { 0x04 }} // allow for 4 draw calls during drawMoonsAndPalette
+    { ( void * ) (0x00425907 + 2), { 0x04 }}, // allow for 4 draw calls during drawMoonsAndPalette
+
+    // css 
+
+    PATCHJUMP(0x00485cde, _naked_cssTest)
 
 };
 
@@ -809,7 +840,13 @@ static const AsmList patch2v2 =
     { ( void * ) (0x00555130 + 0x32C + (0 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x00555130 + 0x32C + (1 * 0xAFC)), { INLINE_DWORD(0x00) } },
     { ( void * ) (0x00555130 + 0x32C + (2 * 0xAFC)), { INLINE_DWORD(0x00) } },
-    { ( void * ) (0x00555130 + 0x32C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } }
+    { ( void * ) (0x00555130 + 0x32C + (3 * 0xAFC)), { INLINE_DWORD(0x00) } },
+
+    // fixes hisui and koha missing moves
+    { ( void * ) (0x00557DB8 + 0xC + (0 * 0x20C)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00557DB8 + 0xC + (1 * 0x20C)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00557DB8 + 0xC + (2 * 0x20C)), { INLINE_DWORD(0x00) } },
+    { ( void * ) (0x00557DB8 + 0xC + (3 * 0x20C)), { INLINE_DWORD(0x00) } },
 
 };
 

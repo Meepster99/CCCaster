@@ -785,4 +785,21 @@ void _naked_drawRoundDots() {
     emitJump(0x00424951); 
 }
 
+// -----
+
+void _naked_cssTest() {
+
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+
+
+    emitCall(0x00485F40);
+    
+    emitJump(0x00485ce3);
+}
+
 } // namespace AsmHacks
