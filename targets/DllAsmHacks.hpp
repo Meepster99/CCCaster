@@ -660,6 +660,8 @@ __attribute__((naked, noinline)) void _naked_drawRoundDots();
 
 __attribute__((naked, noinline)) void _naked_cssTest();
 
+__attribute__((naked, noinline)) void _naked_modifyCSSPixelDraw();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -677,24 +679,21 @@ static const AsmList initPatch2v2 =
 
         maybe camera changes?
 
+        require FN1 to be bound on all players, flash a color, blah blah yea
+
     todo specific:
+
+        double pushback
 
         proration is stored in the attacker, not defender.
             this is not an easy fix, unless i do some super weird things
 
-        require FN1 to be bound on all players, flash a color, blah blah yea
-
         corner priority is suuuuper fucked up, look into it
-            happens in right corner, doesnt in left?
-            only happens for the first player????
-                if only one person can have the corner, does that mean one enemy has it, other doesnt,,, wat
-            in the left corner, the player jumping will instead turn around??!
+            might still be fucked
 
         p2/p3 anims on round end are wrong
 
         roog needs new knife sprites
-
-        double pushback
 
         blood heat still causes the meter bar flash
 
@@ -706,21 +705,108 @@ static const AsmList initPatch2v2 =
 
 
     notes for if i ever do css. ugh check the other branch too:
+    
+        current:
+
+        patch 00489d78 to 770
+        patch 00489f99 to 770
+        PATCH 00489d14 TO 770 // might need a stack boost
+        patch 0048a6d0 to 0x74d994
+        patch 0048aae1 to 4. thats it. thats everything. fuck this game. god i spend literal days of work, just for 5 sets of numbers to be it. 
+
+        at this point, even just moving around p1/p2 fucks things up.
+        it only crashes on p1 select?? and ugh its crashing during rendering not linkedlist. thats really bad
+        nope! i was just running 2 casters
+        ok no, the bug is random!!! and not easily reproducible!!! yay 
+            player 1 can select sion, no one else??
+            player 2 can do whatever?
+            heaven says, this is def a use after free
+            or its,,,, moon shit fucking things up??
+            regardless, i need to ask myself if this is an actual issue, or something i will choose to not solve bc im gutting half of css anyways
+            the value that edx seems to die on is the char id value?
+                AND SION WORKS BC THE NULL CHECKING WORKS
+                this is horrid. gives me no leads
+
+                tracking:
+                    edx in clearviewport comes from   0041653b 8b 17           MOV        EDX,dword ptr [EDI]
+                    edi comes from         0041563e 8d 7c 24 10     LEA        EDI=>local_80,[ESP + 0x10]
+                    this is then from 004155f3 [ebp + texture]
+                    god. im going to need to figure out the tex format, arent i
+
+                    the next ret addr is 00485ce3. is something overwriting the stack?!?!
+
+                    todo, hook 0041564d and have it log the value of eax.
+
+
+
+
+
 
         patch 00489d78 to 770
         patch 00489f99 to 770
         PATCH 0048aae1 TO 4 NOW WORKS
-        im so good with it
+        im so good with it (does this only work in vs mode?) actually this doesnt seem to be,, working? at all? am i stupid? did i not write down a step?
+        i forget. enter and leave a battle to have these changes apply. make the changes inside a battle
 
-        if you remove the write at 0048A552, +4 can actually load their names!!!
+        PATCH 00489d14 TO 770 // might need a stack boost
+
+        crash in clearviewport
+            004163e3, derefing an edx of 0xC
+            caller: 00416541
+            derefing edi, which is on the stack. i was right, totally needed a stack boost
+
+
         patch 0048a6d0 to 0x74d994
 
-        patch 00427b38 to 0x74d978 
+
+        # this stack boost might not be needed
+        PATCH 00489b80 to at least 0x1000 STACK BOOST
+        PATCH 00489d52 to same value!!
+        im so good with it
+
+        pause here. are all the below patches needed? 
+
+
+
+
+        patch 0048a6d0 to 0x74d994 // now doing this patch causes the same bug with viewport. stack boost?!
+            patch 0048a4e0 to 7F (worried about signing) also, how have any of my stack boosts, ever worked???? 
+            patch 0048a6f1 to 7F
+
+            ok. in this state, things are BEYOND fucked. this is most likely because of me realizing how stupid my stack boosts are and that they are super jank
+            im offsetting the stack, this isnt a thread func. it is RELYING ON OLDER STACK INFO!
+            also i dont even know for sure if this func, or its children, is the one overwriting the stack
+
+            there are glimmers of hope though. things load in, spam a/b on a char and see what happens
+            no wait all of this happened when i only did the stack boost and not the needed patch
+
+            ok the crash occurs. and it occurs with the first call of 00485cde
+            its weird though, i can move around a lil bit, 2-3 times, before this crash occurs?
+            but ok. things arent being properly inited edx was 0x13 this time. weird
+                something is mega weird with the stack
+                    00416546 in renderonscreen calling clearviewport
+                    00415652 in drawTexture calling renderOnScreen
+
+                    00485ce3 in drawpixelprev calling drawpixelprev_maybe
+                    0048aa9c in cssLinkListAddCharPreview calling DrawTexture????? the stack must be getting messed up
+
+            ok. the error is sourced from 0048a720
+            the stack boost isnt even needed???
+
+        patch 00427b38 to 0x74d978 // unsure abt this one
+
+        patch 00428500 to 0x74d980
 
         [0074d808] + 1dc + 1dc + 170
 
         [0074d808] + 1dc + 1dc + 1b0
 
+        if you remove the write at 0048A552, +4 can actually load their names!!!
+
+        current:
+
+         
+       
 
 
     */
@@ -817,8 +903,21 @@ static const AsmList initPatch2v2 =
 
     // css 
 
-    PATCHJUMP(0x00485cde, _naked_cssTest)
+    //PATCHJUMP(0x00485cde, _naked_cssTest)
 
+    { ( void * ) (0x00489d78 + 1), { INLINE_DWORD(0x770) } },
+    { ( void * ) (0x00489f99 + 2), { INLINE_DWORD(0x770) } },
+
+    { ( void * ) (0x00489d14 + 1), { INLINE_DWORD(0x770) } }, // css thread loader
+
+    { ( void * ) (0x0048a6d0 + 2), { INLINE_DWORD(0x74d994) } },
+
+    { ( void * ) (0x0048aae1 + 2), { 0x04 } },
+
+    { ( void * ) (0x00485CA9), { 0x8B, 0xC5, 0x24, 0x01, 0x90 } }, // hacky bytecode to fix char facing. i didnt want to write another func jump ok?
+
+    PATCHJUMP(0x0048aad6, _naked_modifyCSSPixelDraw)
+    
 };
 
 static const AsmList patch2v2 = 

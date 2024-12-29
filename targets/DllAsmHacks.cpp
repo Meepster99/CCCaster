@@ -665,7 +665,7 @@ void _naked_checkRoundDone() {
         JGE FAIL;
 
         mov eax, 0; // OK        
-        END:
+        checkrounddoneEND:
         pop ebx;     
         
         push 0x00474641; // jump to resume
@@ -673,7 +673,7 @@ void _naked_checkRoundDone() {
 
         FAIL:
         mov eax, 1; // end the round
-        JMP END;
+        JMP checkrounddoneEND;
     )" __asmEnd
 }
 
@@ -802,6 +802,56 @@ void _naked_cssTest() {
     emitCall(0x00485F40);
     
     emitJump(0x00485ce3);
+}
+
+void _naked_modifyCSSPixelDraw() {
+
+    /*/ weird shits occuring in here:
+    you have access to the following(i think, so far)
+
+    eax is xPos
+    ebp is char Index
+
+    if visual studio messes up block indentation one more time i will freak
+    */
+
+    __asmStart R"(
+
+        // not the fastest, but its quick and easy
+
+        cmp ebp, 0;
+        JE ZERO;
+
+        cmp ebp, 1;
+        JE ONE;
+
+        cmp ebp, 2;
+        JE TWO;        
+
+        // being here means 3
+        mov eax, 600;
+        JMP csspixeldrawEND;
+
+        ZERO:
+        mov eax, 80;
+        JMP csspixeldrawEND;
+
+        ONE:
+        mov eax, 560;
+        JMP csspixeldrawEND;
+
+        TWO:
+        mov eax, 40;
+
+        csspixeldrawEND:
+
+        //imul eax, ebp, 0x40;
+    )" __asmEnd
+
+    emitCall(0x00485b80); // original func
+
+    emitJump(0x0048aadb);
+
 }
 
 } // namespace AsmHacks
