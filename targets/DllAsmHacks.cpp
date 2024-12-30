@@ -894,4 +894,64 @@ void _naked_drawTextureLogger() {
 
 }
 
+void _naked_CSSConfirmExtend() {
+
+    // patch at 0x00427563
+
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+    NOPS
+
+    emitJump(0x00427588);
+}
+
+void _naked_CSSWaitToSelectStage() {
+
+    // 0042794c
+
+
+    __asmStart R"(
+
+        // weirdly, should be 6, not 5 if we are heading to stage sel
+        // i can use eax and edi freely
+        // i do not know if [0x12345678] or offset [0x12345678] is needed
+
+        push ebx;
+
+        mov eax, 6;
+        mov ebx, 0x0074D8EC;
+
+    naked_CSSWaitToSelectStage_LOOP:
+        cmp ebx, (0x0074D8EC + (4 * 0x24));
+        JG naked_CSSWaitToSelectStage_END;
+
+        mov edi, [ebx];
+        cmp edi, 3
+        JGE naked_CSSWaitToSelectStage_CONT;
+
+        cmp edi, eax;
+        JGE naked_CSSWaitToSelectStage_CONT;
+
+        mov eax, edi;
+
+    naked_CSSWaitToSelectStage_CONT:
+
+        add ebx, 0x24;
+        jmp naked_CSSWaitToSelectStage_LOOP;
+
+    naked_CSSWaitToSelectStage_END:
+        pop ebx;
+
+        xor edi, edi;
+        mov [esp + 8], eax;
+
+    )" __asmEnd
+
+    emitJump(0x00427972);
+
+}
+
 } // namespace AsmHacks

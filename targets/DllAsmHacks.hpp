@@ -666,6 +666,10 @@ __attribute__((noinline)) void drawTextureLogger();
 
 __attribute__((naked, noinline)) void _naked_drawTextureLogger();
 
+__attribute__((naked, noinline)) void _naked_CSSConfirmExtend();
+
+__attribute__((naked, noinline)) void _naked_CSSWaitToSelectStage();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -752,76 +756,87 @@ static const AsmList initPatch2v2 =
                     interesting. its a call i plan on deprecating tbh, well its one i dont really even know what it does, but its going away now
                     oh nope, its for the english names!!!
 
+        ok so now, need to remake what i did in the 4v4css branch, but in a less shitty manner
+        00427920 will def need some changes
+        00486bb0
+
+        0048b250. drawPaletteSwapMenu. im getting flashbacks
+        0048bb80 cssLinkListAddCharGridAndCursor
+
+        tbh, the stuff i did in 4v4 css "worked" but those quotes are heavy.
+        not looking at any of the work i did there for this.
+
+        0048bb80 cssLinkListAddCharGridAndCursor
+            working on this one first
+            two loops, first one almost definitely draws the grid of chars
+            second one is what i care about, and has a loop starting at 2, decing
+
+            change ports in the cssing structs
+
+            patch 0048bd5c to 4
+
+            patch 00428342 to 4 // THIS ONE SEEMS POTENTIALLY HORRIBLE
+
+            noped 00427f72 // do these first
+            noped 00427fd2 
+
+            patch 00427b38 to 0x74d978
+
+            patch 0048b276 to 0x74d97c
+
+            patch 004274e7 to 4?
+
+            ok wat its not crashing anymore?
+            i forgot what patches i did
+            yuppee
+
+            # this allowed me to move as all chars, and shit worked. however, selecting a palette crashed 
+            crash was at 0048DDDA
+            this is totally bc palette/moon/char stuff is an alloc somewhere(hopefully not global static) and im corrupting things
+            there are some structs with sizes im not familiar with 
+                eax is junk.
+                mov eax, [esi+8]
+                esi is 050AEAA8, i recognize that as the animation css alloc location. (NOPE IT ISNT)
+                0048dd65 8b f0           MOV        ESI,EAX
+                0048dd09 8b c6           MOV        EAX,ESI
+                0048dd04 8d 34 c1        LEA        ESI,[ECX + EAX*0x8]
+                    0048dcf0 8b 0d dc 17 77 00        MOV        ECX,dword ptr [DAT_007717dc]  # we know what and where ecx is, not tracing anymore
+                0048dcf6 8d 04 fd 00 00 00 00        LEA        EAX,[EDI*0x8 + 0x0]
+                00428101 8b f9           MOV        EDI,ECX
+                00427ae1 8b cf           MOV        ECX,EDI # edi has the index of the char. this is an array out of bounds
 
 
+                 
 
 
+            004279D7, and 00428300  need changing 
 
-        patch 00489d78 to 770
-        patch 00489f99 to 770
-        PATCH 0048aae1 TO 4 NOW WORKS
-        im so good with it (does this only work in vs mode?) actually this doesnt seem to be,, working? at all? am i stupid? did i not write down a step?
-        i forget. enter and leave a battle to have these changes apply. make the changes inside a battle
+            trying new shit
+              0048CA7C is what inits the css 
+          
+            patch 0048cb39 to 0x7746a0
+            patch 004274e7 to 4
+            patch 00427b38 to 0x74d978
+            patch 0048bd5c to 4
 
-        PATCH 00489d14 TO 770 // might need a stack boost
-
-        crash in clearviewport
-            004163e3, derefing an edx of 0xC
-            caller: 00416541
-            derefing edi, which is on the stack. i was right, totally needed a stack boost
-
-
-        patch 0048a6d0 to 0x74d994
-
-
-        # this stack boost might not be needed
-        PATCH 00489b80 to at least 0x1000 STACK BOOST
-        PATCH 00489d52 to same value!!
-        im so good with it
-
-        pause here. are all the below patches needed? 
-
-
-
-
-        patch 0048a6d0 to 0x74d994 // now doing this patch causes the same bug with viewport. stack boost?!
-            patch 0048a4e0 to 7F (worried about signing) also, how have any of my stack boosts, ever worked???? 
-            patch 0048a6f1 to 7F
-
-            ok. in this state, things are BEYOND fucked. this is most likely because of me realizing how stupid my stack boosts are and that they are super jank
-            im offsetting the stack, this isnt a thread func. it is RELYING ON OLDER STACK INFO!
-            also i dont even know for sure if this func, or its children, is the one overwriting the stack
-
-            there are glimmers of hope though. things load in, spam a/b on a char and see what happens
-            no wait all of this happened when i only did the stack boost and not the needed patch
-
-            ok the crash occurs. and it occurs with the first call of 00485cde
-            its weird though, i can move around a lil bit, 2-3 times, before this crash occurs?
-            but ok. things arent being properly inited edx was 0x13 this time. weird
-                something is mega weird with the stack
-                    00416546 in renderonscreen calling clearviewport
-                    00415652 in drawTexture calling renderOnScreen
-
-                    00485ce3 in drawpixelprev calling drawpixelprev_maybe
-                    0048aa9c in cssLinkListAddCharPreview calling DrawTexture????? the stack must be getting messed up
-
-            ok. the error is sourced from 0048a720
-            the stack boost isnt even needed???
-
-        patch 00427b38 to 0x74d978 // unsure abt this one
-
-        patch 00428500 to 0x74d980
-
-        [0074d808] + 1dc + 1dc + 170
-
-        [0074d808] + 1dc + 1dc + 1b0
-
-        if you remove the write at 0048A552, +4 can actually load their names!!!
-
-        current:
-
-         
+            need to like,, omfg default valuees in the css struct
        
+            code at 00427565 NEEDS TO BE EXTENDED
+
+            004274e7 to 4 // this patch prevents me from continuing on into map pick, but still displays it. the check must be for all 4, while the display only for 2? wheres the display. also, caster is on some shit rn. 0042794c needs patch
+
+            0048bd5c to 4
+            patch 0048cb39 to 0x7746a0
+            patch 00427b38 to 0x74d978
+
+            patch 00428342 to 4,,
+
+            im going to need to essentially patch out all of their controller handling, and use my own
+            ugh
+
+            0048bd5c to 4, draw 4 profiles
+            00428342 to 4, handle all controllers?? 
+            00427b38 to 0x74d978 main css loop, needed for a bunch of things, most likely case a bunch of issues
 
 
     */
@@ -935,8 +950,16 @@ static const AsmList initPatch2v2 =
 
     //PATCHJUMP(0x00415580, _naked_drawTextureLogger)
 
-    { ( void *) (0x0048aa28), INLINE_NOP_FIVE_TIMES}, // name draws caused crashes.
-    { ( void *) (0x0048aa97), INLINE_NOP_FIVE_TIMES} // name draws caused crashes.
+    { ( void * ) (0x0048aa28), INLINE_NOP_FIVE_TIMES}, // name draws caused crashes.
+    { ( void * ) (0x0048aa97), INLINE_NOP_FIVE_TIMES}, // name draws caused crashes.
+    { ( void * ) (0x0048a85e), INLINE_NOP_FIVE_TIMES}, // stop drawing big preview
+    { ( void * ) (0x0048a995), INLINE_NOP_FIVE_TIMES}, // stop drawing the shadow behind the big previews
+
+    //PATCHJUMP(0x00427563, _naked_CSSConfirmExtend),
+    
+    //PATCHJUMP(0x0042794c, _naked_CSSWaitToSelectStage)
+
+    //{ ( void * ) (0x0048cb39 + 1), { INLINE_DWORD(0x7746a0) } } // patch the css loader to init 4 times. this causes crashes when coming in????
 
 };
 

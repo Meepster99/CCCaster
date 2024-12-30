@@ -459,6 +459,32 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
         (CSSStructCopy*)(0x0074d83C + (3 * 0x2C))
     };
 
+    typedef struct CSSStructDisplay {
+        unsigned unknown1;
+        unsigned cssPhase;
+        unsigned portNumber;
+        unsigned existsIfMinusOne;
+        unsigned gridPos;
+        unsigned charID;
+        unsigned moon;
+        unsigned palette;
+        unsigned unknown2;
+    } CSSStructDisplay;
+
+    static_assert(sizeof(CSSStructDisplay) == 0x24, "CSSStructDisplay must be size 0x24");
+
+    CSSStructDisplay* dispPlayer0 = (CSSStructDisplay*)(0x0074D8E8 + (0 * 0x24));
+    CSSStructDisplay* dispPlayer1 = (CSSStructDisplay*)(0x0074D8E8 + (1 * 0x24));
+    CSSStructDisplay* dispPlayer2 = (CSSStructDisplay*)(0x0074D8E8 + (2 * 0x24));
+    CSSStructDisplay* dispPlayer3 = (CSSStructDisplay*)(0x0074D8E8 + (3 * 0x24));
+
+    CSSStructDisplay* dispPlayers[4] = {
+        (CSSStructDisplay*)(0x0074D8E8 + (0 * 0x24)),
+        (CSSStructDisplay*)(0x0074D8E8 + (1 * 0x24)),
+        (CSSStructDisplay*)(0x0074D8E8 + (2 * 0x24)),
+        (CSSStructDisplay*)(0x0074D8E8 + (3 * 0x24))
+    };
+
     static_assert(sizeof(charIDList) / sizeof(charIDList[0]) == sizeof(charIDNames) / sizeof(charIDNames[0]), "length of name and id list must be the same");
     constexpr int charIDCount = sizeof(charIDList) / sizeof(charIDList[0]); 
 
@@ -525,6 +551,8 @@ void updateCSSStuff(IDirect3DDevice9 *device) {
             DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
 
             players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
+            dispPlayers[playerIndex]->charID = players[playerIndex]->charID;
+            dispPlayers[playerIndex]->palette = players[playerIndex]->palette;
 
             int displayIndex = playerIndex;
             if(displayIndex == 1) {
