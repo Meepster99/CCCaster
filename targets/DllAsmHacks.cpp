@@ -806,11 +806,15 @@ void _naked_cssTest() {
 
 void _naked_modifyCSSPixelDraw() {
 
+    // patched at 0x0048aad6
+
     /*/ weird shits occuring in here:
     you have access to the following(i think, so far)
 
     eax is xPos
+    esp+4 has yPos
     ebp is char Index
+    need to find the ypos too (maybe, not sure)
 
     if visual studio messes up block indentation one more time i will freak
     */
@@ -829,19 +833,19 @@ void _naked_modifyCSSPixelDraw() {
         JE TWO;        
 
         // being here means 3
-        mov eax, 600;
+        mov eax, 580;
         JMP csspixeldrawEND;
 
         ZERO:
-        mov eax, 80;
+        mov eax, 120;
         JMP csspixeldrawEND;
 
         ONE:
-        mov eax, 560;
+        mov eax, 520;
         JMP csspixeldrawEND;
 
         TWO:
-        mov eax, 40;
+        mov eax, 60;
 
         csspixeldrawEND:
 
@@ -851,6 +855,42 @@ void _naked_modifyCSSPixelDraw() {
     emitCall(0x00485b80); // original func
 
     emitJump(0x0048aadb);
+
+}
+
+extern "C" {
+    DWORD drawTextureLoggerESP;
+}  
+
+void drawTextureLogger() {
+
+    DWORD ret = *(DWORD*)(drawTextureLoggerESP + 0x0);
+    DWORD tex = *(DWORD*)(drawTextureLoggerESP + 0x8);
+    
+    log("DrawTexture called from %08X tex: %08X", ret, tex);
+
+}
+
+void _naked_drawTextureLogger() {
+    
+    // patched at 00415580
+
+    __asmStart R"(
+        mov _drawTextureLoggerESP, esp;
+    )" __asmEnd
+
+    PUSH_ALL;
+    drawTextureLogger();
+    POP_ALL;
+
+    // overwritten asm
+    __asmStart R"(
+        push ebp;
+        mov ebp, esp;
+        and esp,0xfffffff8;
+    )" __asmEnd
+
+    emitJump(0x00415586);
 
 }
 

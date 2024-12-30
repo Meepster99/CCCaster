@@ -662,6 +662,10 @@ __attribute__((naked, noinline)) void _naked_cssTest();
 
 __attribute__((naked, noinline)) void _naked_modifyCSSPixelDraw();
 
+__attribute__((noinline)) void drawTextureLogger();
+
+__attribute__((naked, noinline)) void _naked_drawTextureLogger();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -735,7 +739,18 @@ static const AsmList initPatch2v2 =
 
                     the next ret addr is 00485ce3. is something overwriting the stack?!?!
 
-                    todo, hook 0041564d and have it log the value of eax.
+                    todo, hook 0041564d and have it log the value of eax. 
+                ok, hooked drawtexture, found some things.
+                    DrawTexture called from 0048A99A tex: 053680C0
+                    DrawTexture called from 0048AA2D tex: 00000000 # these nulls occur normally! but 
+                    DrawTexture called from 0048AA9C tex: 00000000 
+                    DrawTexture called from 0048A863 tex: 05368120
+                    DrawTexture called from 0048A99A tex: 05368120
+                    DrawTexture called from 0048AA2D tex: 00000000
+                    DrawTexture called from 0048AA9C tex: 00000001 # this is what kills us
+
+                    interesting. its a call i plan on deprecating tbh, well its one i dont really even know what it does, but its going away now
+                    oh nope, its for the english names!!!
 
 
 
@@ -916,8 +931,13 @@ static const AsmList initPatch2v2 =
 
     { ( void * ) (0x00485CA9), { 0x8B, 0xC5, 0x24, 0x01, 0x90 } }, // hacky bytecode to fix char facing. i didnt want to write another func jump ok?
 
-    PATCHJUMP(0x0048aad6, _naked_modifyCSSPixelDraw)
-    
+    PATCHJUMP(0x0048aad6, _naked_modifyCSSPixelDraw),
+
+    //PATCHJUMP(0x00415580, _naked_drawTextureLogger)
+
+    { ( void *) (0x0048aa28), INLINE_NOP_FIVE_TIMES}, // name draws caused crashes.
+    { ( void *) (0x0048aa97), INLINE_NOP_FIVE_TIMES} // name draws caused crashes.
+
 };
 
 static const AsmList patch2v2 = 
