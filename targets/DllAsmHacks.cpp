@@ -832,20 +832,28 @@ void _naked_modifyCSSPixelDraw() {
         cmp ebp, 2;
         JE TWO;        
 
-        // being here means 3
-        mov eax, 580;
-        JMP csspixeldrawEND;
-
-        ZERO:
-        mov eax, 120;
+        // THREE:
+        mov eax, 300;
+        mov [esp + 4], eax;
+        mov eax, (640 - 60);
         JMP csspixeldrawEND;
 
         ONE:
-        mov eax, 520;
+        mov eax, 448;
+        mov [esp + 4], eax;
+        mov eax, (640 - 60 - 80);
+        JMP csspixeldrawEND;
+
+        ZERO:
+        mov eax, 448;
+        mov [esp + 4], eax;
+        mov eax, (60 + 80);
         JMP csspixeldrawEND;
 
         TWO:
-        mov eax, 60;
+        mov eax, 300;
+        mov [esp + 4], eax;
+        mov eax, (60);
 
         csspixeldrawEND:
 
@@ -951,6 +959,44 @@ void _naked_CSSWaitToSelectStage() {
     )" __asmEnd
 
     emitJump(0x00427972);
+
+}
+
+void _naked_cssInit() {
+
+    // patch at 0048cb4b
+
+    PUSH_ALL;
+    cssInit();
+    POP_ALL;
+
+    __asmStart R"(
+        pop ebx;
+        pop ecx;
+        ret;
+    )" __asmEnd
+}
+
+void _naked_stageSelCallback() {
+
+    // patched at 004888e2 and 004888f0
+
+    __asmStart R"(
+        mov _stageSelEAX, eax;
+    )" __asmEnd
+
+    PUSH_ALL;
+    stageSelCallback();
+    POP_ALL;
+
+    __asmStart R"(
+        
+        mov eax, _stageSelEAX;
+        
+        pop ebx;
+        add esp, 0x8;
+        ret;
+    )" __asmEnd
 
 }
 

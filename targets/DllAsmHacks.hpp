@@ -3,6 +3,7 @@
 #include "Constants.hpp"
 #include "Exceptions.hpp"
 #include "DllNetplayManager.hpp"
+#include "DllCSS.hpp"
 
 #include <stdio.h>
 #include <vector>
@@ -139,6 +140,8 @@
 #define PATCHJUMP(patchAddr, newAddr) PATCHJUMP_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
 
 #define PATCHCALL(patchAddr, newAddr) PATCHCALL_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
+
+#define DISABLECALL(patchAddr) { ( void *) (patchAddr), INLINE_NOP_FIVE_TIMES }
 
 namespace AsmHacks
 {
@@ -670,6 +673,10 @@ __attribute__((naked, noinline)) void _naked_CSSConfirmExtend();
 
 __attribute__((naked, noinline)) void _naked_CSSWaitToSelectStage();
 
+__attribute__((naked, noinline)) void _naked_cssInit();
+
+__attribute__((naked, noinline)) void _naked_stageSelCallback();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -689,7 +696,7 @@ static const AsmList initPatch2v2 =
 
         require FN1 to be bound on all players, flash a color, blah blah yea
 
-    todo specific:
+    todo ingame:
 
         double pushback
 
@@ -711,132 +718,29 @@ static const AsmList initPatch2v2 =
 
         allow for p2/p3 combo count, reduce, counter, etc
 
-
-    notes for if i ever do css. ugh check the other branch too:
+    todo css:
     
-        current:
+        issue. 
+        moon and palette shit is not in heap. 
+        and only has size for 2.
+        at this point, i have the pixel previews. 
+        i just should remake css.
 
-        patch 00489d78 to 770
-        patch 00489f99 to 770
-        PATCH 00489d14 TO 770 // might need a stack boost
-        patch 0048a6d0 to 0x74d994
-        patch 0048aae1 to 4. thats it. thats everything. fuck this game. god i spend literal days of work, just for 5 sets of numbers to be it. 
+        need to:
+            patch out whatever grabs the controls
+            disable the existing char rect selectors that get moved (replace with own)
+                might have to patch out the,, sounds of them too?
 
-        at this point, even just moving around p1/p2 fucks things up.
-        it only crashes on p1 select?? and ugh its crashing during rendering not linkedlist. thats really bad
-        nope! i was just running 2 casters
-        ok no, the bug is random!!! and not easily reproducible!!! yay 
-            player 1 can select sion, no one else??
-            player 2 can do whatever?
-            heaven says, this is def a use after free
-            or its,,,, moon shit fucking things up??
-            regardless, i need to ask myself if this is an actual issue, or something i will choose to not solve bc im gutting half of css anyways
-            the value that edx seems to die on is the char id value?
-                AND SION WORKS BC THE NULL CHECKING WORKS
-                this is horrid. gives me no leads
+            
+            ill remake the palette thing to at least not be a counter
 
-                tracking:
-                    edx in clearviewport comes from   0041653b 8b 17           MOV        EDX,dword ptr [EDI]
-                    edi comes from         0041563e 8d 7c 24 10     LEA        EDI=>local_80,[ESP + 0x10]
-                    this is then from 004155f3 [ebp + texture]
-                    god. im going to need to figure out the tex format, arent i
-
-                    the next ret addr is 00485ce3. is something overwriting the stack?!?!
-
-                    todo, hook 0041564d and have it log the value of eax. 
-                ok, hooked drawtexture, found some things.
-                    DrawTexture called from 0048A99A tex: 053680C0
-                    DrawTexture called from 0048AA2D tex: 00000000 # these nulls occur normally! but 
-                    DrawTexture called from 0048AA9C tex: 00000000 
-                    DrawTexture called from 0048A863 tex: 05368120
-                    DrawTexture called from 0048A99A tex: 05368120
-                    DrawTexture called from 0048AA2D tex: 00000000
-                    DrawTexture called from 0048AA9C tex: 00000001 # this is what kills us
-
-                    interesting. its a call i plan on deprecating tbh, well its one i dont really even know what it does, but its going away now
-                    oh nope, its for the english names!!!
-
-        ok so now, need to remake what i did in the 4v4css branch, but in a less shitty manner
-        00427920 will def need some changes
-        00486bb0
-
-        0048b250. drawPaletteSwapMenu. im getting flashbacks
-        0048bb80 cssLinkListAddCharGridAndCursor
-
-        tbh, the stuff i did in 4v4 css "worked" but those quotes are heavy.
-        not looking at any of the work i did there for this.
-
-        0048bb80 cssLinkListAddCharGridAndCursor
-            working on this one first
-            two loops, first one almost definitely draws the grid of chars
-            second one is what i care about, and has a loop starting at 2, decing
-
-            change ports in the cssing structs
-
-            patch 0048bd5c to 4
-
-            patch 00428342 to 4 // THIS ONE SEEMS POTENTIALLY HORRIBLE
-
-            noped 00427f72 // do these first
-            noped 00427fd2 
-
-            patch 00427b38 to 0x74d978
-
-            patch 0048b276 to 0x74d97c
-
-            patch 004274e7 to 4?
-
-            ok wat its not crashing anymore?
-            i forgot what patches i did
-            yuppee
-
-            # this allowed me to move as all chars, and shit worked. however, selecting a palette crashed 
-            crash was at 0048DDDA
-            this is totally bc palette/moon/char stuff is an alloc somewhere(hopefully not global static) and im corrupting things
-            there are some structs with sizes im not familiar with 
-                eax is junk.
-                mov eax, [esi+8]
-                esi is 050AEAA8, i recognize that as the animation css alloc location. (NOPE IT ISNT)
-                0048dd65 8b f0           MOV        ESI,EAX
-                0048dd09 8b c6           MOV        EAX,ESI
-                0048dd04 8d 34 c1        LEA        ESI,[ECX + EAX*0x8]
-                    0048dcf0 8b 0d dc 17 77 00        MOV        ECX,dword ptr [DAT_007717dc]  # we know what and where ecx is, not tracing anymore
-                0048dcf6 8d 04 fd 00 00 00 00        LEA        EAX,[EDI*0x8 + 0x0]
-                00428101 8b f9           MOV        EDI,ECX
-                00427ae1 8b cf           MOV        ECX,EDI # edi has the index of the char. this is an array out of bounds
+            wait for all 4 players to be ready
+                writing 5 to p1/p2 css states will auto fling us to stagesel 
+                as for pressing b on stagesel,,, ret from 004275f3 controls this (i think?)
 
 
-                 
-
-
-            004279D7, and 00428300  need changing 
-
-            trying new shit
-              0048CA7C is what inits the css 
-          
-            patch 0048cb39 to 0x7746a0
-            patch 004274e7 to 4
-            patch 00427b38 to 0x74d978
-            patch 0048bd5c to 4
-
-            need to like,, omfg default valuees in the css struct
-       
-            code at 00427565 NEEDS TO BE EXTENDED
-
-            004274e7 to 4 // this patch prevents me from continuing on into map pick, but still displays it. the check must be for all 4, while the display only for 2? wheres the display. also, caster is on some shit rn. 0042794c needs patch
-
-            0048bd5c to 4
-            patch 0048cb39 to 0x7746a0
-            patch 00427b38 to 0x74d978
-
-            patch 00428342 to 4,,
-
-            im going to need to essentially patch out all of their controller handling, and use my own
-            ugh
-
-            0048bd5c to 4, draw 4 profiles
-            00428342 to 4, handle all controllers?? 
-            00427b38 to 0x74d978 main css loop, needed for a bunch of things, most likely case a bunch of issues
+            i should probs be fixing game bugs. 
+            but i view this as a break.
 
 
     */
@@ -954,6 +858,21 @@ static const AsmList initPatch2v2 =
     { ( void * ) (0x0048aa97), INLINE_NOP_FIVE_TIMES}, // name draws caused crashes.
     { ( void * ) (0x0048a85e), INLINE_NOP_FIVE_TIMES}, // stop drawing big preview
     { ( void * ) (0x0048a995), INLINE_NOP_FIVE_TIMES}, // stop drawing the shadow behind the big previews
+    
+    { ( void * ) (0x00427231), INLINE_NOP_SIX_TIMES}, // stop the game from taking in CSS controls
+
+    DISABLECALL(0x0048bea1), // disable rect selector
+    DISABLECALL(0x0048bee5), // disable flashing p1/p2
+
+    { ( void * ) (0x0048bd5c + 4), { 0x04 }}, // draw 4 big previews on css 
+
+    DISABLECALL(0x004875d9), // dont draw black gradient on side
+
+    PATCHJUMP(0x0048cb4b, _naked_cssInit),
+
+    PATCHJUMP(0x004888e2, _naked_stageSelCallback),
+    PATCHJUMP(0x004888f0, _naked_stageSelCallback),
+
 
     //PATCHJUMP(0x00427563, _naked_CSSConfirmExtend),
     

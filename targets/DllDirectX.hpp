@@ -8,6 +8,7 @@
 #include <d3dx9.h>
 #include <string>
 #include <fstream>
+#include <map>
 
 // i am being so so real with you
 // if you are getting a bunch of errors with this file for _D3DVECTOR
@@ -21,8 +22,13 @@
 
 static IDirect3DDevice9* device = NULL;
 
-constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51};
-constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime"};
+constexpr int charIDList[] = {0,1,2,3,5,6,7,8,9,10,11,12,13,14,15,17,18,19,20,22,23,25,28,29,30,31,33,51,99};
+constexpr const char* charIDNames[] = {"Sion","Arc","Ciel","Akiha","Hisui","Kohaku","Tohno","Miyako","Wara","Nero","V. Sion","Warc :3","V. Akiha","Mech","Nanaya","Satuki","Len","P. Ciel","Neco","Aoko","W. Len","NAC","Kouma","Sei","Ries","Roa","Ryougi","Hime","Random"};
+constexpr int charGridList[] = { 12, 21, 11, 20, 39, 41, 3, 10, 15, 33, 14, 23, 24, 25, 5, 29, 30, 22, 40, 2, 32, 34, 6, 28, 13, 16, 31, 4, 49};
+
+static_assert(sizeof(charGridList) / sizeof(charGridList[0]) == sizeof(charIDList) / sizeof(charIDList[0]), "chargridlist and charidlist must have the same size");
+static_assert(sizeof(charIDList) / sizeof(charIDList[0]) == sizeof(charIDNames) / sizeof(charIDNames[0]), "length of name and id list must be the same");
+
 
 extern bool updateOccured;
 
@@ -338,6 +344,26 @@ typedef struct Rect {
 	}
 
 } Rect;
+
+namespace UIManager {
+
+	typedef struct UIPair {
+		std::string name = "";
+		float* f = NULL;
+	} UIPair;
+
+	extern std::map<float*, UIPair> UIFloatMap;
+	extern std::map<std::string, UIPair> UIStringMap;
+
+	std::string strip(const std::string& s);
+
+	float safeStof(const std::string& s);
+
+	void add(const std::string& name, float* f);
+	void add(const std::string& name, Point* p);
+	void reload();
+
+};
 
 extern Point mousePos; // no use getting this multiple times a frame
 

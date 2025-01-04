@@ -969,11 +969,6 @@ void __stdcall restoreRenderState() {
 
 namespace UIManager {
 
-	typedef struct UIPair {
-		std::string name = "";
-		float* f = NULL;
-	} UIPair;
-
 	std::map<float*, UIPair> UIFloatMap;
 	std::map<std::string, UIPair> UIStringMap;
 

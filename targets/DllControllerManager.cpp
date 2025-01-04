@@ -774,7 +774,15 @@ void DllControllerManager::handleMappingOverlay()
             continue;
         }
 
+        // swap left and right 
+        if(pressDir == 4) {
+            pressDir = 6;
+        } else if(pressDir == 6) {
+            pressDir = 4;
+        }
+
         int controllerIndex = (pressDir / 2) - 1; // converts 2,4,6,8 to 0,1,2,3
+    
 
         if( std::find(_playerControllers.begin(), _playerControllers.end(), controller) != _playerControllers.end() ) { 
             // controller is being mapped somewhere already. ignore it
@@ -850,7 +858,8 @@ void DllControllerManager::handleMappingOverlay()
         {
 
             //constexpr std::array<const char*, 4> playerTextSelector = { "Press Down on P1 controller", "Press Left on P2 controller", "Press Right on P3 controller", "Press Up on P4 controller" };
-            constexpr std::array<const char*, 4> playerTextSelector = { "P1: Press Down", "P3: Press Left", "P2: Press Right", "P4: Press Up" };
+            //constexpr std::array<const char*, 4> playerTextSelector = { "P1: Press Down", "P3: Press Left", "P2: Press Right", "P4: Press Up" };
+            constexpr std::array<const char*, 4> playerTextSelector = { "P1: Press Down", "P3: Press Right", "P2: Press Left", "P4: Press Up" };
             playerText = std::string(playerTextSelector[i]);
             DllOverlayUi::updateSelector ( i );
             continue;
