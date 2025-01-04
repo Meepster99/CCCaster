@@ -677,6 +677,12 @@ __attribute__((naked, noinline)) void _naked_cssInit();
 
 __attribute__((naked, noinline)) void _naked_stageSelCallback();
 
+__attribute__((noinline)) void palettePatcher();
+
+__attribute__((naked, noinline)) void _naked_paletteHook();
+
+__attribute__((naked, noinline)) void _naked_paletteCallback();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -873,6 +879,10 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x004888e2, _naked_stageSelCallback),
     PATCHJUMP(0x004888f0, _naked_stageSelCallback),
 
+    PATCHJUMP(0x0041f7c0, _naked_paletteHook),
+    PATCHJUMP(0x0041f87a, _naked_paletteCallback),
+
+    PATCHJUMP(0x00486328, 0x0048637b), // prevent code that causes crash with palettes
 
     //PATCHJUMP(0x00427563, _naked_CSSConfirmExtend),
     

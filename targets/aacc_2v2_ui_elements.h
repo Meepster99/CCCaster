@@ -113,4 +113,13 @@ namespace UI {
     MAKEUILABEL(RoaLightning,    42, 572, 11, 16);
     MAKEUILABEL(SionBullet,      59, 572,  5, 14);
     
+    // CSS "Selection" Boxes
+    MAKEUILABEL(CSSP0Box, 670, 0, 52, 62);
+    MAKEUILABEL(CSSP1Box, 774, 0, 52, 62);
+    MAKEUILABEL(CSSP2Box, 722, 0, 52, 62);
+    MAKEUILABEL(CSSP3Box, 826, 0, 52, 62);
+
+    // CSS "Selection" *P Tags
+    MAKEUILABEL(CSSPlayerTags, 878, 0, 52, 62);
+
 };

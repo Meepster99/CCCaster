@@ -39,7 +39,7 @@ CONTRIB_C_SRCS = $(wildcard 3rdparty/*.c)
 LIB_CPP_SRCS = $(wildcard lib/*.cpp)
 BASE_CPP_SRCS = $(wildcard netplay/*.cpp) $(LIB_CPP_SRCS) $(wildcard sequences/*.cpp)
 MAIN_CPP_SRCS = $(wildcard targets/Main*.cpp tests/*.cpp) $(BASE_CPP_SRCS)
-DLL_CPP_SRCS = $(wildcard targets/Dll*.cpp) $(filter-out lib/ConsoleUi.cpp,$(BASE_CPP_SRCS))
+DLL_CPP_SRCS = $(wildcard targets/Dll*.cpp) $(filter-out lib/ConsoleUi.cpp,$(BASE_CPP_SRCS)) targets/palettes/palettes.cpp
 
 NON_GEN_SRCS = \
 	$(wildcard netplay/*.cpp tools/*.cpp targets/*.cpp lib/*.cpp tests/*.cpp sequences/*.cpp)

@@ -6,6 +6,8 @@
 #include "DllTrialManager.hpp"
 #include "DllDirectX.hpp"
 
+#include "palettes/palettes.hpp"
+
 #include <windows.h>
 #include <d3dx9.h>
 #include <fstream>
@@ -998,6 +1000,122 @@ void _naked_stageSelCallback() {
         ret;
     )" __asmEnd
 
+}
+
+extern "C" {
+    DWORD paletteEAX = 0;
+    DWORD paletteEBX = 0;
+}
+
+int getIndexFromCharName(const std::string& name) {
+
+    std::map<std::string, int> lookup = {
+        {"SION",0},
+        {"ARC",1},
+        {"CIEL",2},
+        {"AKIHA",3},
+        {"HISUI",5},
+        {"KOHAKU",6},
+        {"SHIKI",7},
+        {"MIYAKO",8},
+        {"WARAKIA",9},
+        {"NERO",10},
+        {"V_SION",11},
+        {"WARC",12},
+        {"AKAAKIHA",13},
+        {"M_HISUI",14},
+        {"NANAYA",15},
+        {"SATSUKI",17},
+        {"LEN",18},
+        {"P_CIEL",19},
+        {"NECO",20},
+        {"AOKO",22},
+        {"WLEN",23},
+        {"NECHAOS",25},
+        {"KISHIMA",28},
+        {"S_AKIHA",29},
+        {"RIES",30},
+        {"ROA",31},
+        {"RYOUGI",33},
+        {"P_ARC",51},
+        {"P_ARC_D",-1}, // i remember having some issues with P_ARC_D,, not doing it
+    };
+
+    if(!lookup.contains(name)) {
+        log("couldnt find \"%s\"", name.c_str());
+        return -1; 
+    }
+
+    return lookup[name];
+}
+
+void palettePatcher() {
+
+    if(paletteEBX == 0) {
+        return;
+    }
+
+    char ebxBuffer[256];
+    strncpy(ebxBuffer, (char*)paletteEBX, 256);
+
+    std::string ebx(ebxBuffer);
+    if(ebx.substr(MAX(0, ebx.size() - 4)) != ".pal") {
+        return;
+    }
+
+    size_t lastBackslash = ebx.find_last_of('\\');
+    if(lastBackslash == std::string::npos) {
+        return;
+    }
+    std::string charName = ebx.substr(lastBackslash+1, ebx.size() - (lastBackslash+1) - 4);
+
+    int charIndex = getIndexFromCharName(charName);
+    
+    if(charIndex == -1) {
+        return;
+    }
+
+    DWORD* colors = (DWORD*)(paletteEAX + 4);
+
+    if(palettes.contains(charIndex)) {
+        for(auto it = palettes[charIndex].begin(); it != palettes[charIndex].end(); ++it) {
+            memcpy(&colors[256 * it->first], (it->second).data(), sizeof(DWORD) * 256); 
+        }
+    }
+
+}
+
+void _naked_paletteHook() {
+
+    // patched at 0x0041f7c0
+
+    __asmStart R"(
+        mov _paletteEBX, ebx;
+    )" __asmEnd
+
+    // overridden bytes
+    __asmStart R"(
+        push ebp;
+        mov ebp, esp;
+        and esp, 0xfffffff8;
+    )" __asmEnd
+
+    emitJump(0x0041f7c6);
+}
+
+void _naked_paletteCallback() {
+
+    // patched at 0x0041f87a
+
+    __asmStart R"(
+      mov _paletteEAX, eax;
+    )" __asmEnd
+
+    PUSH_ALL;
+    palettePatcher();
+    POP_ALL;
+
+    ASMRET;
 }
 
 } // namespace AsmHacks

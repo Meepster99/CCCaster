@@ -337,7 +337,6 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 			DWORD highlightColor = (((x * 6) + i == palette) && !isRandomPalette) ? 0x40FFFFFF : 0x40000000;
 
 			int paletteDisplayIndex = (offsetPalette ? 36 : 0) + (x * 6) + i + 1;
-
 			
 			if(paletteDisplayIndex > 64) {
 				highlightColor = 0x40FF0000;
