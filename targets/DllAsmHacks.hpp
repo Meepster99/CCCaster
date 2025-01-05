@@ -726,27 +726,10 @@ static const AsmList initPatch2v2 =
 
     todo css:
     
-        issue. 
-        moon and palette shit is not in heap. 
-        and only has size for 2.
-        at this point, i have the pixel previews. 
-        i just should remake css.
+        pretty
+        fix p2/3 not being able to cancel/change bg
 
-        need to:
-            patch out whatever grabs the controls
-            disable the existing char rect selectors that get moved (replace with own)
-                might have to patch out the,, sounds of them too?
-
-            
-            ill remake the palette thing to at least not be a counter
-
-            wait for all 4 players to be ready
-                writing 5 to p1/p2 css states will auto fling us to stagesel 
-                as for pressing b on stagesel,,, ret from 004275f3 controls this (i think?)
-
-
-            i should probs be fixing game bugs. 
-            but i view this as a break.
+        css issues with always selecting cmoon
 
     */
 

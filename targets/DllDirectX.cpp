@@ -1224,7 +1224,6 @@ void LineDrawTex(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) 
 
 }
 
-
 void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	if(shouldReverseDraws) {
@@ -2762,7 +2761,9 @@ void drawNewUI() {
             *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
         }
         // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
-        *(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+		// this is the write which properly updates the moon state ingame.
+        //*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+		*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = getCharMoon(i);
     }
 
 	/*

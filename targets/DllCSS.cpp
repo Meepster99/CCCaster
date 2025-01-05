@@ -27,6 +27,7 @@ typedef struct OurCSSData { // variables i want to keep track of
 	int idIndex = 0; // what char is hovered, indexed in the below list
 	int selectIndex = 0; // what vertical position, char/moon/palette/ready is selected
 	int paletteIndex = 0; 
+	int moonIndex = 0;
 	bool randomPalette = false;
 	bool offsetPalette = false;
 	RawInput prevInput;
@@ -95,6 +96,10 @@ typedef struct CSSStructDisplay {
 static_assert(sizeof(CSSStructDisplay) == 0x24, "CSSStructDisplay must be size 0x24");
 
 OurCSSData ourCSSData[4];
+
+int getCharMoon(int playerIndex) {
+	return ourCSSData[playerIndex].moonIndex;
+}
 
 CSSStructCopy* players[4] = {
 	(CSSStructCopy*)(0x0074d83C + (0 * 0x2C)),
@@ -207,6 +212,7 @@ std::function<void(int playerIndex, int dir)> ControlFuncs[] = {
 		}
 
 		players[playerIndex]->moon = SAFEMOD(players[playerIndex]->moon + inc, 3);
+		ourCSSData[playerIndex].moonIndex = players[playerIndex]->moon;
 	},
 
 	[](int playerIndex, int dir) mutable -> void {
