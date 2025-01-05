@@ -532,6 +532,58 @@ IDirect3DVertexShader9* createVertexShader(const char* shaderCode) {
 	return res;
 }
 
+IDirect3DPixelShader9* loadPixelShaderFromFile(const std::string& filename) {
+
+	std::ifstream file(filename, std::ios::binary | std::ios::ate);
+
+	if (!file.good()) {
+		log("unable to find %s for shader loading", filename.c_str());
+		return NULL;
+	}
+
+	IDirect3DPixelShader9* res = NULL;
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	char* buffer = (char*)malloc(size + 1);
+	file.read(buffer, size);
+
+	buffer[size] = '\0';
+
+	res = createPixelShader(buffer);
+
+	free(buffer);
+
+	return res;
+}
+
+IDirect3DVertexShader9* loadVertexShaderFromFile(const std::string& filename) {
+
+	std::ifstream file(filename, std::ios::binary | std::ios::ate);
+
+	if (!file.good()) {
+		log("unable to find %s for shader loading", filename.c_str());
+		return NULL;
+	}
+
+	IDirect3DVertexShader9* res = NULL;
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	char* buffer = (char*)malloc(size + 1);
+	file.read(buffer, size);
+
+	buffer[size] = '\0';
+
+	res = createVertexShader(buffer);
+
+	free(buffer);
+
+	return res;
+}
+
 bool loadResource(int id, BYTE*& buffer, unsigned& bufferSize) {
 	
 	HMODULE hModule = GetModuleHandle(TEXT("hook.dll"));
@@ -1113,6 +1165,66 @@ void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
 
 }
 
+void LineDrawTex(float x1, float y1, float x2, float y2, DWORD ARGB, bool side) {
+
+	x1 /= 480.0f;
+	x2 /= 480.0f;
+	y1 /= 480.0f;
+	y2 /= 480.0f;
+
+	// this is going to need to be changed at different resolutions
+	float lineWidth = 1.0f / vHeight;
+
+	Point p1 = { x1, y1 };
+	Point p2 = { x2, y2 };
+
+	float mx = p2.x - p1.x;
+	float my = p2.y - p1.y;
+	float m = my / mx;
+
+	float a = atan2(my, mx) + (3.1415926535f / 2.0f);
+
+	float m2 = tan(a);
+
+	Point p3 = { x1, y1 };
+	Point p4 = { x2, y2 };
+
+	Point offset = { lineWidth * cos(a), lineWidth * sin(a) };
+
+	if (side) {
+		p3.x += offset.x;
+		p3.y += offset.y;
+		p4.x += offset.x;
+		p4.y += offset.y;
+	}
+	else {
+		p3.x -= offset.x;
+		p3.y -= offset.y;
+		p4.x -= offset.x;
+		p4.y -= offset.y;
+	}
+
+	p1.y = 1 - p1.y;
+	p2.y = 1 - p2.y;
+	p3.y = 1 - p3.y;
+	p4.y = 1 - p4.y;
+
+	PosColTexVert v1 = { D3DVECTOR((p1.x * 1.5f) - 1.0f, (p1.y * 2.0f) - 1.0f, 0.5f), ARGB , D3DXVECTOR2(0, 0) };
+	PosColTexVert v2 = { D3DVECTOR((p2.x * 1.5f) - 1.0f, (p2.y * 2.0f) - 1.0f, 0.5f), ARGB , D3DXVECTOR2(0.001, 0) };
+	PosColTexVert v3 = { D3DVECTOR((p3.x * 1.5f) - 1.0f, (p3.y * 2.0f) - 1.0f, 0.5f), ARGB , D3DXVECTOR2(0, 0.001) };
+	PosColTexVert v4 = { D3DVECTOR((p4.x * 1.5f) - 1.0f, (p4.y * 2.0f) - 1.0f, 0.5f), ARGB , D3DXVECTOR2(0.001, 0.001) };
+
+	scaleVertex(v1.position);
+	scaleVertex(v2.position);
+	scaleVertex(v3.position);
+	scaleVertex(v4.position);
+
+	posColTexVertData.add(v1, v2, v3);
+	posColTexVertData.add(v2, v3, v4);
+
+}
+
+
 void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 	if(shouldReverseDraws) {
@@ -1153,6 +1265,65 @@ void RectDraw(float x, float y, float w, float h, DWORD ARGB) {
 
 void RectDraw(const Rect& rect, DWORD ARGB) {
 	RectDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
+}
+
+void RectDrawTex(const Rect& rect, DWORD ARGB) {
+
+	// draws a rect with a texture, for very annoying reasons
+
+	float x = rect.x1;
+	float y = rect.y1;
+	float w = rect.x2 - rect.x1;
+	float h = rect.y2 - rect.y1;
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
+	x /= 480.0f;
+	w /= 480.0f;
+	y /= 480.0f;
+	h /= 480.0f;
+
+	y = 1 - y;
+
+	PosColTexVert v1 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, 0) };
+	PosColTexVert v2 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0.001, 0) };
+	PosColTexVert v3 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, 0.001) };
+	PosColTexVert v4 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0.001, 0.001) };
+
+	scaleVertex(v1.position);
+	scaleVertex(v2.position);
+	scaleVertex(v3.position);
+	scaleVertex(v4.position);
+
+	posColTexVertData.add(v1, v2, v3);
+	posColTexVertData.add(v2, v3, v4);
+
+}
+
+void BorderDrawTex(const Rect& rect, DWORD ARGB) {
+	
+	float x = rect.x1;
+	float y = rect.y1;
+	float w = rect.w();
+	float h = rect.h();
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
+	float lineWidth = 480.0f * (1.0f / vHeight);
+
+	h -= lineWidth;
+	w -= lineWidth;
+
+	LineDrawTex(x + lineWidth, y, x + w, y, ARGB, true);
+	LineDrawTex(x, y, x, y + h, ARGB, false);
+	LineDrawTex(x + w, y, x + w, y + h, ARGB, false);
+	LineDrawTex(x, y + h, x + w + lineWidth, y + h, ARGB, true);
 }
 
 void LineDrawPrio(float x1, float y1, float x2, float y2, DWORD ARGB) {
@@ -1220,6 +1391,34 @@ void BorderDraw(float x, float y, float w, float h, DWORD ARGB) {
 }
 
 void BorderDraw(const Rect& rect, DWORD ARGB) {
+	BorderDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
+}
+
+void BorderDrawPrio(float x, float y, float w, float h, DWORD ARGB) {
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
+	//x /= 480.0f;
+	//w /= 480.0f;
+	//y /= 480.0f;
+	//h /= 480.0f;
+
+	// this mult occurs here because linedraw has a div. need to be sure this is ok
+	float lineWidth = 480.0f * (1.0f / vHeight);
+
+	h -= lineWidth;
+	w -= lineWidth;
+
+	LineDrawPrio(x + lineWidth, y, x + w, y, ARGB);
+	LineDrawPrio(x, y, x, y + h, ARGB);
+	LineDrawPrio(x + w, y, x + w, y + h, ARGB);
+	LineDrawPrio(x, y + h, x + w + lineWidth, y + h, ARGB);
+}
+
+void BorderDrawPrio(const Rect& rect, DWORD ARGB) {
 	BorderDraw(rect.x1, rect.y1, rect.x2 - rect.x1, rect.y2 - rect.y1, ARGB);
 }
 
@@ -1348,6 +1547,199 @@ void drawChevronOnPlayer(int p, int c) {
 	point.y -= 175;
 
 	drawChevron(point, c);
+
+}
+
+std::vector<std::pair<Rect, DWORD>> CharRects;
+std::vector<std::pair<Rect, DWORD>> animatedRects;
+
+void addCharRect(const Rect& r, DWORD ARGB) {
+	CharRects.push_back(std::pair<Rect, DWORD>(r, ARGB));
+}
+
+void addAnimatedRect(const Rect& r, DWORD ARGB) {
+
+	Rect temp = r;
+
+	if(shouldReverseDraws) {
+		
+		temp.x1 = 640 - temp.x1;
+		temp.x2 = 640 - temp.x2;
+
+		std::swap(temp.x1, temp.x2);
+	}
+
+	animatedRects.push_back(std::pair<Rect, DWORD>(temp, ARGB));
+}
+
+IDirect3DPixelShader9* getCharRectPixelShader() {
+
+	return createPixelShader(R"(
+
+		float4 frameFloatOffset : register(c223);
+
+		float4 main(float4 color : COLOR, float2 baseTexCoord : TEXCOORD0) : COLOR {
+
+			// i still dont properly understand what params are being passed in here
+			// well, is it the same order as,,,, the,, is it stdcall
+
+			float2 texCoord = baseTexCoord; // THIS IS PASSED IN BY REFERENCE?
+			texCoord *= 1000; // this should have been gotten from a register containing the tex dimensions
+			
+			float4 res = color;
+			
+			if(texCoord.x > 0.05 && texCoord.y > 0.05 && texCoord.x < 0.95 && texCoord.y < 0.95) {
+				res.w = 0;
+				return res;
+			}
+			
+			texCoord -= 0.5;
+			
+			float angle = frameFloatOffset *2*3.14 *1;
+			
+			float cosAngle = cos(angle);
+			float sinAngle = sin(angle);
+
+			float2 rotatedTexCoord;
+			rotatedTexCoord.x = cosAngle * texCoord.x - sinAngle * texCoord.y;
+			rotatedTexCoord.y = sinAngle * texCoord.x + cosAngle * texCoord.y;
+
+			res.w = 4*(rotatedTexCoord.x * rotatedTexCoord.y);
+
+			return res;	
+		}
+			
+	)");
+
+}
+
+IDirect3DVertexShader9* getCharRectVertexShader() {
+	return createVertexShader(R"(
+	
+		struct VS_INPUT {
+			float4 position : POSITION;
+			float4 color : COLOR;
+			float2 texCoord : TEXCOORD0;
+		};
+
+		struct VS_OUTPUT {
+			float4 position : POSITION;
+			float4 color : COLOR;
+			float2 texCoord : TEXCOORD0;
+		};
+
+		VS_OUTPUT main(VS_INPUT input) {
+			VS_OUTPUT output;
+			output.position = input.position;
+			output.color = input.color;
+			output.texCoord = input.texCoord;
+			return output;
+		}
+
+	)");
+}
+
+void CharRectDraw() {
+
+	if(CharRects.size() == 0 && animatedRects.size() == 0) { 
+		return;
+	}
+
+	static IDirect3DPixelShader9* testPixelShader = NULL;
+	static IDirect3DVertexShader9* testVertexShader = NULL;
+
+	/*
+	if(SHIFTHELD && DOWNPRESS) {
+		if(testPixelShader != NULL) {
+			testPixelShader->Release();
+			testPixelShader = NULL;
+		}
+		if(testVertexShader != NULL) {
+			testVertexShader->Release();
+			testVertexShader = NULL;
+		}
+	}
+	*/
+
+	if(testPixelShader == NULL) {
+		//log("reloading pixel shader");
+		//testPixelShader = loadPixelShaderFromFile("testPixelShader.hlsl");
+		testPixelShader = getCharRectPixelShader();
+	}
+
+	if(testVertexShader == NULL) {
+		//log("reloading vertex shader");
+		//testVertexShader = loadVertexShaderFromFile("testVertexShader.hlsl");
+		testVertexShader = getCharRectVertexShader();
+	}
+
+	constexpr const Rect* tagRects[] = {
+		&UI::CSSPlayerTagP0,
+		&UI::CSSPlayerTagP2,
+		&UI::CSSPlayerTagP1,
+		&UI::CSSPlayerTagP3
+	};
+
+	static float scale = 3.0f;
+	static float xOffset = -19;
+	static float yOffset = -13;
+	//UIManager::add("scale", &scale);
+	//UIManager::add("xOffset", &xOffset);
+	//UIManager::add("yOffset", &yOffset);
+
+	for(int i=0; i<CharRects.size(); i++) {
+		//BorderDraw(CharRects[i].first, 0xFFFFFFFF);	
+		Rect tempRect = CharRects[i].first;
+		RectDrawTex(tempRect, CharRects[i].second);
+
+		Point drawPoint(0,0);
+		switch(i) {
+			case 0:
+				drawPoint = tempRect.bottomLeft();
+				drawPoint.y += yOffset;
+				break;
+			case 1:
+				drawPoint = tempRect.bottomRight();
+				drawPoint.x += xOffset;
+				drawPoint.y += yOffset;
+				break;
+			case 2:
+				drawPoint = tempRect.topLeft();
+				drawPoint.y += 1;
+				break;
+			case 3:
+				drawPoint = tempRect.topRight();
+				drawPoint.x += xOffset;
+				drawPoint.y += 1;
+				break;
+			default:
+				break;
+		}
+
+		UIDraw(*tagRects[i], drawPoint, scale, 0xFFFFFFFF);
+	}
+
+	for(int i=0; i<animatedRects.size(); i++) { // for some reason, i decided to use this func to draw more rects
+		Rect tempRect = animatedRects[i].first;
+		RectDrawTex(tempRect, animatedRects[i].second);
+	}
+
+	IDirect3DPixelShader9* pixelShaderBackup = NULL;	
+	IDirect3DVertexShader9* vertexShaderBackup = NULL;
+
+	device->GetPixelShader(&pixelShaderBackup); // does this inc the refcount?
+	device->GetVertexShader(&vertexShaderBackup);
+
+	device->SetPixelShader(testPixelShader);
+	device->SetVertexShader(testVertexShader);
+	
+	posColTexVertData.draw(); // this is incredibly sloppy. not efficient at all
+	
+	device->SetPixelShader(pixelShaderBackup);
+	device->SetVertexShader(vertexShaderBackup);
+
+	CharRects.clear();
+	animatedRects.clear();
 
 }
 
@@ -1694,45 +2086,6 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 
 // -----
 
-template <typename T>
-struct Smooth {
-    
-    Smooth(T v) : current(v), goal(v), rate(T(1)) {}
-
-	Smooth(T v, T r) : current(v), goal(v), rate(r) {}
-    
-    void operator=(const T& other) {
-        goal = other;
-    }
-    
-    T operator*() {
-        
-        // could (maybe should) use if constexpr (std::is_floating_point<T>::value)
-        // std::abs aparently avoids unneccessary casting!
-        // tbh, i dont even need any sort of type check with std::abs at all
-       
-	   	T delta = std::abs(current - goal);
-        if(delta < rate) {
-			current = goal;
-            return current;   
-        }
-
-		T temp = rate;
-	
-		temp *= MIN(delta / rate, 10.0f);
-
-        current += (current < goal) ? temp : -temp;
-        
-        return current;
-    }
-    
-	// todo, add arithmetic overloads
-
-    T current;
-    T goal;
-    T rate; // how much to alter value on every access. would be a template param, but c++ doesnt allow floats as template values
-}; 
-
 const float healthBarSmoothValue = 0.005f;
 typedef struct Bar {
 	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
@@ -1789,6 +2142,23 @@ void drawHealthBar(int i, Bar& bar) {
 
 	drawRect.p1.x = drawRect.p2.x - (tempMaxHealthWidth * (*bar.yellowHealth));
 	UIDraw(yellowBars[shouldReverseDraws], drawRect, 0xFFFFFFFF);
+
+	static float hitFades[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+	static float resetVal = 0.30f;
+	static float decVal = 0.03f;
+	//UIManager::add("resetFloat", &resetVal);
+	//UIManager::add("decFloat", &decVal);
+	
+	if(*(BYTE*)(0x00555130 + 0x1A5 + (i * 0xAFC))) {
+		hitFades[i] = resetVal;
+	}
+
+	if(hitFades[i] > 0.0f) {
+		hitFades[i] -= decVal;
+		drawRect.p1.x = drawRect.p2.x - tempMaxHealthWidth;
+		DWORD col = (((BYTE)(0xFF * hitFades[i])) << 24) | 0x00FFFFFF;
+		RectDrawTex(drawRect, col);
+	}
 
 }
 
@@ -2532,6 +2902,8 @@ void _drawGeneralCalls() {
 	meltyVertData.draw();
 	meltyLineData.draw();
 
+	CharRectDraw();
+
 	device->EndScene();
 }
 
@@ -2564,6 +2936,15 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	if(SHIFTHELD && UPPRESS) {
 		UIManager::reload();
 	}
+
+
+	static D3DXVECTOR4 frameFloatOffset(0.0f, 0.0f, 0.0f, 0.0f);
+	frameFloatOffset.x += (1.0f / 60.0f);
+	if (frameFloatOffset.x > 1.0f) {
+		frameFloatOffset.x = 0.0f;
+	}
+	
+	device->SetPixelShaderConstantF(223, (float*)&frameFloatOffset, 1);
 
 	doUpdate();
 	drawNewUI();

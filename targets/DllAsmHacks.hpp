@@ -748,7 +748,6 @@ static const AsmList initPatch2v2 =
             i should probs be fixing game bugs. 
             but i view this as a break.
 
-
     */
 
     // i actually prefer this patch method(with a lil modification) tbh. its very well done
@@ -770,7 +769,7 @@ static const AsmList initPatch2v2 =
 
     // i quite literally, do not know what these two patches do!
     // im keeping them here, but pleaes keep that in mind
-    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed.
+    PATCHJUMP(0x0046f207, _naked_hitBoxConnect1), // im unsure if this patch is needed. totzally does something though
 
     PATCHJUMP(0x00468127, _naked_hitBoxConnect2), // im unsure if this patch is needed. this patch was def needed. shielding issues?
 

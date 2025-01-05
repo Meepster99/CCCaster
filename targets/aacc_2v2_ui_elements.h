@@ -114,12 +114,12 @@ namespace UI {
     MAKEUILABEL(SionBullet,      59, 572,  5, 14);
     
     // CSS "Selection" Boxes
-    MAKEUILABEL(CSSP0Box, 670, 0, 52, 62);
-    MAKEUILABEL(CSSP1Box, 774, 0, 52, 62);
-    MAKEUILABEL(CSSP2Box, 722, 0, 52, 62);
-    MAKEUILABEL(CSSP3Box, 826, 0, 52, 62);
+    MAKEUILABEL(CSSBox, 670, 0, 52, 62);
 
     // CSS "Selection" *P Tags
-    MAKEUILABEL(CSSPlayerTags, 878, 0, 52, 62);
+    MAKEUILABEL(CSSPlayerTagP0, 877,  0, 25, 16);
+    MAKEUILABEL(CSSPlayerTagP1, 877, 45, 25, 16);
+    MAKEUILABEL(CSSPlayerTagP2, 904,  0, 25, 16);
+    MAKEUILABEL(CSSPlayerTagP3, 904, 45, 25, 16);
 
 };

@@ -253,20 +253,48 @@ typedef struct Point {
 	float x = 0.0;
 	float y = 0.0;
 	constexpr Point() {}
+	constexpr Point(float f) : x(f), y(f) {}
 	constexpr Point(float x_, float y_) : x(x_), y(y_) {}
+	
+	Point& operator=(const Point& rhs) { if (this != &rhs) { x = rhs.x; y = rhs.y; } return *this; }
+	
 	bool operator==(const Point& rhs) { return x == rhs.x && y == rhs.y; }
 	bool operator!=(const Point& rhs) { return x != rhs.x || y != rhs.y; }
-	Point operator+(const Point& rhs) { return Point(x + rhs.x, y + rhs.y); }
-	Point operator-(const Point& rhs) { return Point(x - rhs.x, y - rhs.y); }
+	Point operator+(const Point& rhs) const { return Point(x + rhs.x, y + rhs.y); }
 	Point& operator+=(const Point& rhs) { x += rhs.x; y += rhs.y; return *this; }
+	Point operator-(const Point& rhs) const { return Point(x - rhs.x, y - rhs.y); }
 	Point& operator-=(const Point& rhs) { x -= rhs.x; y -= rhs.y; return *this; }
-	Point& operator=(const Point& rhs) { if (this != &rhs) { x = rhs.x; y = rhs.y; } return *this; }
+	Point operator/(const Point& rhs) const { return Point(x / rhs.x, y / rhs.y); }
+	Point& operator/=(const Point& rhs) { x /= rhs.x; y /= rhs.y; return *this; }
+	Point operator*(const Point& rhs) const { return Point(x * rhs.x, y * rhs.y); }
+	Point& operator*=(const Point& rhs) { x *= rhs.x; y *= rhs.y; return *this; }
+
+	Point operator/(const float rhs) const { return Point(x / rhs, y / rhs); }
+	Point& operator/=(const float rhs) { x /= rhs; y /= rhs; return *this; }
+	Point operator*(const float rhs) const { return Point(x * rhs, y * rhs); }
+	Point& operator*=(const float rhs) { x *= rhs; y *= rhs; return *this; }
+	
+	Point abs() const { return Point(std::abs(x), std::abs(y)); }
+	Point operator-() const { return Point(-x, -y); }
+	bool operator<(const Point& rhs) { return ((x * x) + (y * y)) < ((rhs.x * rhs.x) + (rhs.y * rhs.y)); } // this might not be the most efficient
+
+	static Point getRate(const Point& current, const Point& goal, const Point& rate) {
+		//return delta / rate;
+		Point delta = goal - current;
+		
+		return delta * rate;
+	}
 
 	bool inside(const Rect& rect) const;
 
 	bool outside(const Rect& rect) const;
 
+	
+
+
 } Point;
+
+inline Point abs(const Point& p) { return p.abs(); }
 
 typedef struct Rect {
 
@@ -711,6 +739,10 @@ IDirect3DPixelShader9* createPixelShader(const char* pixelShaderCode);
 
 IDirect3DVertexShader9* createVertexShader(const char* shaderCode);
 
+IDirect3DPixelShader9* loadPixelShaderFromFile(const std::string& filename);
+
+IDirect3DVertexShader9* loadVertexShaderFromFile(const std::string& filename);
+
 inline unsigned scaleNextPow2(unsigned v) {
 	v--;
 	v |= v >> 1;
@@ -845,6 +877,10 @@ void LineDraw(float x1, float y1, float x2, float y2, DWORD ARGB = 0x8042e5f4, b
 
 void RectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
+void RectDrawTex(const Rect& rect, DWORD ARGB);
+
+void BorderDrawTex(const Rect& rect, DWORD ARGB);
+
 void RectDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
 void RectDrawPrio(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
@@ -855,6 +891,10 @@ void BorderDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
 void BorderDraw(const Rect& rect, DWORD ARGB = 0x8042e5f4);
 
+void BorderDrawPrio(float x, float y, float w, float h, DWORD ARGB);
+
+void BorderDrawPrio(const Rect& rect, DWORD ARGB);
+
 void BorderRectDraw(float x, float y, float w, float h, DWORD ARGB = 0x8042e5f4);
 
 void UIDraw(Rect texRect, Rect screenRect, DWORD ARGB, bool mirror = false);
@@ -862,6 +902,15 @@ void UIDraw(Rect texRect, Rect screenRect, DWORD ARGB, bool mirror = false);
 void UIDraw(const Rect& texRect, const Point& p, DWORD ARGB, bool mirror = false);
 
 void UIDraw(const Rect& texRect, const Point& p, const float scale, DWORD ARGB, bool mirror = false);
+
+extern std::vector<std::pair<Rect, DWORD>> CharRects;
+extern std::vector<std::pair<Rect, DWORD>> animatedRects;
+
+void addCharRect(const Rect& r, DWORD ARGB);
+
+void addAnimatedRect(const Rect& r, DWORD ARGB);
+
+void CharRectDraw(const Rect& r, DWORD ARGB);
 
 // -----
 
@@ -885,5 +934,65 @@ Rect TextDraw(const Point& p, float size, DWORD ARGB, const char* format, Args..
 }
 
 void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format, ...);
+
+template <typename T>
+struct Smooth {
+
+	Smooth() : current(T(0)), goal(T(0)), rate(T(0)) {} // im not happy about having this, but ig if you want to default construct an object, its needed
+
+    Smooth(T v) : current(v), goal(v), rate(T(1)) {}
+
+	Smooth(T v, T r) : current(v), goal(v), rate(r) {}
+    
+    void operator=(const T& other) {
+        goal = other;
+    }
+    
+    T operator*() {
+        
+        // could (maybe should) use if constexpr (std::is_floating_point<T>::value)
+        // std::abs aparently avoids unneccessary casting!
+        // tbh, i dont even need any sort of type check with std::abs at all
+
+		if constexpr (std::is_class<T>::value) {
+			/*
+			if(abs(delta) < rate) { // tbh i dont know when/if i should use a condition like this
+				current = goal;
+				return current;
+			}
+			log("calling getrate"); 
+			*/
+			current += T::getRate(current, goal, rate); // all classes using this struct require something like this
+		} else {
+       
+			T delta = abs(current - goal); // why did i abs this only to have a sign check down below??
+			if(delta < rate) {
+				current = goal;
+				return current;   
+			}
+
+			T tempRate = rate;
+		
+			//temp *= MIN(delta / rate, T(10.0f)); // this value,,, this min thingy,, might not be the best
+			//temp *= MIN(delta / rate, T(1.0f)); // this value,,, this min thingy,, might not be the best
+			tempRate *= MIN(delta / rate, T(10.0f));
+		
+			current += (current < goal) ? tempRate : -tempRate;
+		}
+        
+        return current;
+    }
+    
+	operator T() { // this is insanely cool, wish i did it earlier. 
+		T res = *(*this);
+		return res; 
+	} 
+
+	// todo, add arithmetic overloads
+
+    T current;
+    T goal;
+    T rate; // how much to alter value on every access. would be a template param, but c++ doesnt allow floats as template values
+}; 
 
 void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt);
