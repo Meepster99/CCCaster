@@ -783,6 +783,9 @@ void updateMeltyState() {
 		players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
 		dispPlayers[playerIndex]->charID = players[playerIndex]->charID;
 		dispPlayers[playerIndex]->palette = players[playerIndex]->palette;
+
+		players[playerIndex]->moon = ourCSSData[playerIndex].moonIndex;
+		dispPlayers[playerIndex]->moon = ourCSSData[playerIndex].moonIndex;
 	}	
 }
 
