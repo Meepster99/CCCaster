@@ -203,9 +203,9 @@ std::function<void(int playerIndex, int dir)> ControlFuncs[] = {
 	[](int playerIndex, int dir) mutable -> void {
 
 		int inc = 0;
-		if(dir == 6) {
+		if(dir == 6 || dir == 2) {
 			inc = 1;
-		} else if(dir == 4) {
+		} else if(dir == 4 || dir == 8) {
 			inc = -1;
 		} else {
 			return;

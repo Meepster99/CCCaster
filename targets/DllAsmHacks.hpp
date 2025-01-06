@@ -724,12 +724,12 @@ static const AsmList initPatch2v2 =
 
         allow for p2/p3 combo count, reduce, counter, etc
 
+        (f)koha round end last arc crash? (maybe didnt wait for anims properly)
+
     todo css:
     
         pretty
         fix p2/3 not being able to cancel/change bg
-
-        css issues with always selecting cmoon
 
     */
 
