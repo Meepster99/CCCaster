@@ -717,8 +717,6 @@ void updateControls() {
 
 		// this needs refactoring
 
-	
-		//if(inStageSelect) {
 		if(*(BYTE*)(0x00773158 + 0x3C) == 0x01) {
 			if(pressBtn == 0x20) { // B press
 				leaveStageSel(); // does this even work.
@@ -732,9 +730,13 @@ void updateControls() {
 						ourCSSData[i].selectIndex = menuOptionCount - 1;
 					}
 				} else if(pressBtn & 0x20) { // B
-					ourCSSData[i].selectIndex--;
-					if(ourCSSData[i].selectIndex < 0) {
+					if(ourCSSData[i].selectIndex == menuOptionCount - 1) { // we are at ready, go back to 0
 						ourCSSData[i].selectIndex = 0;
+					} else {
+						ourCSSData[i].selectIndex--;
+						if(ourCSSData[i].selectIndex < 0) {
+							ourCSSData[i].selectIndex = 0;
+						}
 					}
 				} else if((pressBtn & 0x0C) && ((ourCSSData[i].input.btn & 0x0C) == 0x0C)) { // caster is fucking with p/2/3 on subsequent loads. am i not resetting correctly? its randomly having 0x02 btn
 					ourCSSData[i].offsetPalette = !ourCSSData[i].offsetPalette;

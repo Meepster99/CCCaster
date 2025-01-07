@@ -1587,6 +1587,8 @@ IDirect3DPixelShader9* getCharRectPixelShader() {
 			
 			float4 res = color;
 			
+
+			
 			if(texCoord.x > 0.05 && texCoord.y > 0.05 && texCoord.x < 0.95 && texCoord.y < 0.95) {
 				res.w = 0;
 				return res;
@@ -1594,8 +1596,16 @@ IDirect3DPixelShader9* getCharRectPixelShader() {
 			
 			texCoord -= 0.5;
 			
-			float angle = frameFloatOffset *2*3.14 *1;
+			float angle = frameFloatOffset *2 * 3.14;
 			
+			if(color.y > 0.01) { 
+				angle += (3.14 * 0.25);
+			}
+			
+			if(color.z > 0.01) {
+				angle += (3.14 * 0.5);
+			}
+
 			float cosAngle = cos(angle);
 			float sinAngle = sin(angle);
 
@@ -1603,7 +1613,13 @@ IDirect3DPixelShader9* getCharRectPixelShader() {
 			rotatedTexCoord.x = cosAngle * texCoord.x - sinAngle * texCoord.y;
 			rotatedTexCoord.y = sinAngle * texCoord.x + cosAngle * texCoord.y;
 
+			//res.x = rotatedTexCoord.x;
+			//res.y = rotatedTexCoord.y;
+			//res.z = 0;
+			
+			//res.w = 4*(rotatedTexCoord.x * rotatedTexCoord.y);
 			res.w = 4*(rotatedTexCoord.x * rotatedTexCoord.y);
+			
 
 			return res;	
 		}
@@ -1647,6 +1663,7 @@ void CharRectDraw() {
 	static IDirect3DPixelShader9* testPixelShader = NULL;
 	static IDirect3DVertexShader9* testVertexShader = NULL;
 
+	
 	/*
 	if(SHIFTHELD && DOWNPRESS) {
 		if(testPixelShader != NULL) {
