@@ -731,6 +731,9 @@ static const AsmList initPatch2v2 =
         pretty
         fix p2/3 not being able to cancel/change bg
 
+        right side mirrordraw also mirrors the moons
+        resetting char doersnt reset moon, does reset palette 
+
     */
 
     // i actually prefer this patch method(with a lil modification) tbh. its very well done

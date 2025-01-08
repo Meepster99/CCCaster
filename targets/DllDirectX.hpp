@@ -9,6 +9,7 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <functional>
 
 // i am being so so real with you
 // if you are getting a bunch of errors with this file for _D3DVECTOR
@@ -943,6 +944,8 @@ struct Smooth {
     Smooth(T v) : current(v), goal(v), rate(T(1)) {}
 
 	Smooth(T v, T r) : current(v), goal(v), rate(r) {}
+
+	Smooth(T v, T r, std::function<T(const T& current, const T& goal, const T& rate)> f) : current(v), goal(v), rate(r), func(f) {}
     
     void operator=(const T& other) {
         goal = other;
@@ -953,6 +956,11 @@ struct Smooth {
         // could (maybe should) use if constexpr (std::is_floating_point<T>::value)
         // std::abs aparently avoids unneccessary casting!
         // tbh, i dont even need any sort of type check with std::abs at all
+
+		if(func != nullptr) {
+			current += func(current, goal, rate);
+			return current;
+		}
 
 		if constexpr (std::is_class<T>::value) {
 			/*
@@ -993,6 +1001,7 @@ struct Smooth {
     T current;
     T goal;
     T rate; // how much to alter value on every access. would be a template param, but c++ doesnt allow floats as template values
+	std::function<T(const T& current, const T& goal, const T& rate)> func = nullptr; // sometimes i suppose i would want one class to have multiple options, right?. also, is this func passed by copy,, it would suck if it was
 }; 
 
 void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt);

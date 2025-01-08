@@ -279,7 +279,14 @@ std::function<void(int playerIndex, int dir)> ControlFuncs[] = {
 
 static Point moonRate(0.15, 0.15);
 
-Smooth<Point> startingMoonSmoothPoint = Smooth<Point>(Point(0, 0), moonRate); // rate is what percentage of this bs to do per frame.
+std::function<Point(const Point& current, const Point& goal, const Point& rate)> moonRateFunc = [](const Point& current, const Point& goal, const Point& rate) -> Point {
+
+	Point delta = goal - current;
+	
+	return delta * rate;
+};
+
+Smooth<Point> startingMoonSmoothPoint = Smooth<Point>(Point(0, 0), moonRate, moonRateFunc); // rate is what percentage of this bs to do per frame.
 static Smooth<Point> moonPositions[4][3] = {
 	{ startingMoonSmoothPoint, startingMoonSmoothPoint, startingMoonSmoothPoint },
 	{ startingMoonSmoothPoint, startingMoonSmoothPoint, startingMoonSmoothPoint },
@@ -354,13 +361,13 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 		ourCSSData[playerIndex].randomPalette = false;
 	}
 
-	constexpr const Rect* moonRects[] = {
+	const Rect* moonRects[] = {
 		&UI::MoonCrescent,
 		&UI::MoonFull,
 		&UI::MoonHalf,
 		&UI::MoonEclipse
 	};
-
+	
 	static Point moonOffset(40, -180);
 	static float moonScale = 4.0f;
 	//UIManager::add("moonOffset", &moonOffset);
@@ -384,8 +391,15 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 	}*/
 
 	moonPositions[playerIndex][moonIndex] = Point(0, 0);
-	moonPositions[playerIndex][prevMoonIndex] = -otherMoonOffset;
-	moonPositions[playerIndex][nextMoonIndex] = otherMoonOffset;
+
+	if(shouldReverseDraws) {
+		moonPositions[playerIndex][prevMoonIndex] = otherMoonOffset;
+		moonPositions[playerIndex][nextMoonIndex] = -otherMoonOffset;
+	} else {
+		moonPositions[playerIndex][prevMoonIndex] = -otherMoonOffset;
+		moonPositions[playerIndex][nextMoonIndex] = otherMoonOffset;
+	}
+	
 
 	Point centerPos = p + moonOffset + moonPositions[playerIndex][moonIndex];
 	Point leftPos =   p + moonOffset + moonPositions[playerIndex][prevMoonIndex];

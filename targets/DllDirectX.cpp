@@ -2955,14 +2955,30 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 		UIManager::reload();
 	}
 
-
 	static D3DXVECTOR4 frameFloatOffset(0.0f, 0.0f, 0.0f, 0.0f);
+
 	frameFloatOffset.x += (1.0f / 60.0f);
 	if (frameFloatOffset.x > 1.0f) {
 		frameFloatOffset.x = 0.0f;
 	}
 	
-	device->SetPixelShaderConstantF(223, (float*)&frameFloatOffset, 1);
+	frameFloatOffset.y += (1.0f / 120.0f);
+	if (frameFloatOffset.y > 1.0f) {
+		frameFloatOffset.y = 0.0f;
+	}
+
+	frameFloatOffset.z += (1.0f / 240.0f);
+	if (frameFloatOffset.z > 1.0f) {
+		frameFloatOffset.z = 0.0f;
+	}
+
+	frameFloatOffset.w += (1.0f / 480.0f);
+	if (frameFloatOffset.w > 1.0f) {
+		frameFloatOffset.w = 0.0f;
+	}
+
+	device->SetPixelShaderConstantF(223, (float*)&frameFloatOffset, 1); // why the hell did i go with 223 here?
+	device->SetVertexShaderConstantF(223, (float*)&frameFloatOffset, 1);
 
 	doUpdate();
 	drawNewUI();
