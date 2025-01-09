@@ -734,6 +734,10 @@ static const AsmList initPatch2v2 =
         right side mirrordraw also mirrors the moons
         resetting char doersnt reset moon, does reset palette 
 
+            if a moons selected and you press B, and then go back in, keep moon
+            if a palette is selected, and you press B, keep palette
+            stuffs only reset on moving
+
     */
 
     // i actually prefer this patch method(with a lil modification) tbh. its very well done

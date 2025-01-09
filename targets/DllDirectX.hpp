@@ -177,7 +177,7 @@ public:
 		maxSize *= 2;
 		T* temp = (T*)realloc(data, maxSize * sizeof(T));
 		
-		if (temp == NULL) {
+		if (temp == (T*)NULL) {
 			log("vec resize failed??!");
 			return;
 		}
@@ -190,7 +190,7 @@ public:
 
 		T* temp = (T*)realloc(data, maxSize * sizeof(T));
 
-		if (temp == NULL) {
+		if (temp == (T*)NULL) {
 			log("Vec realloc failed??!");
 			return;
 		}

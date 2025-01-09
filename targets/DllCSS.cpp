@@ -188,15 +188,16 @@ std::function<void(int playerIndex, int dir)> ControlFuncs[] = {
 		}
 
 		if(newIndex == -1) {
-			// i could,, and maybe should, recurse here.
 			return;
 		}
-
-		// reset the palette and moon of the char, now that a new one is here
-		players[playerIndex]->moon = 0;
-		ourCSSData[playerIndex].paletteIndex = 0;
-		ourCSSData[playerIndex].randomPalette = false;
-
+		
+		if(newIndex != ourCSSData[playerIndex].idIndex) { // reset the palette and moon of the char, now that a new one is here
+			ourCSSData[playerIndex].moonIndex = 0;
+			players[playerIndex]->moon = 0;
+			ourCSSData[playerIndex].paletteIndex = 0;
+			ourCSSData[playerIndex].randomPalette = false;
+		}
+		
 		ourCSSData[playerIndex].idIndex = newIndex;
 	},
 
@@ -336,6 +337,12 @@ std::function<void(int playerIndex, Point p)> drawCharSelect = [](int playerInde
 	y += cssMenuFontSize;
 	*/
 
+	/*for(int m=0; m<3; m++) {
+		moonPositions[playerIndex][m].current = Point(0, 0);
+		moonPositions[playerIndex][m].goal = Point(0, 0);
+	}*/
+
+	// reset moon positions
 	for(int m=0; m<3; m++) {
 		moonPositions[playerIndex][m].current = Point(0, 0);
 		moonPositions[playerIndex][m].goal = Point(0, 0);
@@ -743,15 +750,8 @@ void updateControls() {
 					if(ourCSSData[i].selectIndex >= menuOptionCount) {
 						ourCSSData[i].selectIndex = menuOptionCount - 1;
 					}
-				} else if(pressBtn & 0x20) { // B
-					if(ourCSSData[i].selectIndex == menuOptionCount - 1) { // we are at ready, go back to 0
-						ourCSSData[i].selectIndex = 0;
-					} else {
-						ourCSSData[i].selectIndex--;
-						if(ourCSSData[i].selectIndex < 0) {
-							ourCSSData[i].selectIndex = 0;
-						}
-					}
+				} else if(pressBtn & 0x20) { // B. B Always moves you back to start 
+					ourCSSData[i].selectIndex = 0;
 				} else if((pressBtn & 0x0C) && ((ourCSSData[i].input.btn & 0x0C) == 0x0C)) { // caster is fucking with p/2/3 on subsequent loads. am i not resetting correctly? its randomly having 0x02 btn
 					ourCSSData[i].offsetPalette = !ourCSSData[i].offsetPalette;
 				}
@@ -773,15 +773,15 @@ void updateControls() {
 	}
 
 	// check if i should move ppl to css
-	bool shouldMoveToCSS = true;
+	bool shouldMoveToStageSel = true;
 	for(int i=0; i<4; i++) {
 		if(ourCSSData[i].selectIndex != menuOptionCount - 1) {
-			shouldMoveToCSS = false;
+			shouldMoveToStageSel = false;
 			break;
 		}
 	}
 
-	if(shouldMoveToCSS) {
+	if(shouldMoveToStageSel) {
 		enterStageSel();
 	}
 
