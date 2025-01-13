@@ -315,49 +315,10 @@ std::array<std::array<Smooth<Point>, 36>, 4> palettePositions = []() { // i actu
 
 
 std::function<void(int playerIndex, Point p)> drawCharSelect = [](int playerIndex, Point p) mutable -> void {
-	/*
-	bool mirror = playerIndex & 1;
-	DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
-
-	dispPlayers[playerIndex]->gridPos = charGridList[ourCSSData[playerIndex].idIndex];
-	players[playerIndex]->charID = charIDList[ourCSSData[playerIndex].idIndex];
-	dispPlayers[playerIndex]->charID = players[playerIndex]->charID;
-	dispPlayers[playerIndex]->palette = players[playerIndex]->palette;
-
-	int displayIndex = playerIndex;
-	if(displayIndex == 1) {
-		displayIndex = 2;
-	} else if(displayIndex == 2) {
-		displayIndex = 1;
-	}
-
-	std::string tempCharString = "P" + std::to_string(displayIndex + 1) + ": " + charIDNames[ourCSSData[playerIndex].idIndex];
-	RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
-	TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, tempCharString.c_str());
-	y += cssMenuFontSize;
-	*/
-
-	/*for(int m=0; m<3; m++) {
-		moonPositions[playerIndex][m].current = Point(0, 0);
-		moonPositions[playerIndex][m].goal = Point(0, 0);
-	}*/
-
-	// reset moon positions
-	for(int m=0; m<3; m++) {
-		moonPositions[playerIndex][m].current = Point(0, 0);
-		moonPositions[playerIndex][m].goal = Point(0, 0);
-	}
-
-	//TextDraw(p, cssMenuFontSize, 0xFFFFFFFF, "CHOOSE CHAR");
+	// since the css grid thingys are always drawn, this func doesnt do much, but im leaving it here for consistency
 };
 
 std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerIndex, Point p) mutable -> void {
-
-	// reset palette positions
-	for(int pal=0; pal<36; pal++) {
-		palettePositions[playerIndex][pal].current = Point(0, 0);
-		palettePositions[playerIndex][pal].goal = Point(0, 0);
-	}
 
 	// upon entering moon select, if people have a random char selected, i need to give them a random char
 	if(ourCSSData[playerIndex].idIndex == charIDCount - 1) {
@@ -392,11 +353,6 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 	//UIManager::add("otherMoonScale", &otherMoonScale);	
 	DWORD moonCol = (((BYTE)(0xFF * moonTransparency)) << 24) | 0x00FFFFFF;
 
-	//UIManager::add("moonRate", &moonRate);
-	/*for(int m=0; m<3; m++) {
-		moonPositions[playerIndex][m].rate = moonRate;
-	}*/
-
 	moonPositions[playerIndex][moonIndex] = Point(0, 0);
 
 	if(shouldReverseDraws) {
@@ -406,7 +362,6 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 		moonPositions[playerIndex][prevMoonIndex] = -otherMoonOffset;
 		moonPositions[playerIndex][nextMoonIndex] = otherMoonOffset;
 	}
-	
 
 	Point centerPos = p + moonOffset + moonPositions[playerIndex][moonIndex];
 	Point leftPos =   p + moonOffset + moonPositions[playerIndex][prevMoonIndex];
@@ -545,9 +500,17 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 				}
 
 				if(x != 0) {
-					palColor.r *= 0.4;
-					palColor.g *= 0.4;
-					palColor.b *= 0.4;
+					// melty seems to do col *= (1 / (x+1)). this works,, but i have some weird shit
+					// nope, this is wrong!!!,, maybe? or something else is fucking up my transforms??
+					// its doing some other type of transform. that ratio is correct, but not consistent
+					// it was for warc 27 though?
+					//palColor.r = (BYTE)(palColor.r * (1.0f / (x + 1.0f)));
+					//palColor.g = (BYTE)(palColor.g * (1.0f / (x + 1.0f)));
+					//palColor.b = (BYTE)(palColor.b * (1.0f / (x + 1.0f)));
+
+					palColor.r = (BYTE)(palColor.r * (1.0f / (2.0f)));
+					palColor.g = (BYTE)(palColor.g * (1.0f / (2.0f)));
+					palColor.b = (BYTE)(palColor.b * (1.0f / (2.0f)));
 				}
 
 				RectDrawTex(drawRect, palColor);
@@ -568,9 +531,6 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 			startOffset.y -= paletteSize.y;
 		}
 	}
-
-	
-
 };
 
 std::function<void(int playerIndex, Point p)> drawReadySelect = [](int playerIndex, Point p) mutable -> void {
@@ -580,14 +540,6 @@ std::function<void(int playerIndex, Point p)> drawReadySelect = [](int playerInd
 		ourCSSData[playerIndex].paletteIndex = rand() % 36;
 	}
 
-	/*
-	bool mirror = playerIndex & 1;
-	DWORD bgCol = selfIndex == ourCSSData[playerIndex].selectIndex ? 0xFFFF0000 : 0xFF000000;
-
-	RectDraw(x, y, cssMenuSelectorWidth, cssMenuFontSize, bgCol);
-	TextDraw(x, y, cssMenuFontSize, 0xFFFFFFFF, "Ready(notworking)");
-	y += cssMenuFontSize;
-	*/	  
 	TextDraw(p, cssMenuFontSize, 0xFF42e5f4, "READY");
 };
 
@@ -752,6 +704,19 @@ void updateControls() {
 					}
 				} else if(pressBtn & 0x20) { // B. B Always moves you back to start 
 					ourCSSData[i].selectIndex = 0;
+
+					// reset moon positions
+					for(int m=0; m<3; m++) {
+						moonPositions[i][m].current = Point(0, 0);
+						moonPositions[i][m].goal = Point(0, 0);
+					}
+
+					// reset palette positions
+					for(int pal=0; pal<36; pal++) {
+						palettePositions[i][pal].current = Point(0, 0);
+						palettePositions[i][pal].goal = Point(0, 0);
+					}
+
 				} else if((pressBtn & 0x0C) && ((ourCSSData[i].input.btn & 0x0C) == 0x0C)) { // caster is fucking with p/2/3 on subsequent loads. am i not resetting correctly? its randomly having 0x02 btn
 					ourCSSData[i].offsetPalette = !ourCSSData[i].offsetPalette;
 				}

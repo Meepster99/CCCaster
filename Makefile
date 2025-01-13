@@ -52,10 +52,10 @@ LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) 
 
-# Tool chain
+# Tool chain #,,, is -fexceptions needed here?
 PREFIX = i686-w64-mingw32-
-GCC = $(PREFIX)gcc -march=skylake
-CXX = $(PREFIX)g++ -march=skylake
+GCC = $(PREFIX)gcc -march=skylake 
+CXX = $(PREFIX)g++ -march=skylake 
 WINDRES = windres
 STRIP = strip
 TOUCH = touch
@@ -95,7 +95,7 @@ INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(C
 CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 
 # Linker flags
-LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32
+LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 
 
 # Build options
 # DEFINES += -DDISABLE_LOGGING

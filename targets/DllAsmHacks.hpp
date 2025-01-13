@@ -102,6 +102,8 @@
 
 #define NOPS __asmStart R"( nop; nop; nop; nop; nop; nop; nop; nop; nop; nop; )" __asmEnd
 
+//__attribute__((noinline, optimize("-O0"))) bool isAddrValid(DWORD addr);
+
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \
     do {                                                                                                            \
         const int error = ASM_HACK.write();                                                                         \
@@ -683,6 +685,16 @@ __attribute__((naked, noinline)) void _naked_paletteHook();
 
 __attribute__((naked, noinline)) void _naked_paletteCallback();
 
+// -----
+
+__attribute__((noinline)) void getLinkedListElementCallback();
+
+__attribute__((naked, noinline)) void _naked_getLinkedListElementCallback();
+
+__attribute__((noinline)) void modifyLinkedList();
+
+__attribute__((naked, noinline)) void _naked_modifyLinkedList();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -878,6 +890,14 @@ static const AsmList initPatch2v2 =
     //PATCHJUMP(0x0042794c, _naked_CSSWaitToSelectStage)
 
     //{ ( void * ) (0x0048cb39 + 1), { INLINE_DWORD(0x7746a0) } } // patch the css loader to init 4 times. this causes crashes when coming in????
+
+    // renderer hooks.
+
+    { ( void * ) (0x004162c8 + 1), { 0xA0 }}, // this increases the size of a quad, such that i can fit my own data into it.
+
+    PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+
+    PATCHJUMP(0x00433302, _naked_modifyLinkedList),
 
 };
 

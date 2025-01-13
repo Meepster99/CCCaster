@@ -42,7 +42,6 @@ void __stdcall log(const char* format, ...);
 void __stdcall printDirectXError(HRESULT hr);
 
 void doUpdate();
-
 typedef struct COLOR {
 	COLOR() {}
 	COLOR(DWORD d) : col(d) {}
@@ -57,7 +56,7 @@ typedef struct COLOR {
 	};
 	operator DWORD() const { return col; } // this is super nice syntax. i wonder if i could have defined it with enums? would have saved a lot of casting back with GBAStranger
 } COLOR;
- 
+
 static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");
 
 COLOR avgColors(COLOR col1, COLOR col2, float f);
