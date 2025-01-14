@@ -893,11 +893,11 @@ static const AsmList initPatch2v2 =
 
     // renderer hooks.
 
-    { ( void * ) (0x004162c8 + 1), { 0xA0 }}, // this increases the size of a quad, such that i can fit my own data into it.
+    //{ ( void * ) (0x004162c8 + 1), { 0xA0 }}, // this increases the size of a quad, such that i can fit my own data into it.
 
-    PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+    //PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
 
-    PATCHJUMP(0x00433302, _naked_modifyLinkedList),
+    //PATCHJUMP(0x00433302, _naked_modifyLinkedList),
 
 };
 

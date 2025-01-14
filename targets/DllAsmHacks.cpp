@@ -33,241 +33,83 @@ using namespace std;
 __attribute__((noinline, naked)) long ehandler(EXCEPTION_POINTERS *pointers);
 
 extern "C" {
-    DWORD isAddrValidESP;
-    DWORD isAddrValidRET;
-
-    DWORD isAddrValidFS;
-    DWORD isAddrDeref;
+    DWORD isAddrValidAddr;
+    DWORD isAddrValidRes;
+    DWORD isAddrValidTemp;
+    bool insideCheckAddress = false;
 }
 
-bool tempTestFirstRun = false;
 
-__attribute__((noinline)) void tempTest() {
-
-    Sleep(16);
-
-    log("execHandler ran?!");
-    
-    return;
-
-    if(tempTestFirstRun) {
-        while(true) {}
-    }
-    tempTestFirstRun = true;
-
-    for(int i=0; i<8; i++) {
-        log("[esp + %02X] %08X %08X", i * 4, isAddrValidESP + (4*i), *(DWORD*)(isAddrValidESP + (4*i)));
-    }
-    
-
+EXCEPTION_DISPOSITION __cdecl _except_handler(struct _EXCEPTION_RECORD * ExceptionRecord, void * EstablisherFrame, struct _CONTEXT * ContextRecord, void * DispatcherContext) {
+    ContextRecord->Eax = (DWORD)&isAddrValidTemp;
+    isAddrValidRes = 0;
+    return ExceptionContinueExecution;
 }
 
-extern "C" {
-    __attribute__((naked, noinline)) void isAddrValid_ExecHandler(void* unknown);
-}
-
-void isAddrValid_ExecHandler(void* unknown) {
-    
-    // i dont even know what if anything this should return, or how many params it take
-    // vibes tell me,, the params should be 1 dword, and its stdcall
-
-    PUSH_ALL;
-    tempTest();
-    POP_ALL;
-
-    // https://learn.microsoft.com/en-us/cpp/cpp/try-except-statement?view=msvc-170
-    // i want to EXCEPTION_EXECUTE_HANDLER,, i think.
-    // i could,,, EXCEPTION_CONTINUE_EXECUTION,, if i moved the thing im derefing into a memory address??? maybe??
-    // all vibes and everything tell me that,, theres no way that they would continue exec NOT at like,, what
-    // ik it says continue_execution, but theres no way it doesnt skip the instruction which caused the error right?
-    // idek anymore. EXCEPTION_EXECUTE_HANDLER is what i did in msvc, and is what ill do now 
-
-    __asmStart R"(
-        mov eax, 1; // EXCEPTION_EXECUTE_HANDLER
-        ret 0x4;
-    )" __asmEnd
-
-}
-
-__attribute__((naked, noinline, cdecl)) DWORD isAddrValid(DWORD addr) {
+__attribute__((noinline, cdecl)) void checkAddress() {
 
     /*
-    
-    the vibe:
-    overwrite the SEH handler with my own
-    do the thing
-    restore SEH
-    
-    still super confused on how to return from the SEH handler though.
+    confused? so am i! read all of this please:
+        https://en.wikipedia.org/wiki/Microsoft-specific_exception_handling_mechanisms#SEH
+        https://en.wikipedia.org/wiki/Win32_Thread_Information_Block
+        https://limbioliong.wordpress.com/2022/01/18/understanding-windows-structured-exception-handling-part-2-digging-deeper/
+        https://learn.microsoft.com/en-us/cpp/build/reference/safeseh-image-has-safe-exception-handlers?view=msvc-170
+        https://groups.google.com/g/llvm-dev/c/BFmQV5X0buw
 
-    i can use eax, ecx, and edx under cdecl
+        I have done literally everything, but short of forking the compiler, or doing some EXTREMELY JANKY THINGS this is not changing.
+        in order for the exception to be recognized, the data for it needs to be in 
+        makes me wonder how visual studio does it in the first place
+        dlls can have their own xdata, i,, ugh
 
+        this solution at least uses MUCH less inline asm than most of my temps, if it even works
+        tbh making this exception always run would be very helpful for me to track down access violations in general 
+        thats assuming i can even get it to work
     */
 
     // follow 0x00416329
 
-    __asmStart R"(
-        mov edx, dword ptr [esp+4];
 
-        push esp;
-        push ebp;
-        push ebx;
-        push esi;
-        push edi;
-
-    )" __asmEnd
-
-    // save FS
-    //mov eax, fs:0;
-    //mov _isAddrValidFS, eax;
-    // write our func to the SEH thing
-    //mov eax, OFFSET _isAddrValid_ExecHandler; 
-    //mov fs:0, eax;
-    // restore FS
-    //mov eax, _isAddrValidFS;
-    //mov fs:0, eax; // restore FS
-
-    __asmStart R"(
+    insideCheckAddress = true;
+    isAddrValidRes = 1;
     
-        // i dont understand how this works, am i supposed to write to fs:0 or not??
-        push OFFSET _isAddrValid_ExecHandler;
-        push dword ptr fs:0;
-        mov dword ptr fs:0, esp;
-
-        // actual read to see if this area is readable
-        //mov cl, byte ptr [edx]; 
+    //static bool exceptAdded = false;
+    //if(!exceptAdded) {
+        //exceptAdded = true;
         
-        mov _isAddrDeref, edx;
-        mov cl, byte ptr _isAddrDeref;
+        NT_TIB* tib = (NT_TIB*)NtCurrentTeb();
 
-        mov eax, dword ptr [esp];
-        mov fs:0, eax;
-        add esp, 8;
-
-        mov eax, edx;
-
-    )" __asmEnd
-
-    __asmStart R"(
-
-        pop edi;
-        pop esi;
-        pop ebx;
-        pop ebp;
-        pop esp;
-
-        ret;
-    )" __asmEnd
-}
-
-
-__attribute__((noinline, optimize("O0"), cdecl)) bool isAddrValid_OLD(DWORD addr) {
+        EXCEPTION_REGISTRATION_RECORD reg;
+        reg.Next = tib->ExceptionList;
+        reg.Handler = (PEXCEPTION_ROUTINE)_except_handler;
+        tib->ExceptionList = &reg;
+    //}
     
-    // mingw doesnt support SEH exceptions, which is horrible
-    // all of this is a result of me trying to catch access violation exceptions
-
-    // need to get this func to work! check with godbolt.
-    // my options for this are limited, and all horrible, but not having this func makes testing extremely difficult    
-    // my solution? putting a try except from msvc into a dll, and calling that.
-    // gendef SEHLib.dll
-    // i686-w64-mingw32-dlltool -d SEHLib.def -D SEHLib.dll -l SEHLib.a
-    // strip SEHLib.a
-    // i686-w64-mingw32-ranlib SEHLib.a
-    // i do not know why stripping and unstripping it magically had it work??
-    // i wasnt actually calling the func tho
-    // currently for reasons unknown to even god, this causes melty to shit itself. 
-    // check event viewer
-    // this route is just not it.
-    // i genuinely do not understand the resulting code here, even its syntax is wrong.
-    // check out https://stackoverflow.com/questions/7244645/porting-vcs-try-except-exception-stack-overflow-to-mingw
-    // that solution only works for 64 bit though.
-    // im going to have to write this whole thing in asm arent i
-    // the SEH bs is at,,, fs:0
-    /*
-    
-    // from the mingw source code:
-
-    #define __try1(pHandler) \
-        __asm__ __volatile__ (
-            "pushl %0;
-            pushl %%fs:0;
-            movl %%esp,%%fs:0;
-            " : : "g" (pHandler));
-
-    #define	__except1	\
-        __asm__ __volatile__ (
-        "movl (%%esp),%%eax;
-        movl %%eax,%%fs:0;
-        addl $8,%%esp;" \
-        : : : "%eax");
-    
-    */
-
     __asmStart R"(
-        mov _isAddrValidESP, esp;
-        mov esp, [esp]; // using esp as scratch sapce
-        mov _isAddrValidRET, esp;
-        mov esp, _isAddrValidESP;
+    
+        push eax;
+
+        mov eax, _isAddrValidAddr;
+        mov eax, [eax];
+
+        pop eax;
+
     )" __asmEnd
 
-    tempTest();
-    tempTestFirstRun = false;
-    
-    bool res = true;
+    tib->ExceptionList = reg.Next;
 
-    //log("isAddrValid called addr is %08X ret: %08X", (DWORD)isAddrValid, *(DWORD*)isAddrValidESP);
-    log("isAddrValid ret: %08X", isAddrValidRET);
+    insideCheckAddress = false;
 
-    __try1 (ehandler) { 
-        volatile BYTE temp = *(BYTE*)addr;
-        
-        goto isAddrValidContinue; // straight up, does it just FALLTHROUGH HERE??? what fucked up assembly is being created here
-    } __except1 {
-        // i dont think this area of code is ever even execed
-        log("exception occured and we caught it!");
-        res = false;
-    }
-
-    isAddrValidContinue:
-
-    log("isaddrvalid returning %d", res);
-
-
-    return res;
-}
-
-long ehandler(EXCEPTION_POINTERS *pointers) { 
-
-    // ok so,, for reasons unknown, pointers->ExceptionRecord->ExceptionCod gens an exception itself!!!
-    // im just going to ret EXCEPTION_EXECUTE_HANDLER;
-    // the callback was fucking looping on itself
-    // i dont even understand what the fuck the try1 and except1 things are doing
-    // at this point, i know that being in here means that shit is,,, bad
-    // i just need to get out
-    // random assumptions:
-    // isaddrvalid is cdecl, the caller will clean that shit up. issue, what the fuck is this func.
-    // the asm from try1 and except1 seem to push/pop 2 things onto the stack?
-    // what about the 1 thing which is also in this func as a param??
-    // worst case scenario, i just, save the regs and restore them
-
-    __asmStart R"(
-        mov _isAddrValidESP, esp;
-    )" __asmEnd
-
-    PUSH_ALL;
-    tempTest();
-    POP_ALL;
-
-    __asmStart R"(
-        add esp, 0xC; // complete guess
-        mov eax, _isAddrValidRET;
-        mov [esp], eax;
-        mov eax, 0; // actual return value
-        ret;
-    )" __asmEnd
+    //*(int*)0 = 0;
 
 }
 
+DWORD isAddrValid(DWORD addr) {
+    isAddrValidAddr = addr;
+    //log("trying to call isAddrValid");
+    checkAddress();
+    //log("isAddrValidRes %d", isAddrValidRes);
+    return isAddrValidRes;
+}
 
 static int memwrite ( void *dst, const void *src, size_t len )
 {
@@ -1416,27 +1258,34 @@ static_assert(sizeof(LinkedListDataElement) == 0xA0, "LinkedListDataElement must
 
 void getLinkedListElementCallback() {
 
+    /*
     DWORD res;
 
-    log("this should be   valid");
+    //log("this should be   valid");
     res = isAddrValid(0x00555130);
-    log("\t%08X", res);
+    //log("\t%08X", res);
+    if(res != 1) {
+        log("valid isAddr fucked up");
+    }
 
-    log("this should be invalid");
+    //log("this should be invalid");
     res = isAddrValid(0);
-    log("\t%08X", res);
-
-    return;
+    //log("\t%08X", res);
+    if(res == 1) {
+        log("invalid isAddr fucked up");
+    }
+    */
 
     //DWORD* eax = (DWORD*)getLinkedListElementCallbackEAX;
     //eax[0x94 / 4]++;
 
     LinkedListDataElement* elem = (LinkedListDataElement*)getLinkedListElementCallbackEAX;
 
-    log("linkListCallback");
     if(!isAddrValid((DWORD)elem)) {
         return;
     }
+    
+    log("linkListCallback");
 
     elem->miscCounter++;
 
@@ -1444,6 +1293,8 @@ void getLinkedListElementCallback() {
         elem->verts[i].diffuse = 0xFFFFFFFF;
         elem->verts[i].specular = 0xFFFFFFFF;
     }
+
+    log("linkListCallback leaving");
 
 }
 
@@ -1465,10 +1316,12 @@ void _naked_getLinkedListElementCallback() {
 
 void modifyLinkedList() {
 
-    return;
-
     DWORD addr = 0x005550A8;
     addr = *(DWORD*)(addr + 8);
+
+    if(!isAddrValid(addr)) {
+        return;
+    }
 
     if(*(DWORD*)(addr) != 1) {
         log("%08X was not 1, returning", addr);
