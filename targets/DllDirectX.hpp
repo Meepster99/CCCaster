@@ -42,10 +42,11 @@ void __stdcall log(const char* format, ...);
 void __stdcall printDirectXError(HRESULT hr);
 
 void doUpdate();
-typedef struct COLOR {
-	COLOR() {}
-	COLOR(DWORD d) : col(d) {}
-	union {
+
+typedef struct BGRAColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT NOTICE BC IT WORKED FOR PALETTES
+	BGRAColor() {}
+	BGRAColor(DWORD d) : col(d) {}
+	union { 
 		struct {
 			BYTE a = 0xFF;
 			BYTE r = 0;
@@ -55,11 +56,60 @@ typedef struct COLOR {
 		DWORD col;
 	};
 	operator DWORD() const { return col; } // this is super nice syntax. i wonder if i could have defined it with enums? would have saved a lot of casting back with GBAStranger
-} COLOR;
+} BGRAColor;
 
-static_assert(sizeof(COLOR) == 4, "color struct must be 4 bytes");
+static_assert(sizeof(BGRAColor) == 4, "BGRAColor struct must be 4 bytes");
 
-COLOR avgColors(COLOR col1, COLOR col2, float f);
+typedef struct ARGBColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT NOTICE BC IT WORKED FOR PALETTES
+	ARGBColor() {}
+	ARGBColor(DWORD d) : col(d) {}
+	union { 
+		struct {
+			BYTE b = 0;
+			BYTE g = 0;
+			BYTE r = 0;
+			BYTE a = 0xFF;
+		};
+		DWORD col;
+	};
+	operator DWORD() const { return col; }
+} ARGBColor;
+
+static_assert(sizeof(ARGBColor) == 4, "ARGBColor struct must be 4 bytes");
+
+typedef struct FloatColor { // here just so i can load colors from UImanager without having to use variants
+
+	FloatColor() {}
+
+	FloatColor(float a_, float r_, float g_, float b_) : a(a_), r(r_), g(g_), b(b_) {}
+
+	union {
+		float cols[4];
+		struct {
+			float a = 1.0;
+			float r = 0;
+			float g = 0;
+			float b = 0;
+		};
+	};
+
+	DWORD getCol() {
+
+		ARGBColor res;
+
+		res.a = (BYTE)(a * 255.0);
+		res.r = (BYTE)(r * 255.0);
+		res.g = (BYTE)(g * 255.0);
+		res.b = (BYTE)(b * 255.0);
+
+		return res;
+	}
+
+} FloatColor;
+
+
+
+BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f);
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -389,6 +439,7 @@ namespace UIManager {
 
 	void add(const std::string& name, float* f);
 	void add(const std::string& name, Point* p);
+	void add(const std::string& name, FloatColor* c);
 	void reload();
 
 };

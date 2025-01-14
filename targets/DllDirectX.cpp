@@ -377,11 +377,11 @@ void doUpdate() {
 	
 }
 
-COLOR avgColors(COLOR col1, COLOR col2, float f) {
+BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f) {
 	
 	f = CLAMP(f, 0.0f, 1.0f);
 
-	COLOR res = 0;
+	BGRAColor res = 0;
 
 	res.a = (col1.a * (1 - f)) + (col2.a * f);
 	res.r = (col1.r * (1 - f)) + (col2.r * f);
@@ -1063,9 +1063,16 @@ namespace UIManager {
 		add(name + "Y", &(p->y));
 	}
 
+	void add(const std::string& name, FloatColor* c) {
+		add(name + "A", &(c->a));
+		add(name + "R", &(c->r));
+		add(name + "G", &(c->g));
+		add(name + "B", &(c->b));
+	}
+
 	void reload() {
 
-		log("reload called");
+		//log("reload called");
 
 		std::ifstream inFile("UIData.txt");
 		if (!inFile.is_open()) {
@@ -1085,7 +1092,7 @@ namespace UIManager {
 				std::string name = match[1].matched ? match[1].str() : "";
 				std::string value = match[2].matched ? match[2].str() : "";
 
-				log("%s -> %s", name.c_str(), value.c_str());
+				//log("%s -> %s", name.c_str(), value.c_str());
 
 				if(UIStringMap.contains(name)) {
 					*(UIStringMap[name].f) = safeStof(value);

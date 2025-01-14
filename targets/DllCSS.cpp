@@ -491,7 +491,7 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 				drawRect.p1 = baseDrawPoint + paletteColorOffset;
 				drawRect.p2 = baseDrawPoint + paletteColorOffset + paletteColorSize;
 
-				COLOR palColor = 0xFF00FF00;
+				BGRAColor palColor = 0xFF00FF00;
 
 				if(paletteColorMap.contains(charID)) {
 					int tempIndex = (((palX + x) % 6) * 6) + y + offsetPaletteVal;

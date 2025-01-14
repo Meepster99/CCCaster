@@ -54,10 +54,12 @@ DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o
 
 # Tool chain #,,, is -fexceptions needed here?
 PREFIX = i686-w64-mingw32-
-#GCC = $(PREFIX)gcc -march=skylake 
-#CXX = $(PREFIX)g++ -march=skylake 
-GCC = $(PREFIX)gcc 
-CXX = $(PREFIX)g++ 
+# this march is needed for SEH to work,,, i believe
+# -fdata-sections???
+GCC = $(PREFIX)gcc -march=skylake 
+CXX = $(PREFIX)g++ -march=skylake
+#GCC = $(PREFIX)gcc 
+#CXX = $(PREFIX)g++ 
 WINDRES = windres
 STRIP = strip
 TOUCH = touch

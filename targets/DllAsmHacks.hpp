@@ -10,7 +10,133 @@
 #include <array>
 #include <windows.h>
 
-#define SHIFTHELD    (GetAsyncKeyState(VK_SHIFT)    & 0x8000)
+
+/*
+
+my naming schemes are horrid, but then again, i dont even know what im naming
+
+LinkedListDataElement is for the data at 005550B0
+
+LinkedListElement is for the data inside the list of lists in 005550A8, [[005550A8]]
+
+*/ 
+
+typedef struct RawMeltyVert {
+	float x;
+	float y;
+	float z;
+	float w;
+	DWORD diffuse; 
+	DWORD specular; 
+	float u;
+	float v;
+} RawMeltyVert;
+
+static_assert(sizeof(RawMeltyVert) == 0x20, "RawMeltyVert must be size 0x20");
+
+enum class ListDrawType : BYTE {
+    Unknown = 0,
+    Character = 1,
+    Shadow = 2,
+    Effect = 3,
+    HitEffect = 4
+};
+
+const char* getListDrawString(ListDrawType t);
+
+enum class ListRetType : BYTE {
+    Unknown = 0,
+    DrawMenuCursor = 1,
+    DrawEffectsTopUIandCharaSelect = 2,
+    DrawHitEffect = 3,
+    DrawBlur = 4,
+    DrawCharacterSelectBackground = 5,
+    DrawCharactersAndBackground = 6,
+    RenderOnScreen = 7
+};
+
+const char* getListRetString(ListRetType t);
+
+typedef struct __attribute__((packed)) LinkedListSharedData {
+    DWORD address;
+    
+    ListDrawType drawType;
+    ListRetType retType;
+
+    BYTE unused1;
+    BYTE unused2;
+    DWORD id; // todo, have a database of this, and find out where copies occur
+
+} LinkedListSharedData;
+
+typedef struct __attribute__((packed)) LinkedListDataElement {
+
+    LinkedListDataElement* next;
+    LinkedListDataElement* prev;
+
+    union {
+        RawMeltyVert verts[4];
+        struct {
+            RawMeltyVert v0;
+            RawMeltyVert v1;
+            RawMeltyVert v2;
+            RawMeltyVert v3;
+        };
+    };
+
+    IDirect3DTexture9* tex;
+
+    DWORD unk1;
+    DWORD unk2;
+    
+    LinkedListSharedData data;
+
+} LinkedListDataElement;
+
+// im genuinely not sure if i can go over this size. malloc is allocing things onto 0x10 boundaries, and whatever is copying is doing that too
+// i should be able to change the copying, but thats a TON of extra effort
+// some super weird stuff is occuring with the "melty closed but is still in task manager" thing. tbh i should probs just,,, alloc a pointer? why not? but i should be able to have more space.
+// so this relies on malloc going to 0x10 bounds, copies somehow going to 0x10 bounds, heaven and hell loving me
+static_assert(sizeof(LinkedListDataElement) == 0xA0, "LinkedListDataElement must be size 0xA0");
+
+typedef struct __attribute__((packed)) LinkedListElement {
+
+    LinkedListElement* next;
+    
+    // not sure about this one at all
+    union {
+        DWORD flags;
+        struct {
+            BYTE flag0; // most likely a D3DRESOURCETYPE. very weird that its only,,, one byte though,,, so it might be something else. check out 004c0243 for an explanation
+            BYTE flag1;
+            BYTE flag2;
+            BYTE flag3;
+        };
+    };
+
+    union {
+        RawMeltyVert verts[4];
+        struct {
+            RawMeltyVert v0;
+            RawMeltyVert v1;
+            RawMeltyVert v2;
+            RawMeltyVert v3;
+        };
+    };
+
+    IDirect3DTexture9* tex; // i think? be sure this is at,,, +54? or +88? look back to training mode code
+
+    DWORD unk1;
+    DWORD unk2;
+
+    // this data seems to mirror the data i put into LinkedListDataElement!!! so i just store info on the object being drawn here. easy.
+    LinkedListSharedData data;
+
+} LinkedListElement;
+
+//static_assert(sizeof(LinkedListElement) == 0xA0, "LinkedListElement must be size idek");
+
+#define SHIFTHELD  (GetAsyncKeyState(VK_SHIFT)    & 0x8000)
 #define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
@@ -695,6 +821,14 @@ __attribute__((noinline)) void modifyLinkedList();
 
 __attribute__((naked, noinline)) void _naked_modifyLinkedList();
 
+// tracking funcs to keep track of whats being drawn
+
+__attribute__((naked, noinline)) void _naked_trackListCharacterDraw();
+
+__attribute__((naked, noinline)) void _naked_trackListShadowDraw();
+
+__attribute__((naked, noinline)) void _naked_trackListEffectDraw();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -895,9 +1029,24 @@ static const AsmList initPatch2v2 =
 
     //{ ( void * ) (0x004162c8 + 1), { 0xA0 }}, // this increases the size of a quad, such that i can fit my own data into it.
 
-    //PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+    // dynamically change the allocation size whenever i add new params :)
+    // or at least, it should? but something is being VERY weird with it. is the size of the element hardcoded elsewhere??
+    // worst case, i know 0xA0 worked. only because malloc is being super weird with it though
+    { ( void * ) (0x004162c8 + 1), { INLINE_DWORD(sizeof(LinkedListDataElement)) }}, 
 
-    //PATCHJUMP(0x00433302, _naked_modifyLinkedList),
+    PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+
+    //PATCHJUMP(0x004331d4, _naked_modifyLinkedList), // the reason im doing this at 004331d4 and not 0040e48e is bc the game would close, but not actually exit the process. i need the mutex, i am hoping
+    PATCHJUMP(0x0040e48e, _naked_modifyLinkedList),
+
+    // all these patches are so i can track what is actually being drawn, per draw call. (there has to be an easier way of doing this)
+    // something that, ugh. assuming i only overwrite instructions which properly align to 5 bytes, i could,, overwrite them, copy them into a func, but like at that point whatthefuck
+
+    PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
+
+    PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
+
+    PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
 
 };
 
