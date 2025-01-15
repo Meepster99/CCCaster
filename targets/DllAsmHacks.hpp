@@ -57,75 +57,146 @@ enum class ListRetType : BYTE {
 
 const char* getListRetString(ListRetType t);
 
-#define packedStruct struct __attribute__((packed))
+#define packedStruct typedef struct __attribute__((packed))
 
-typedef packedStruct RenderList {
+packedStruct RenderList {
 
-    packedStruct LinkedListAssets { 
+    packedStruct LinkedListAssetsList { 
+        
+        packedStruct LinkedListAssetsElement {
+
+            packedStruct LinkedListAssetsData {
+                // straight up? not fuckin sure about the size of this
+                // its either going to point to another 
+
+                LinkedListAssetsElement* nextAsset; // loops back to where this thing would have been if,, yea, yk
+
+                // not sure about this one at all
+                union {
+                    DWORD flags; //
+                    struct {
+                        BYTE flag0; // most likely a D3DRESOURCETYPE. very weird that its only,,, one byte though,,, so it might be something else. check out 004c0243 for an explanation
+                        BYTE flag1;
+                        BYTE flag2;
+                        BYTE flag3;
+                    };
+                };
+
+                union {
+                    RawMeltyVert verts[4];
+                    struct {
+                        RawMeltyVert v0;
+                        RawMeltyVert v1;
+                        RawMeltyVert v2;
+                        RawMeltyVert v3;
+                    };
+                };
+
+                IDirect3DTexture9* tex; // at 0x88
+                
+                // why do i feel like these look similar to that weird memory area i used to,,, see if something was heat?
+                DWORD LinkedListAssetsData_UNK1; 
+                DWORD LinkedListAssetsData_UNK2;
+
+            } LinkedListAssetsData;
+
+            static_assert(sizeof(LinkedListAssetsData) == 0x94, "LinkedListAssetsData size error"); // created at 00414EEA
+
+            // dawg. i got NO FUCKING CLUE WHATS HAPPENING
+            // basically, if this ptr + 4 is nonzero, then hit it with the switch at 004c03cb
+            // and its an alloc size 94. if not, then just keep chugging down the list??!
+
+            // if this is a nextElement, [choice + 4] == 0
+            // if this is an actual fucking thing with draw details, [choice + 4] != 0
+            
+            typedef union LinkedListAssetsElementChoice {
+                LinkedListAssetsElement* nextAsset;
+                LinkedListAssetsData* nextData;
+            } LinkedListAssetsElementChoice;
+
+            LinkedListAssetsElementChoice choice; 
+            DWORD stupidFlags; // 00414e48 sets this to 0, 004C0566 skips drawing if its,, not 0?
+            DWORD unknown2; // swaps between 0 and 1, not sure why. this is what doesThingsIfList+8=0 interacts with
+            DWORD possibleCount; // 1600. why? im not sure
+
+
+        } LinkedListAssetsElement;
+
+        static_assert(sizeof(LinkedListAssetsElement) == 0x10, "LinkedListAssetsElement != 0x10");
+
         // i could, maybe should, have this whole struct be a union of LinkedListAssets and LinkedListAssetsData
         // tbh i will
         // although, is this fucker always accessed as a linked list? or also as an array??
         // theres no fucking way that its,, i,,,
+        LinkedListAssetsElement elements[1600];
+    } LinkedListAssetsList;
 
-        packedStruct LinkedListAssetsData {
-            // straight up? not fuckin sure about the size of this
-            // its either going to point to another 
-            // alloced at 00414EEA
+    static_assert(sizeof(LinkedListAssetsList) == 0x6400, "LinkedListAssetsList != 0x6400");
 
-            LinkedListAssets* nextAsset;
-
-            // not sure about this one at all
-            union {
-                DWORD flags; //
-                struct {
-                    BYTE flag0; // most likely a D3DRESOURCETYPE. very weird that its only,,, one byte though,,, so it might be something else. check out 004c0243 for an explanation
-                    BYTE flag1;
-                    BYTE flag2;
-                    BYTE flag3;
-                };
-            };
-
-            union {
-                RawMeltyVert verts[4];
-                struct {
-                    RawMeltyVert v0;
-                    RawMeltyVert v1;
-                    RawMeltyVert v2;
-                    RawMeltyVert v3;
-                };
-            };
-
-            IDirect3DTexture9* tex; // at hex 88
-
-            DWORD LinkedListAssetsData_UNK1;
-            DWORD LinkedListAssetsData_UNK2
-
-        };
-
-        static_assert(sizeof(LinkedListAssetsData) == 0x94, "LinkedListAssetsData size error");
-
-        union {
-            // dawg. i got NO FUCKING CLUE WHATS HAPPENING
-            // basically, if this ptr + 4 is nonzero, then hit it with the switch at 004c03cb
-            // and its an alloc size 94. if not, then just keep chugging down the list??!
-            LinkedListAssets* nextAsset; 
-            LinkedListAssetsData* nextData;
-        }
-
-        DWORD stupidFlags; // 00414e48 sets this to 0, 004C0566 skips drawing if its,, not 0?
-        DWORD unknown2; // swaps between 0 and 1, not sure why. this is what doesThingsIfList+8=0 interacts with
-        DWORD possibleCount; // 1600. why? im not sure
-
-    };
-
-    static_assert(sizeof(LinkedListAssets) == 4 * sizeof(DWORD), "LinkedListAssets size error");
-
-    LinkedListAssets* linkedListAssets; // malloced at 0041507D with size 0x6400
-    DWORD linkedListAssetsCount; // 1600, the malloc was 0x6400, 0x6400 / 0x10 is 1600.
-    
     packedStruct LinkedListRender {
 
-    };  
+        packedStruct LinkedListRenderList {
+
+            packedStruct LinkedListRenderElement {
+
+                /*
+                //LinkedListAssetsData** dataPtr; // im not confident on this at all, only did one check
+                LinkedListAssetsElement* assetElementPtr;
+
+                BYTE flag; // used in switch at 004c03bf
+                BYTE unknown1;
+                BYTE unknown2;
+                BYTE unknown3;
+
+                union {
+                    RawMeltyVert verts[4];
+                    struct {
+                        RawMeltyVert v0;
+                        RawMeltyVert v1;
+                        RawMeltyVert v2;
+                        RawMeltyVert v3;
+                    };
+                };
+
+                IDirect3DTexture9* tex; // at 0x88
+                
+                // why do i feel like these look similar to that weird memory area i used to,,, see if something was heat?
+                DWORD LinkedListAssetsData_UNK1; 
+                DWORD LinkedListAssetsData_UNK2;
+
+            } LinkedListRenderElement;
+            static_assert(sizeof(LinkedListRenderElement) == 0x94, "LinkedListRenderElement != 0x94"); // alloced at 00414EEA
+
+            LinkedListRenderElement* elements[8000];
+            */
+
+           LinkedListAssetsData* elements[8000];
+        } LinkedListRenderList;
+
+        static_assert(sizeof(LinkedListRenderList) == 0x7D00, "LinkedListRenderList != 0x7D00"); // alloced at 00401BDF
+
+        DWORD unknown1; // set to one
+        LinkedListRenderList* renderList;
+        DWORD numDraws; // set to,, 4? but i believe that, holy fuck. i knew from previous bs this was the number of gameplay drawss on screen. im in css now, but im drawing 4 char sprites!!
+        DWORD unknown3; // 8000
+        DWORD unknown4; // 8000. this is the length
+
+    } LinkedListRender;  
+    static_assert(sizeof(LinkedListRender) == 0x14, "LinkedListRender != 0x14"); // created at 0041513E
+
+    /*
+    
+    going off of nothing but vibes here, but i think i had the two lists reversed
+    which explains why i could never find the one at 5550b0 in the directx area, but could with 5550a0
+    justifications:
+        A0 is only 1600 long, sprite ids for chars go up to,,, what is it ~1000? 2 chars couldnt fit
+        B0 is 8000
+        
+
+    */
+
+    LinkedListAssetsList* linkedListAssetsList; // malloced at 0041507D with size 0x6400
+    DWORD linkedListAssetsCount; // 1600, the malloc was 0x6400, 0x6400 / 0x10 is 1600.
 
     LinkedListRender* linkedListRender; 
 
@@ -140,127 +211,6 @@ typedef packedStruct RenderList {
 static_assert(sizeof(RenderList) == 7 * sizeof(DWORD), "RenderList size error");
 
 RenderList* renderList = (RenderList*)0x005550A8;
-
-
-
-typedef struct __attribute__((packed)) LinkedListSharedData {
-    DWORD address;
-    
-    ListDrawType drawType;
-    ListRetType retType;
-
-    BYTE unused1;
-    BYTE unused2;
-    DWORD id; // todo, have a database of this, and find out where copies occur
-    DWORD unused3;
-
-} LinkedListSharedData;
-
-typedef struct __attribute__((packed)) LinkedListAssetElement {
-
-    /*
-    
-    has a list of lists with:
-    ptr
-    0
-    1 // goes between 0 and one, some kinda of validity check?
-    1600 // length
-    
-    [[[005550A8 + 8] + 4] + 0] + 0 seems to have an address to,,, data stored in [[005550A8 + 0] + 0] + 0
-    
-    ok i think im high now
-    at this point, new solution, log malloc for some reason
-
-    i should have hooked malloc months ago 
-    also, i need to remake a sane version of cheat engine that lets me hot load structs
-
-    */
-
-    LinkedListAssetElement* next;
-    LinkedListAssetElement* prev;
-
-    union {
-        RawMeltyVert verts[4];
-        struct {
-            RawMeltyVert v0;
-            RawMeltyVert v1;
-            RawMeltyVert v2;
-            RawMeltyVert v3;
-        };
-    };
-
-    IDirect3DTexture9* tex; // 0x88
-
-    DWORD unk1; // 8C
-    DWORD unk2; // 90
-    DWORD unk3; // 94
-    DWORD unk4; // 98
-    DWORD unk5; // 9C
-    
-    LinkedListSharedData data;
-
-} LinkedListAssetElement;
-
-// im genuinely not sure if i can go over this size. malloc is allocing things onto 0x10 boundaries, and whatever is copying is doing that too
-// i should be able to change the copying, but thats a TON of extra effort
-// some super weird stuff is occuring with the "melty closed but is still in task manager" thing. tbh i should probs just,,, alloc a pointer? why not? but i should be able to have more space.
-// so this relies on malloc going to 0x10 bounds, copies somehow going to 0x10 bounds, heaven and hell loving me
-// nope, im an idiot. 004b3b22 mallocs a0.
-// im now confused about what the fuck is going on with the hex 94 area??
-// that malloc is never even called (maybe called on program load?)
-static_assert(sizeof(LinkedListAssetElement) == 0xB0, "LinkedListAssetElement must be size 0xA0");
-
-typedef struct __attribute__((packed)) LinkedListRenderElement {
-
-    /* 
-    this is the data in the list at 005550B0
-
-    the data for the list holder is created at 00415139 with that malloc call
-
-    but the elements for this list,,,
-    00414ee5? 0x004b3b1d?
-
-    if i was human, i would have both render/asset list share the same struct? but im not even sure of that????
-
-    */
-
-
-    LinkedListRenderElement* next;
-    
-    // not sure about this one at all
-    union {
-        DWORD flags;
-        struct {
-            BYTE flag0; // most likely a D3DRESOURCETYPE. very weird that its only,,, one byte though,,, so it might be something else. check out 004c0243 for an explanation
-            BYTE flag1;
-            BYTE flag2;
-            BYTE flag3;
-        };
-    };
-
-    union {
-        RawMeltyVert verts[4];
-        struct {
-            RawMeltyVert v0;
-            RawMeltyVert v1;
-            RawMeltyVert v2;
-            RawMeltyVert v3;
-        };
-    };
-
-    IDirect3DTexture9* tex; // 0x88
-
-    DWORD unk1; // 8C
-    DWORD unk2; // 90
-    DWORD unk3; // 94
-    DWORD unk4; // 98
-    DWORD unk5; // 9C
-    
-    LinkedListSharedData data;
-
-} LinkedListRenderElement;
-
-static_assert(sizeof(LinkedListRenderElement) == 0xB0, "LinkedListRenderElement must be size idek whats going on ");
 
 #define SHIFTHELD  (GetAsyncKeyState(VK_SHIFT) & 0x8000)
 #define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
