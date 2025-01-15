@@ -71,6 +71,13 @@ typedef struct __attribute__((packed)) LinkedListSharedData {
 
 typedef struct __attribute__((packed)) LinkedListDataElement {
 
+    /* 
+    this is the data in the list at 005550B0
+
+    the data for the list holder is created at 00415139 with that malloc call
+
+    */
+
     LinkedListDataElement* next;
     LinkedListDataElement* prev;
 
@@ -97,6 +104,9 @@ typedef struct __attribute__((packed)) LinkedListDataElement {
 // i should be able to change the copying, but thats a TON of extra effort
 // some super weird stuff is occuring with the "melty closed but is still in task manager" thing. tbh i should probs just,,, alloc a pointer? why not? but i should be able to have more space.
 // so this relies on malloc going to 0x10 bounds, copies somehow going to 0x10 bounds, heaven and hell loving me
+// nope, im an idiot. 004b3b22 mallocs a0.
+// im now confused about what the fuck is going on with the hex 94 area??
+// that malloc is never even called (maybe called on program load?)
 static_assert(sizeof(LinkedListDataElement) == 0xA0, "LinkedListDataElement must be size 0xA0");
 
 typedef struct __attribute__((packed)) LinkedListElement {
@@ -829,6 +839,8 @@ __attribute__((naked, noinline)) void _naked_trackListShadowDraw();
 
 __attribute__((naked, noinline)) void _naked_trackListEffectDraw();
 
+__attribute__((naked, noinline)) void _naked_linkedListMalloc();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -1033,6 +1045,8 @@ static const AsmList initPatch2v2 =
     // or at least, it should? but something is being VERY weird with it. is the size of the element hardcoded elsewhere??
     // worst case, i know 0xA0 worked. only because malloc is being super weird with it though
     { ( void * ) (0x004162c8 + 1), { INLINE_DWORD(sizeof(LinkedListDataElement)) }}, 
+
+    PATCHJUMP(0x004162cd, _naked_linkedListMalloc), // i want to make sure to set all the memory to 0, mostly for myself
 
     PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
 

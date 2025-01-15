@@ -1311,6 +1311,43 @@ extern "C" {
 
 }
 
+void _naked_linkedListMalloc() {
+
+    // patched at 004162cd
+
+    emitCall(0x004e0230); // malloc call
+
+    PUSH_ALL;
+    omfgomfg();
+    POP_ALL;
+
+    // zero out the alloced memory, mostly for my own sanity
+    // the size of the malloc is still on the stack
+    __asmStart R"(
+        push ebx;
+        push eax;
+
+        mov ebx, [esp + 8]; 
+
+    _naked_linkedListMalloc_Loop:
+
+        mov byte ptr [eax], 0xFF;
+        
+        add eax, 1;
+
+        sub ebx, 1;
+        cmp ebx, 0;
+        jg _naked_linkedListMalloc_Loop;
+
+
+        pop eax;
+        pop ebx;
+    )" __asmEnd
+
+    emitJump(0x004162d2); // resume exec
+
+}
+
 void _naked_trackListCharacterDraw() {
 
     // patched at 0x0041b3c9
@@ -1495,6 +1532,10 @@ void modifyLinkedList() {
     
     // issue. im totally not properly clearing,, the data from LinkedListDataElement. i think that this data is just a copied version of it!
     // this is maybe,, why the errors only flash for one frame?
+    // ACTUALLY, JUST MAKE IT A POINTER INSTEAD FOOL
+    // allocing memory,, kinda sucks though
+    // and oh god if the linkedlist things get freed, ill leak
+    // i could do a custom allocator/a map, but like at that point what am i even on
     LinkedListElement* elem = (LinkedListElement*)addr;
 
     // misc scratch variables
