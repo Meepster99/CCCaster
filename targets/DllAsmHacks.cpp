@@ -1321,16 +1321,12 @@ extern "C" {
 
 static std::mutex mallocMutex; // maybe i should generalize this to,, the log func? assuming thats even whats causing the crash
 static volatile int omfg = 0;
-void mallocCallback() {
+void mallocCallback(DWORD naked_mallocHook_ret, DWORD naked_mallocHook_result, DWORD naked_mallocHook_size) {
 
-    bool res = mallocMutex.try_lock(); // does checking a mutex involve dynamic allocs????
-    if(!res) {
-        return;
-    }
-
-    //mallocMutex.lock();
+    mallocMutex.lock();
 
     // somehow, someway, logging in here was causing crashes. does my log func call malloc?? and like,,, not its own?? i,,, what the fuck is happening???
+    // regarding the above, globals were shared between threads. doing all parameter things on stack fixed it 
 
     //log("%08X created %08X size %08X", naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
 
@@ -1339,7 +1335,7 @@ void mallocCallback() {
     DWORD threadID = GetCurrentThreadId();
 
     char buffer[256];
-    snprintf(buffer, 256, "t: %04X %08X created %08X size %08X\n", threadID, naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
+    snprintf(buffer, 256, "t: %04X at %08X created %08X size %08X\n", threadID, naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
 
     outfile << buffer;
     omfg++;
@@ -1351,20 +1347,26 @@ void mallocCallback() {
 void _naked_mallocCallback() {
 
     __asmStart R"(
-        mov _naked_mallocHook_result, eax;
+        mov ecx, [esp + 0]; // size
+        mov edx, [esp + 4]; // ret
     )" __asmEnd
 
-    PUSH_ALL;
-    mallocCallback();
+    PUSH_ALL; // does 9 pushes. i could go stack subtracking, or i could take an unnecessary risk and be weird with cdecl
+    __asmStart R"(
+        
+        push ecx; // size
+        push eax; // result
+        push edx; // ret
+
+        call _mallocCallback;
+
+        add esp, 0xC;
+    )" __asmEnd
     POP_ALL;
 
     __asmStart R"(
-        mov eax, _naked_mallocHook_ret;
-        push eax;
-
-        mov eax, _naked_mallocHook_result;
-
-        ret;
+        add esp, 0x4; // this is for the duplicated size i pushed on the stack
+        ret; // the return address is still on the stack!
     )" __asmEnd
 
 }
@@ -1375,21 +1377,11 @@ void _naked_mallocHook() {
 
     __asmStart R"(
 
-        // eax is caller saved. this should be ok
-        // but weird shit is happening! so im no longer trusting it!
+        mov eax, [esp + 0x4]; // size
+        push eax;
 
-        mov _naked_mallocHook_result, eax; // backup eax
-
-        mov eax, [esp + 0x4];
-        mov _naked_mallocHook_size, eax;
-
-        mov eax, [esp];
-        mov _naked_mallocHook_ret, eax;
-        
         mov eax, OFFSET __naked_mallocCallback;
-        mov [esp], eax;
-
-        mov eax, _naked_mallocHook_result; // restore eax
+        push eax; // replace the old ret with our ret!!
 
     )" __asmEnd
 

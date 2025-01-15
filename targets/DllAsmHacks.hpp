@@ -57,6 +57,92 @@ enum class ListRetType : BYTE {
 
 const char* getListRetString(ListRetType t);
 
+#define packedStruct struct __attribute__((packed))
+
+typedef packedStruct RenderList {
+
+    packedStruct LinkedListAssets { 
+        // i could, maybe should, have this whole struct be a union of LinkedListAssets and LinkedListAssetsData
+        // tbh i will
+        // although, is this fucker always accessed as a linked list? or also as an array??
+        // theres no fucking way that its,, i,,,
+
+        packedStruct LinkedListAssetsData {
+            // straight up? not fuckin sure about the size of this
+            // its either going to point to another 
+            // alloced at 00414EEA
+
+            LinkedListAssets* nextAsset;
+
+            // not sure about this one at all
+            union {
+                DWORD flags; //
+                struct {
+                    BYTE flag0; // most likely a D3DRESOURCETYPE. very weird that its only,,, one byte though,,, so it might be something else. check out 004c0243 for an explanation
+                    BYTE flag1;
+                    BYTE flag2;
+                    BYTE flag3;
+                };
+            };
+
+            union {
+                RawMeltyVert verts[4];
+                struct {
+                    RawMeltyVert v0;
+                    RawMeltyVert v1;
+                    RawMeltyVert v2;
+                    RawMeltyVert v3;
+                };
+            };
+
+            IDirect3DTexture9* tex; // at hex 88
+
+            DWORD LinkedListAssetsData_UNK1;
+            DWORD LinkedListAssetsData_UNK2
+
+        };
+
+        static_assert(sizeof(LinkedListAssetsData) == 0x94, "LinkedListAssetsData size error");
+
+        union {
+            // dawg. i got NO FUCKING CLUE WHATS HAPPENING
+            // basically, if this ptr + 4 is nonzero, then hit it with the switch at 004c03cb
+            // and its an alloc size 94. if not, then just keep chugging down the list??!
+            LinkedListAssets* nextAsset; 
+            LinkedListAssetsData* nextData;
+        }
+
+        DWORD stupidFlags; // 00414e48 sets this to 0, 004C0566 skips drawing if its,, not 0?
+        DWORD unknown2; // swaps between 0 and 1, not sure why. this is what doesThingsIfList+8=0 interacts with
+        DWORD possibleCount; // 1600. why? im not sure
+
+    };
+
+    static_assert(sizeof(LinkedListAssets) == 4 * sizeof(DWORD), "LinkedListAssets size error");
+
+    LinkedListAssets* linkedListAssets; // malloced at 0041507D with size 0x6400
+    DWORD linkedListAssetsCount; // 1600, the malloc was 0x6400, 0x6400 / 0x10 is 1600.
+    
+    packedStruct LinkedListRender {
+
+    };  
+
+    LinkedListRender* linkedListRender; 
+
+    DWORD unknownCount1;
+    DWORD unknownCount1_sub;
+
+    DWORD unknownCount2;
+    DWORD unknownCount2_sub;
+
+} RenderList;
+
+static_assert(sizeof(RenderList) == 7 * sizeof(DWORD), "RenderList size error");
+
+RenderList* renderList = (RenderList*)0x005550A8;
+
+
+
 typedef struct __attribute__((packed)) LinkedListSharedData {
     DWORD address;
     
@@ -84,6 +170,9 @@ typedef struct __attribute__((packed)) LinkedListAssetElement {
     
     ok i think im high now
     at this point, new solution, log malloc for some reason
+
+    i should have hooked malloc months ago 
+    also, i need to remake a sane version of cheat engine that lets me hot load structs
 
     */
 
@@ -868,13 +957,11 @@ __attribute__((naked, noinline)) void _naked_trackListEffectDraw();
 
 __attribute__((naked, noinline)) void _naked_linkedListMalloc();
 
-__attribute__((noinline)) void mallocCallback();
-
 extern "C" {
+    __attribute__((noinline, cdecl)) void mallocCallback(DWORD naked_mallocHook_ret, DWORD naked_mallocHook_result, DWORD naked_mallocHook_size);
     __attribute__((naked, noinline)) void _naked_mallocCallback();
+    __attribute__((naked, noinline)) void _naked_mallocHook();
 }
-
-__attribute__((naked, noinline)) void _naked_mallocHook();
 
 static const AsmList initPatch2v2 =
 { 
@@ -1078,15 +1165,15 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x004e0230, _naked_mallocHook),
 
-    { ( void * ) (0x004b3b1d + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // malloc of the linkedListAllAssets
-    { ( void * ) (0x004b3b27 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // memset of the linkedListAllAssets
-    { ( void * ) (0x00414ee0 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }},
+    //{ ( void * ) (0x004b3b1d + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // malloc of the linkedListAllAssets
+    //{ ( void * ) (0x004b3b27 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // memset of the linkedListAllAssets
+    //{ ( void * ) (0x00414ee0 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }},
         
     // find where the above things are copied, and patch them. im not even sure if my using the space i thought was mine but wasnt was causing these issues? but i need to be sure
 
 
 
-    PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+    //PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
 
     //PATCHJUMP(0x004331d4, _naked_modifyLinkedList), // the reason im doing this at 004331d4 and not 0040e48e is bc the game would close, but not actually exit the process. i need the mutex, i am hoping
     //PATCHJUMP(0x0040e48e, _naked_modifyLinkedList),
