@@ -16,6 +16,7 @@
 #include <regex>
 #include <stdexcept>
 #include <eh.h>
+#include <mutex>
 
 using namespace std;
 
@@ -1309,42 +1310,99 @@ extern "C" {
     ListDrawType linkedListDrawType = ListDrawType::Unknown;
     ListRetType linkedListRetType = ListRetType::Unknown; // not sure if im even using this
 
+
+    // these variables are SHARED between THREADS meaning code will (im hoping) get all fucked.
+    // ill need to do everything in stack
+    //DWORD naked_mallocHook_ret;
+    //DWORD naked_mallocHook_result;
+    //DWORD naked_mallocHook_size;
+
 }
 
-void _naked_linkedListMalloc() {
+static std::mutex mallocMutex; // maybe i should generalize this to,, the log func? assuming thats even whats causing the crash
+static volatile int omfg = 0;
+void mallocCallback() {
 
-    // patched at 004162cd
+    bool res = mallocMutex.try_lock(); // does checking a mutex involve dynamic allocs????
+    if(!res) {
+        return;
+    }
 
-    emitCall(0x004e0230); // malloc call
+    //mallocMutex.lock();
 
-    PUSH_ALL;
-    omfgomfg();
-    POP_ALL;
+    // somehow, someway, logging in here was causing crashes. does my log func call malloc?? and like,,, not its own?? i,,, what the fuck is happening???
 
-    // zero out the alloced memory, mostly for my own sanity
-    // the size of the malloc is still on the stack
+    //log("%08X created %08X size %08X", naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
+
+    std::ofstream outfile("mallocLog.txt", std::ios_base::app);
+
+    DWORD threadID = GetCurrentThreadId();
+
+    char buffer[256];
+    snprintf(buffer, 256, "t: %04X %08X created %08X size %08X\n", threadID, naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
+
+    outfile << buffer;
+    omfg++;
+
+    mallocMutex.unlock();
+
+}
+
+void _naked_mallocCallback() {
+
     __asmStart R"(
-        push ebx;
-        push eax;
-
-        mov ebx, [esp + 8]; 
-
-    _naked_linkedListMalloc_Loop:
-
-        mov byte ptr [eax], 0xFF;
-        
-        add eax, 1;
-
-        sub ebx, 1;
-        cmp ebx, 0;
-        jg _naked_linkedListMalloc_Loop;
-
-
-        pop eax;
-        pop ebx;
+        mov _naked_mallocHook_result, eax;
     )" __asmEnd
 
-    emitJump(0x004162d2); // resume exec
+    PUSH_ALL;
+    mallocCallback();
+    POP_ALL;
+
+    __asmStart R"(
+        mov eax, _naked_mallocHook_ret;
+        push eax;
+
+        mov eax, _naked_mallocHook_result;
+
+        ret;
+    )" __asmEnd
+
+}
+
+void _naked_mallocHook() {
+
+    // patched at 0x004e0230
+
+    __asmStart R"(
+
+        // eax is caller saved. this should be ok
+        // but weird shit is happening! so im no longer trusting it!
+
+        mov _naked_mallocHook_result, eax; // backup eax
+
+        mov eax, [esp + 0x4];
+        mov _naked_mallocHook_size, eax;
+
+        mov eax, [esp];
+        mov _naked_mallocHook_ret, eax;
+        
+        mov eax, OFFSET __naked_mallocCallback;
+        mov [esp], eax;
+
+        mov eax, _naked_mallocHook_result; // restore eax
+
+    )" __asmEnd
+
+    // overwritten asm
+
+    emitByte(0x55);
+
+    emitByte(0x8B);
+    emitByte(0x6C);
+    emitByte(0x24);
+    emitByte(0x08);
+
+    emitJump(0x004e0235); // continue exec
 
 }
 
@@ -1401,7 +1459,9 @@ void _naked_trackListEffectDraw() {
 
 void getLinkedListElementCallback() {
 
-    LinkedListDataElement* elem = (LinkedListDataElement*)getLinkedListElementCallbackEAX;
+    return;
+
+    LinkedListRenderElement* elem = (LinkedListRenderElement*)getLinkedListElementCallbackEAX;
     //elem->data.miscCounter++;
     
     elem->data.address = 0;
@@ -1536,7 +1596,7 @@ void modifyLinkedList() {
     // allocing memory,, kinda sucks though
     // and oh god if the linkedlist things get freed, ill leak
     // i could do a custom allocator/a map, but like at that point what am i even on
-    LinkedListElement* elem = (LinkedListElement*)addr;
+    LinkedListRenderElement* elem = (LinkedListRenderElement*)addr;
 
     // misc scratch variables
     BYTE exists;
@@ -1663,6 +1723,5 @@ void _naked_modifyLinkedList() {
     emitJump(0x0040e494);
 
 }
-
 
 } // namespace AsmHacks

@@ -66,20 +66,29 @@ typedef struct __attribute__((packed)) LinkedListSharedData {
     BYTE unused1;
     BYTE unused2;
     DWORD id; // todo, have a database of this, and find out where copies occur
+    DWORD unused3;
 
 } LinkedListSharedData;
 
-typedef struct __attribute__((packed)) LinkedListDataElement {
+typedef struct __attribute__((packed)) LinkedListAssetElement {
 
-    /* 
-    this is the data in the list at 005550B0
-
-    the data for the list holder is created at 00415139 with that malloc call
+    /*
+    
+    has a list of lists with:
+    ptr
+    0
+    1 // goes between 0 and one, some kinda of validity check?
+    1600 // length
+    
+    [[[005550A8 + 8] + 4] + 0] + 0 seems to have an address to,,, data stored in [[005550A8 + 0] + 0] + 0
+    
+    ok i think im high now
+    at this point, new solution, log malloc for some reason
 
     */
 
-    LinkedListDataElement* next;
-    LinkedListDataElement* prev;
+    LinkedListAssetElement* next;
+    LinkedListAssetElement* prev;
 
     union {
         RawMeltyVert verts[4];
@@ -91,14 +100,17 @@ typedef struct __attribute__((packed)) LinkedListDataElement {
         };
     };
 
-    IDirect3DTexture9* tex;
+    IDirect3DTexture9* tex; // 0x88
 
-    DWORD unk1;
-    DWORD unk2;
+    DWORD unk1; // 8C
+    DWORD unk2; // 90
+    DWORD unk3; // 94
+    DWORD unk4; // 98
+    DWORD unk5; // 9C
     
     LinkedListSharedData data;
 
-} LinkedListDataElement;
+} LinkedListAssetElement;
 
 // im genuinely not sure if i can go over this size. malloc is allocing things onto 0x10 boundaries, and whatever is copying is doing that too
 // i should be able to change the copying, but thats a TON of extra effort
@@ -107,11 +119,24 @@ typedef struct __attribute__((packed)) LinkedListDataElement {
 // nope, im an idiot. 004b3b22 mallocs a0.
 // im now confused about what the fuck is going on with the hex 94 area??
 // that malloc is never even called (maybe called on program load?)
-static_assert(sizeof(LinkedListDataElement) == 0xA0, "LinkedListDataElement must be size 0xA0");
+static_assert(sizeof(LinkedListAssetElement) == 0xB0, "LinkedListAssetElement must be size 0xA0");
 
-typedef struct __attribute__((packed)) LinkedListElement {
+typedef struct __attribute__((packed)) LinkedListRenderElement {
 
-    LinkedListElement* next;
+    /* 
+    this is the data in the list at 005550B0
+
+    the data for the list holder is created at 00415139 with that malloc call
+
+    but the elements for this list,,,
+    00414ee5? 0x004b3b1d?
+
+    if i was human, i would have both render/asset list share the same struct? but im not even sure of that????
+
+    */
+
+
+    LinkedListRenderElement* next;
     
     // not sure about this one at all
     union {
@@ -134,19 +159,21 @@ typedef struct __attribute__((packed)) LinkedListElement {
         };
     };
 
-    IDirect3DTexture9* tex; // i think? be sure this is at,,, +54? or +88? look back to training mode code
+    IDirect3DTexture9* tex; // 0x88
 
-    DWORD unk1;
-    DWORD unk2;
-
-    // this data seems to mirror the data i put into LinkedListDataElement!!! so i just store info on the object being drawn here. easy.
+    DWORD unk1; // 8C
+    DWORD unk2; // 90
+    DWORD unk3; // 94
+    DWORD unk4; // 98
+    DWORD unk5; // 9C
+    
     LinkedListSharedData data;
 
-} LinkedListElement;
+} LinkedListRenderElement;
 
-//static_assert(sizeof(LinkedListElement) == 0xA0, "LinkedListElement must be size idek");
+static_assert(sizeof(LinkedListRenderElement) == 0xB0, "LinkedListRenderElement must be size idek whats going on ");
 
-#define SHIFTHELD  (GetAsyncKeyState(VK_SHIFT)    & 0x8000)
+#define SHIFTHELD  (GetAsyncKeyState(VK_SHIFT) & 0x8000)
 #define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
@@ -841,6 +868,14 @@ __attribute__((naked, noinline)) void _naked_trackListEffectDraw();
 
 __attribute__((naked, noinline)) void _naked_linkedListMalloc();
 
+__attribute__((noinline)) void mallocCallback();
+
+extern "C" {
+    __attribute__((naked, noinline)) void _naked_mallocCallback();
+}
+
+__attribute__((naked, noinline)) void _naked_mallocHook();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -1037,30 +1072,31 @@ static const AsmList initPatch2v2 =
 
     //{ ( void * ) (0x0048cb39 + 1), { INLINE_DWORD(0x7746a0) } } // patch the css loader to init 4 times. this causes crashes when coming in????
 
-    // renderer hooks.
+    // renderer modifications
 
-    //{ ( void * ) (0x004162c8 + 1), { 0xA0 }}, // this increases the size of a quad, such that i can fit my own data into it.
+    // malloc logger, for some reason
 
-    // dynamically change the allocation size whenever i add new params :)
-    // or at least, it should? but something is being VERY weird with it. is the size of the element hardcoded elsewhere??
-    // worst case, i know 0xA0 worked. only because malloc is being super weird with it though
-    { ( void * ) (0x004162c8 + 1), { INLINE_DWORD(sizeof(LinkedListDataElement)) }}, 
+    PATCHJUMP(0x004e0230, _naked_mallocHook),
 
-    PATCHJUMP(0x004162cd, _naked_linkedListMalloc), // i want to make sure to set all the memory to 0, mostly for myself
+    { ( void * ) (0x004b3b1d + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // malloc of the linkedListAllAssets
+    { ( void * ) (0x004b3b27 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // memset of the linkedListAllAssets
+    { ( void * ) (0x00414ee0 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }},
+        
+    // find where the above things are copied, and patch them. im not even sure if my using the space i thought was mine but wasnt was causing these issues? but i need to be sure
+
+
 
     PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
 
     //PATCHJUMP(0x004331d4, _naked_modifyLinkedList), // the reason im doing this at 004331d4 and not 0040e48e is bc the game would close, but not actually exit the process. i need the mutex, i am hoping
-    PATCHJUMP(0x0040e48e, _naked_modifyLinkedList),
+    //PATCHJUMP(0x0040e48e, _naked_modifyLinkedList),
 
     // all these patches are so i can track what is actually being drawn, per draw call. (there has to be an easier way of doing this)
     // something that, ugh. assuming i only overwrite instructions which properly align to 5 bytes, i could,, overwrite them, copy them into a func, but like at that point whatthefuck
 
-    PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
-
-    PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
-
-    PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
+    //PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
+    //PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
+    //PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
 
 };
 
