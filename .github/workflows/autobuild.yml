@@ -14,7 +14,8 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    # for unknown reasons, ubuntu 24 messes up when running the generator.
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4

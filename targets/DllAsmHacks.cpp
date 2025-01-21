@@ -1600,6 +1600,7 @@ void modifyLinkedList() {
     // misc scratch variables
     BYTE exists;
     BYTE source;
+    DWORD pattern;
     BYTE owner;
     DWORD playerAddr;
     BYTE charID;
@@ -1623,7 +1624,7 @@ void modifyLinkedList() {
     //log("actual: %08X test: %08X %d", actual, test, actual == test);
 
     addr = *(DWORD*)addr;
-    LinkedListRenderElement* renderElem = linkedListRenderList->elements[0].nextElement; 
+    LinkedListRenderElement* renderElem = linkedListRenderList->elements[0].nextElement; // the reason things werent working earlier was,, i was doing &(linkedListRenderList->elements[0]) 
 
     actual = addr;
     test = (DWORD)renderElem;
@@ -1656,6 +1657,7 @@ void modifyLinkedList() {
 
                     exists = *(BYTE*)(data->address + 0x0);
                     source = *(BYTE*)(data->address + 0x8);
+                    pattern = *(DWORD*)(data->address + 0x10);
                     owner = *(BYTE*)(data->address + 0x2F4);
                     playerAddr = 0x00555130 + (0xAFC * owner);
                     charID = *(BYTE*)(playerAddr + 0x5);
@@ -1666,11 +1668,25 @@ void modifyLinkedList() {
                         shouldColor = false;
                     }
 
+                    // i really should just import the list from training mode
+                    // basically, warc gets transformed into an effect for some reason.
+                    // i really should whitelist instead of blacklist here
+                    if(shouldColor) {
+                        if(pattern <= 79) { // ???
+                            shouldColor = false;
+                        } else if(pattern >= 223 && pattern <= 229) {
+                            shouldColor = false;
+                        } else if(pattern >= 260 && pattern <= 388) {
+                            shouldColor = false;
+                        }
+                    }
+                    
+
                     if(shouldColor) {
                         for(int i=0; i<4; i++) {
                             renderData->verts[i].specular = specular[i].getCol();
                         }
-                        //log("%5d %d %08X %-16s %-16s", index, data->verifyHash(), data->address, getListDrawString(data->drawType), getListRetString(data->retType));
+                        log("%5d %d %08X %5d %-16s %-16s", index, data->verifyHash(), data->address, pattern, getListDrawString(data->drawType), getListRetString(data->retType));
                     }
                     
                 }
@@ -1682,7 +1698,6 @@ void modifyLinkedList() {
         renderElem = renderElem->nextElement;
 
         index++;
-        
     }
 
 }
