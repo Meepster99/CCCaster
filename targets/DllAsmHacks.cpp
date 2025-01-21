@@ -1320,11 +1320,16 @@ extern "C" {
 
 }
 
+#ifdef NBLEEDING
 static std::mutex mallocMutex; // maybe i should generalize this to,, the log func? assuming thats even whats causing the crash
 static volatile int omfg = 0;
+#endif 
+
 void mallocCallback(DWORD naked_mallocHook_ret, DWORD naked_mallocHook_result, DWORD naked_mallocHook_size) {
 
+    #ifdef NBLEEDING
     mallocMutex.lock();
+    #endif
 
     // somehow, someway, logging in here was causing crashes. does my log func call malloc?? and like,,, not its own?? i,,, what the fuck is happening???
     // regarding the above, globals were shared between threads. doing all parameter things on stack fixed it 
@@ -1339,10 +1344,12 @@ void mallocCallback(DWORD naked_mallocHook_ret, DWORD naked_mallocHook_result, D
     snprintf(buffer, 256, "t: %04X at %08X created %08X size %08X\n", threadID, naked_mallocHook_ret, naked_mallocHook_result, naked_mallocHook_size);
 
     outfile << buffer;
+
+    #ifdef NBLEEDING
     omfg++;
-
     mallocMutex.unlock();
-
+    #endif
+    
 }
 
 void _naked_mallocCallback() {

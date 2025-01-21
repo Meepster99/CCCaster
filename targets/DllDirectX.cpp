@@ -368,13 +368,13 @@ void doUpdate() {
 	}
 	hasUpdated = true;
 
-	if(BLEEDING[0] == '0') {
+	#ifdef BLEEDING
+		log("THIS IS A BLEEDING RELEASE, CHECKING UPDATE")
+		updateDLL();
+	#else
 		log("THIS IS NOT A BLEEDING RELEASE. RETURNING");
-		return;
-	}
-	
-	updateDLL();
-	
+	#endif
+
 }
 
 BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f) {

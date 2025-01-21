@@ -92,11 +92,23 @@ DEFINES += -DHOOK_DLL='"$(FOLDER)\\$(DLL)"' -DLAUNCHER='"$(FOLDER)\\$(LAUNCHER)"
 DEFINES += -DRELAY_LIST='"$(RELAY_LIST)"' -DTAG='"$(TAG)"'
 DEFINES += -DLOBBY_LIST='"$(LOBBY_LIST)"'
 DEFINES += -DCOMPILETIMESTAMP='"$(shell date -u +"%Y-%m-%d %H:%M:%S")"'
-DEFINES += -DBLEEDING='"$(shell echo ${BLEEDING} a )"'
+#DEFINES += -DBLEEDING='"$(shell echo ${BLEEDING} a )"'
 INCLUDES = -I$(CURDIR) -I$(CURDIR)/netplay -I$(CURDIR)/lib -I$(CURDIR)/tests -I$(CURDIR)/3rdparty -I$(CURDIR)/sequences
 INCLUDES += -I$(CURDIR)/3rdparty/cereal/include -I$(CURDIR)/3rdparty/gtest/include -I$(CURDIR)/3rdparty/minhook/include
 INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(CURDIR)/3rdparty/imgui -I$(CURDIR)/3rdparty/imgui/backends
 CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
+
+ifeq ($(origin BLEEDING), undefined)
+	$(error Environment variable BLEEDING is not defined. set to 0 for local release, 1 for bleeding)
+else
+	ifeq ($(BLEEDING), 0)
+		DEFINES += -DNBLEEDING
+	else
+		DEFINES += -DBLEEDING
+	endif
+endif
+
+
 
 # Linker flags
 LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 
