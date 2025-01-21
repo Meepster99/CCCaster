@@ -37,6 +37,9 @@ const char* getListDrawString(ListDrawType t) {
         case ListDrawType::Unknown:
             res = "Unknown";
             break;
+        case ListDrawType::Reset:
+            res = "Reset";
+            break;
         case ListDrawType::Character:
             res = "Character";
             break;
@@ -63,6 +66,9 @@ const char* getListRetString(ListRetType t) {
     switch(t) {
         case ListRetType::Unknown:
             res = "Unknown";
+            break;
+         case ListRetType::Reset:
+            res = "Reset";
             break;
         case ListRetType::DrawMenuCursor:
             res = "DrawMenuCursor";
@@ -192,6 +198,12 @@ __attribute__((noinline, cdecl)) void checkAddress() {
 }
 
 DWORD isAddrValid(DWORD addr) {
+
+    if(addr == 0) {
+        isAddrValidRes = 0;
+        return isAddrValidRes;
+    }
+
     isAddrValidAddr = addr;
     //log("trying to call isAddrValid");
     checkAddress();
@@ -1302,20 +1314,10 @@ void _naked_paletteCallback() {
 // -----
 
 extern "C" {
-    DWORD getLinkedListElementCallbackEAX;
-    DWORD getLinkedListElementCallbackESP;
 
-    // i should have just done a LinkedListSharedData here, but holy fuck do i not want to deal with offsetting 
     DWORD linkedListCallbackAddress = 0; // make sure to reset this to 0 after use!!
     ListDrawType linkedListDrawType = ListDrawType::Unknown;
     ListRetType linkedListRetType = ListRetType::Unknown; // not sure if im even using this
-
-
-    // these variables are SHARED between THREADS meaning code will (im hoping) get all fucked.
-    // ill need to do everything in stack
-    //DWORD naked_mallocHook_ret;
-    //DWORD naked_mallocHook_result;
-    //DWORD naked_mallocHook_size;
 
 }
 
@@ -1351,7 +1353,7 @@ void _naked_mallocCallback() {
         mov edx, [esp + 4]; // ret
     )" __asmEnd
 
-    PUSH_ALL; // does 9 pushes. i could go stack subtracking, or i could take an unnecessary risk and be weird with cdecl
+    PUSH_ALL; // does 9 pushes. i could go stack subtracking, or i could take an unnecessary risk and be weird with cdecl, remember that eax, ecx, and edx are caller, NOT callee saved!!!!!
     __asmStart R"(
         
         push ecx; // size
@@ -1381,7 +1383,7 @@ void _naked_mallocHook() {
         push eax;
 
         mov eax, OFFSET __naked_mallocCallback;
-        push eax; // replace the old ret with our ret!!
+        push eax; // add our ret
 
     )" __asmEnd
 
@@ -1449,65 +1451,64 @@ void _naked_trackListEffectDraw() {
 
 }
 
-void getLinkedListElementCallback() {
+void getLinkedListElementCallback(DWORD callbackEAX, DWORD callbackESP) {
 
-    return;
+    // TODO, GLOBAL VARS FOR THINGS LIKE THIS MIGHT END UP CORRUPTING SHIT IF THREADING BECOMES AN ISSUE
 
-    LinkedListRenderElement* elem = (LinkedListRenderElement*)getLinkedListElementCallbackEAX;
+    LinkedListRenderData* ren = (LinkedListRenderData*)callbackEAX;
     //elem->data.miscCounter++;
-    
-    elem->data.address = 0;
-    elem->data.drawType = ListDrawType::Unknown;
-    elem->data.retType = ListRetType::Unknown;
 
+    ExtraData* data = &ren->data;
+    
+    data->address = 0;
+    data->drawType = ListDrawType::Unknown;
+    data->retType = ListRetType::Unknown;
+
+    data->threadID = GetCurrentThreadId();
     // i could do a bunch of stack backtracking here, 
     // or i could find the draw loops and go from there?
     // one option involves a ton of patches, the other is janky as hell
 
-    if(isAddrValid(getLinkedListElementCallbackESP)) {
-        DWORD ret = *(DWORD*)getLinkedListElementCallbackESP;
+    if(isAddrValid(callbackESP)) {
+        DWORD ret = *(DWORD*)callbackESP;
 
         switch(ret) {
             case 0x00415467:
-                elem->data.retType = ListRetType::DrawMenuCursor;
+                data->retType = ListRetType::DrawMenuCursor;
                 break;
             case 0x004157ac:
-                elem->data.retType = ListRetType::DrawEffectsTopUIandCharaSelect;
+                data->retType = ListRetType::DrawEffectsTopUIandCharaSelect;
                 break;
             case 0x00415a35:
-                elem->data.retType = ListRetType::DrawHitEffect;
+                data->retType = ListRetType::DrawHitEffect;
                 break;
             case 0x00415bbf:
-                elem->data.retType = ListRetType::DrawBlur;
+                data->retType = ListRetType::DrawBlur;
                 break;
             case 0x00415d03:
-                elem->data.retType = ListRetType::DrawCharacterSelectBackground;
+                data->retType = ListRetType::DrawCharacterSelectBackground;
                 break;
             case 0x00416128:
-                elem->data.retType = ListRetType::DrawCharactersAndBackground;
-                // two pushes occur, and then the secondary ret will occur
-
-                elem->data.address  = linkedListCallbackAddress;
-                elem->data.drawType = linkedListDrawType;
-                //elem->data.retType  = linkedListRetType;
-
-                linkedListCallbackAddress = 0;
-                linkedListDrawType = ListDrawType::Unknown;
-                //linkedListRetType = ListRetType::Unknown;
-
-                //elem->data.address = *(DWORD*)(getLinkedListElementCallbackESP + (3 * 0x4));
-                //if(elem->data.address == 0x00406EFF) { // unsure if needed
-                
+                data->retType = ListRetType::DrawCharactersAndBackground;
+                data->address  = linkedListCallbackAddress;
+                data->drawType = linkedListDrawType;
+                linkedListCallbackAddress = 0xFFFFFFFF;
+                linkedListDrawType = ListDrawType::Reset;
                 break;
             case 0x004164D4:
-                elem->data.retType = ListRetType::RenderOnScreen;
+                data->retType = ListRetType::RenderOnScreen;
                 break;
             default:
                 log("unknown ret %08X", ret);
                 break;
         }
     }
-    
+
+    // these SHOULD be set here, but instead,,, dude idek. im going to wait for somethinbg specific to eat them yk
+    //linkedListCallbackAddress = 0;
+    //linkedListDrawType = ListDrawType::Unknown;
+
+    data->setHash();
 
 }
 
@@ -1516,33 +1517,47 @@ void _naked_getLinkedListElementCallback() {
     // patched at 0x00416329
 
     __asmStart R"(
-        mov _getLinkedListElementCallbackEAX, eax;
-        mov _getLinkedListElementCallbackESP, esp;
+        // ecx is caller saved
+        mov ecx, esp;
     )" __asmEnd
 
     PUSH_ALL; // a thought occurs, i am not backing up the fp stack. oh no.
-    getLinkedListElementCallback();
+    __asmStart R"(
+        push ecx;
+        push eax;
+        call _getLinkedListElementCallback;
+        add esp, 0x8;
+    )" __asmEnd
+    //getLinkedListElementCallback();
     POP_ALL;
     
     ASMRET
 
 }
 
+void _naked_getLinkedListElementHook() {
+
+    // patched at 0x004162b0
+
+    __asmStart R"(
+        // overwrite call stack with out own return value
+        push OFFSET __naked_getLinkedListElementCallback;
+    )" __asmEnd 
+
+    // overwritten asm
+    __asmStart R"(
+        push esi;
+        mov esi, eax;
+        test esi, eax;
+    )" __asmEnd
+
+    emitJump(0x004162b5); // resume exec
+
+}
+
 void modifyLinkedList() {
 
-    DWORD addr = 0x005550A8;
-    addr = *(DWORD*)(addr + 0); 
-
-    if(!isAddrValid(addr)) { // this is the list of lists
-        return;
-    }
-
-    addr = *(DWORD*)(addr + 0);
-    if(!isAddrValid(addr)) { // this is,,, actual data
-        return;
-    }
-
-    log("entered modifyLinkedList");
+    //log("entered modifyLinkedList. pray");
 
     // d: FFFFFFFF s: 0000BFFF
     
@@ -1582,120 +1597,114 @@ void modifyLinkedList() {
     }
     */
     
-    // issue. im totally not properly clearing,, the data from LinkedListDataElement. i think that this data is just a copied version of it!
-    // this is maybe,, why the errors only flash for one frame?
-    // ACTUALLY, JUST MAKE IT A POINTER INSTEAD FOOL
-    // allocing memory,, kinda sucks though
-    // and oh god if the linkedlist things get freed, ill leak
-    // i could do a custom allocator/a map, but like at that point what am i even on
-    LinkedListRenderElement* elem = (LinkedListRenderElement*)addr;
-
     // misc scratch variables
     BYTE exists;
+    BYTE source;
     BYTE owner;
     DWORD playerAddr;
     BYTE charID;
     BYTE moon;
     BYTE palette;
 
+    if(*((uint8_t*) 0x0054EEE8) == 0x14) { // straight up disable this when in css
+        return;
+    }
+
+    //log("start");
+
+    DWORD actual;
+    DWORD test;
+
+    DWORD addr = *(DWORD*)0x005550A8;
+    LinkedListRenderList* linkedListRenderList = renderList->linkedListRenderList;
+
+    actual = addr;
+    test = (DWORD)linkedListRenderList;
+    //log("actual: %08X test: %08X %d", actual, test, actual == test);
+
+    addr = *(DWORD*)addr;
+    LinkedListRenderElement* renderElem = linkedListRenderList->elements[0].nextElement; 
+
+    actual = addr;
+    test = (DWORD)renderElem;
+    //log("actual: %08X test: %08X %d", actual, test, actual == test);
+
+    // idek how i was looping this previously for things to not,, work
+
     int index = 0;
 
-    while(isAddrValid((DWORD)elem)) {
+    while(true) {
 
-        // this emulates the check at 004c03bf,, well i didnt want to write this as a switch though, but still
+        if(!isAddrValid(addr)) {
+            //log("\taddr %08X wasnt valid, breaking", addr);
+            break;
+        }
 
-        if(elem->flag0 == 1) {
+        if(!isAddrValid((DWORD)renderElem)) {
+            //log("\taddr %08X wasnt valid, breaking", (DWORD)renderElem);
+            break;
+        }
 
-            //*(DWORD*)&elem->v0.x = 0x3f800000;
+        if((renderElem->stupidFlags & 0xFF) == 0x01) {
+            LinkedListRenderData* renderData = (LinkedListRenderData*)renderElem;
+            ExtraData* data = &renderData->data;
+    
+            if(data->verifyHash()) {
+                if(data->drawType == ListDrawType::Effect) {
 
-            /*DWORD alpha = 0xC0000000;
+                    bool shouldColor = true;
 
-            DWORD cols[4] = {0x0000FFFF, 0x00FF00FF, 0x00FFFF00, 0x00FFFFFF};
-
-            for(int i=0; i<4; i++) {
-                //elem->verts[i].diffuse = cols[i];
-                elem->verts[i].specular = alpha | cols[i];
-            }*/
-
-            DWORD overrideCol = 0xFFFFFFFF;
-
-            switch(elem->data.drawType) {
-
-                case ListDrawType::Character:
-                    overrideCol = 0xFFFF0000;
-                    break;
-                case ListDrawType::Shadow:
-                    overrideCol = 0xFF00FF00;
-                    break;
-                case ListDrawType::Effect:
-                    if(*(BYTE*)(elem->data.address + 8) == 0xFE) { // check if source isnt -2. some weird shit happens on the background?? or are vert colors not properly cleared between funcs?
-                        break;
-                    }
-
-                    // i should probs bring over debuginfo.h,, but im not
-                    exists = *(BYTE*)(elem->data.address + 0x0);
-                    owner = *(BYTE*)(elem->data.address + 0x2F4);
+                    exists = *(BYTE*)(data->address + 0x0);
+                    source = *(BYTE*)(data->address + 0x8);
+                    owner = *(BYTE*)(data->address + 0x2F4);
                     playerAddr = 0x00555130 + (0xAFC * owner);
                     charID = *(BYTE*)(playerAddr + 0x5);
                     moon = *(BYTE*)(playerAddr + 0xC);
                     palette = *(BYTE*)(playerAddr + 0xA);
 
-                    if(exists == 0 || palette != 26 || moon != 0 || charID != 12) {
-                        break;
-                    }
-                
-                    //overrideCol = 0xFF0000FF;
-
-                    for(int i=0; i<4; i++) {
-                        //elem->verts[i].diffuse = diffuse[i].getCol();
-                        //elem->verts[i].specular = specular[i].getCol();
-
-                        DWORD temp = elem->verts[i].specular = specular[i].getCol();
-                        temp &= 0x0000FFFF;
-                        elem->verts[i].specular |= temp;
-
-                        //elem->verts[i].diffuse = diffuseCol;
-                        //elem->verts[i].specular = specularCol;
+                    if(exists == 0 || source == 0xFE || palette != 26 || moon != 0 || charID != 12) {
+                        shouldColor = false;
                     }
 
-                    break;
-                
-                default:
-                    break;
-            }
-
-            /*if(overrideCol != 0xFFFFFFFF) {
-                for(int i=0; i<4; i++) {
-                    elem->verts[i].diffuse = overrideCol;
+                    if(shouldColor) {
+                        for(int i=0; i<4; i++) {
+                            renderData->verts[i].specular = specular[i].getCol();
+                        }
+                        //log("%5d %d %08X %-16s %-16s", index, data->verifyHash(), data->address, getListDrawString(data->drawType), getListRetString(data->retType));
+                    }
+                    
                 }
-            }*/
-
-            // is this ok? i swear im having some issues with reuse
-            //elem->data.drawType = ListDrawType::Unknown;
-            //elem->data.address = 0;
-
-            if(index < 50) { // this is just a hard limit so i dont lag the console too much
-                log("%5d %08X - %08X %-16s %-16s", index, elem->flags, elem->data.address, getListDrawString(elem->data.drawType), getListRetString(elem->data.retType));
             }
-
-            index++;
 
         }
 
-        elem->data.drawType = ListDrawType::Unknown;
-        elem->data.address = 0;
+        addr = *(DWORD*)addr;
+        renderElem = renderElem->nextElement;
 
-        elem = elem->next;
-
+        index++;
+        
     }
 
-    log("leaving modifyLinkedList");
+}
+  
+void _naked_modifyLinkedList1() {
+    // patched at 0x004331d4:
 
+    PUSH_ALL;
+    modifyLinkedList();
+    POP_ALL;
+
+    emitCall(0x004c04e0);
+
+    emitJump(0x004331d9);
+    
 }
 
-void _naked_modifyLinkedList() {
+void _naked_modifyLinkedList2() {
 
-    // patched at 0x004331d4
+    // patched at 0040e48e
+
+    
     // patching at 0040e48e worked, but caused the game to not close properly (either a mutex issue, or my exception handler)
     emitByte(0x89);
     emitByte(0x2D);
@@ -1709,11 +1718,8 @@ void _naked_modifyLinkedList() {
     modifyLinkedList();
     POP_ALL;
 
-    //emitCall(0x004c04e0);
-    //emitJump(0x004331d9);
-
     emitJump(0x0040e494);
-
+    
 }
 
 } // namespace AsmHacks

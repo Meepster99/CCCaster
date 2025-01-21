@@ -10,6 +10,8 @@
 #include <array>
 #include <windows.h>
 
+void __stdcall log(const char* format, ...);
+
 
 /*
 
@@ -21,25 +23,14 @@ LinkedListElement is for the data inside the list of lists in 005550A8, [[005550
 
 */ 
 
-typedef struct RawMeltyVert {
-	float x;
-	float y;
-	float z;
-	float w;
-	DWORD diffuse; 
-	DWORD specular; 
-	float u;
-	float v;
-} RawMeltyVert;
-
-static_assert(sizeof(RawMeltyVert) == 0x20, "RawMeltyVert must be size 0x20");
 
 enum class ListDrawType : BYTE {
     Unknown = 0,
     Character = 1,
     Shadow = 2,
     Effect = 3,
-    HitEffect = 4
+    HitEffect = 4, 
+    Reset = 0xFF
 };
 
 const char* getListDrawString(ListDrawType t);
@@ -52,24 +43,88 @@ enum class ListRetType : BYTE {
     DrawBlur = 4,
     DrawCharacterSelectBackground = 5,
     DrawCharactersAndBackground = 6,
-    RenderOnScreen = 7
+    RenderOnScreen = 7,
+    Reset = 0xFF
 };
 
 const char* getListRetString(ListRetType t);
 
 #define packedStruct typedef struct __attribute__((packed))
 
+packedStruct RawMeltyVert {
+	float x;
+	float y;
+	float z;
+	float w;
+	DWORD diffuse; 
+	DWORD specular; 
+	float u;
+	float v;
+} RawMeltyVert;
+static_assert(sizeof(RawMeltyVert) == 0x20, "RawMeltyVert must be size 0x20");
+
+packedStruct ExtraData {
+    DWORD address;
+    ListDrawType drawType;
+    ListRetType retType;
+    DWORD threadID;
+
+
+    /*
+        i cannot belive i am doing this, but i think its needed. 
+        the render elements are made at 00414EEA, but i have no confidence or desire to go and figure out where/if/how it zeros the memory. 
+        this is the solution
+        things like this are why i love c++
+    */
+
+    DWORD hash;  
+
+    DWORD getHash(ExtraData* d) {
+
+        // i have done like no testing on if this thing has collisions. i really should
+
+        DWORD res = 7;
+
+        BYTE* rawData = (BYTE*)d;
+        int dataLen = sizeof(ExtraData) - sizeof(hash); // i dont want to hash the hash as part of the hash
+        
+        for(int i=0; i<dataLen; i++) {
+            res = (res * 31) + rawData[i];
+        }
+
+        return res;
+    }
+
+    void setHash() {
+        hash = getHash(this);
+    }
+
+    bool verifyHash() {
+        return hash == getHash(this);
+    }
+
+    void reset() {
+
+        hash = 0xFFFFFFFF;
+        address = 0xFFFFFFFF;
+        drawType = ListDrawType::Reset;
+        retType = ListRetType::Reset;
+        threadID = 0xFFFFFFFF;
+    }
+
+} ExtraData;
+
 packedStruct RenderList {
 
-    packedStruct LinkedListAssetsList { 
+    packedStruct LinkedListRenderList { 
         
-        packedStruct LinkedListAssetsElement {
+        packedStruct LinkedListRenderElement {
 
-            packedStruct LinkedListAssetsData {
+            packedStruct LinkedListRenderData {
                 // straight up? not fuckin sure about the size of this
                 // its either going to point to another 
 
-                LinkedListAssetsElement* nextAsset; // loops back to where this thing would have been if,, yea, yk
+                LinkedListRenderElement* nextElement; // loops back to where this thing would have been if,, yea, yk
 
                 // not sure about this one at all
                 union {
@@ -82,6 +137,11 @@ packedStruct RenderList {
                     };
                 };
 
+                bool isTexData() {
+                    // is flag0 here correct?? in terms of byte order/endianness
+                    return flag0 == 0x01;
+                }
+
                 union {
                     RawMeltyVert verts[4];
                     struct {
@@ -95,12 +155,17 @@ packedStruct RenderList {
                 IDirect3DTexture9* tex; // at 0x88
                 
                 // why do i feel like these look similar to that weird memory area i used to,,, see if something was heat?
-                DWORD LinkedListAssetsData_UNK1; 
-                DWORD LinkedListAssetsData_UNK2;
+                // check out 0041650b
+                BYTE unknown1; // 0x8C
+                BYTE unknown2; // 0x8D
+                WORD unknown3; // 0x8E
+                WORD unknown4; // 0x90;
+                WORD unknown5; // 0x92; // might just be padding
 
-            } LinkedListAssetsData;
+                ExtraData data;
 
-            static_assert(sizeof(LinkedListAssetsData) == 0x94, "LinkedListAssetsData size error"); // created at 00414EEA
+            } LinkedListRenderData;
+            static_assert(sizeof(LinkedListRenderData) == 0x94 + sizeof(ExtraData), "LinkedListRenderData size error"); // created at 00414EEA
 
             // dawg. i got NO FUCKING CLUE WHATS HAPPENING
             // basically, if this ptr + 4 is nonzero, then hit it with the switch at 004c03cb
@@ -109,96 +174,71 @@ packedStruct RenderList {
             // if this is a nextElement, [choice + 4] == 0
             // if this is an actual fucking thing with draw details, [choice + 4] != 0
             
-            typedef union LinkedListAssetsElementChoice {
-                LinkedListAssetsElement* nextAsset;
-                LinkedListAssetsData* nextData;
-            } LinkedListAssetsElementChoice;
+            union {
+                LinkedListRenderElement* nextElement;
+                LinkedListRenderData* nextData; // this is for textures. but there is a different kind of struct for each directx type. look at 004c0243 for more info
+            };
 
-            LinkedListAssetsElementChoice choice; 
+            //LinkedListAssetsElementChoice choice; 
             DWORD stupidFlags; // 00414e48 sets this to 0, 004C0566 skips drawing if its,, not 0?
             DWORD unknown2; // swaps between 0 and 1, not sure why. this is what doesThingsIfList+8=0 interacts with
             DWORD possibleCount; // 1600. why? im not sure
+            
+            bool isTexChoice() {
+                if(nextData == NULL) {
+                    return false;
+                }
+                return nextData->isTexData();
+            }
 
-
-        } LinkedListAssetsElement;
-
-        static_assert(sizeof(LinkedListAssetsElement) == 0x10, "LinkedListAssetsElement != 0x10");
+        } LinkedListRenderElement;
+        static_assert(sizeof(LinkedListRenderElement) == 0x10, "LinkedListRenderElement != 0x10");
 
         // i could, maybe should, have this whole struct be a union of LinkedListAssets and LinkedListAssetsData
         // tbh i will
         // although, is this fucker always accessed as a linked list? or also as an array??
         // theres no fucking way that its,, i,,,
-        LinkedListAssetsElement elements[1600];
-    } LinkedListAssetsList;
+        LinkedListRenderElement elements[1600];
+    } LinkedListRenderList;
+    static_assert(sizeof(LinkedListRenderList) == 0x6400, "LinkedListRenderList != 0x6400");
 
-    static_assert(sizeof(LinkedListAssetsList) == 0x6400, "LinkedListAssetsList != 0x6400");
+    packedStruct LinkedListAllAssets {
 
-    packedStruct LinkedListRender {
-
-        packedStruct LinkedListRenderList {
-
-            packedStruct LinkedListRenderElement {
-
-                /*
-                //LinkedListAssetsData** dataPtr; // im not confident on this at all, only did one check
-                LinkedListAssetsElement* assetElementPtr;
-
-                BYTE flag; // used in switch at 004c03bf
-                BYTE unknown1;
-                BYTE unknown2;
-                BYTE unknown3;
-
-                union {
-                    RawMeltyVert verts[4];
-                    struct {
-                        RawMeltyVert v0;
-                        RawMeltyVert v1;
-                        RawMeltyVert v2;
-                        RawMeltyVert v3;
-                    };
-                };
-
-                IDirect3DTexture9* tex; // at 0x88
-                
-                // why do i feel like these look similar to that weird memory area i used to,,, see if something was heat?
-                DWORD LinkedListAssetsData_UNK1; 
-                DWORD LinkedListAssetsData_UNK2;
-
-            } LinkedListRenderElement;
-            static_assert(sizeof(LinkedListRenderElement) == 0x94, "LinkedListRenderElement != 0x94"); // alloced at 00414EEA
-
-            LinkedListRenderElement* elements[8000];
-            */
-
-           LinkedListAssetsData* elements[8000];
-        } LinkedListRenderList;
-
-        static_assert(sizeof(LinkedListRenderList) == 0x7D00, "LinkedListRenderList != 0x7D00"); // alloced at 00401BDF
+        packedStruct LinkedListAssetsList {
+           LinkedListRenderList::LinkedListRenderElement* elements[8000];
+        } LinkedListAssetsList;
+        static_assert(sizeof(LinkedListAssetsList) == 0x7D00, "LinkedListAssetsList != 0x7D00"); // alloced at 00401BDF
 
         DWORD unknown1; // set to one
-        LinkedListRenderList* renderList;
+        LinkedListAssetsList* assetsList;
         DWORD numDraws; // set to,, 4? but i believe that, holy fuck. i knew from previous bs this was the number of gameplay drawss on screen. im in css now, but im drawing 4 char sprites!!
         DWORD unknown3; // 8000
         DWORD unknown4; // 8000. this is the length
 
-    } LinkedListRender;  
-    static_assert(sizeof(LinkedListRender) == 0x14, "LinkedListRender != 0x14"); // created at 0041513E
+    } LinkedListAllAssets;  
+    static_assert(sizeof(LinkedListAllAssets) == 0x14, "LinkedListAllAssets != 0x14"); // created at 0041513E
 
     /*
     
-    going off of nothing but vibes here, but i think i had the two lists reversed
-    which explains why i could never find the one at 5550b0 in the directx area, but could with 5550a0
-    justifications:
-        A0 is only 1600 long, sprite ids for chars go up to,,, what is it ~1000? 2 chars couldnt fit
-        B0 is 8000
-        
+        going off of nothing but vibes here, but i think i had the two lists reversed
+        which explains why i could never find the one at 5550b0 in the directx area, but could with 5550a0
+        justifications:
+            A0 is only 1600 long, sprite ids for chars go up to,,, what is it ~1000? 2 chars couldnt fit
+            B0 is 8000. plenty of space
+
+            B0 is offset by addr too, for example, sprite index probs!!!
+            
+            this is beautiful.
+            i will now go sleep
+
+        as for how the game draws 2 of the same thing, twice at the same time, check out 0041618
 
     */
 
-    LinkedListAssetsList* linkedListAssetsList; // malloced at 0041507D with size 0x6400
+    LinkedListRenderList* linkedListRenderList; // malloced at 0041507D with size 0x6400
     DWORD linkedListAssetsCount; // 1600, the malloc was 0x6400, 0x6400 / 0x10 is 1600.
 
-    LinkedListRender* linkedListRender; 
+    LinkedListAllAssets* linkedListAllAssets; 
 
     DWORD unknownCount1;
     DWORD unknownCount1_sub;
@@ -207,16 +247,26 @@ packedStruct RenderList {
     DWORD unknownCount2_sub;
 
 } RenderList;
+static_assert(sizeof(RenderList) == 7 * sizeof(DWORD), "RenderList != 0x1C (7 * 0x4)");
 
-static_assert(sizeof(RenderList) == 7 * sizeof(DWORD), "RenderList size error");
+static RenderList* renderList = (RenderList*)0x005550A8;
 
-RenderList* renderList = (RenderList*)0x005550A8;
+// the following is horrible, but i want access to nested types. 
+
+typedef RenderList::LinkedListRenderList                                                            LinkedListRenderList;
+typedef RenderList::LinkedListRenderList::LinkedListRenderElement                                   LinkedListRenderElement;
+typedef RenderList::LinkedListRenderList::LinkedListRenderElement::LinkedListRenderData             LinkedListRenderData;
+//typedef RenderList::LinkedListRenderList::LinkedListRenderElement::LinkedListAssetsElementChoice    LinkedListAssetsElementChoice;
+
+typedef RenderList::LinkedListAllAssets                                                             LinkedListAllAssets;
+typedef RenderList::LinkedListAllAssets::LinkedListAssetsList                                       LinkedListAssetsList;
 
 #define SHIFTHELD  (GetAsyncKeyState(VK_SHIFT) & 0x8000)
 #define UPPRESS    (GetAsyncKeyState(VK_UP)    & 0x0001)
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
 #define RIGHTPRESS (GetAsyncKeyState(VK_RIGHT) & 0x0001)
+#define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
 
 // i wish i ever got the raw strings thing to work
 #define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (
@@ -889,13 +939,18 @@ __attribute__((naked, noinline)) void _naked_paletteCallback();
 
 // -----
 
-__attribute__((noinline)) void getLinkedListElementCallback();
+extern "C" {
+    __attribute__((noinline, cdecl)) void getLinkedListElementCallback(DWORD callbackEAX, DWORD callbackESP);
+    __attribute__((naked, noinline)) void _naked_getLinkedListElementCallback();
+}
 
-__attribute__((naked, noinline)) void _naked_getLinkedListElementCallback();
+__attribute__((naked, noinline)) void _naked_getLinkedListElementHook();
 
 __attribute__((noinline)) void modifyLinkedList();
 
-__attribute__((naked, noinline)) void _naked_modifyLinkedList();
+__attribute__((naked, noinline)) void _naked_modifyLinkedList1();
+
+__attribute__((naked, noinline)) void _naked_modifyLinkedList2();
 
 // tracking funcs to keep track of whats being drawn
 
@@ -967,6 +1022,10 @@ static const AsmList initPatch2v2 =
             if a moons selected and you press B, and then go back in, keep moon
             if a palette is selected, and you press B, keep palette
             stuffs only reset on moving
+
+    general other caster stuff:
+    
+        make something that adds up all replay time
 
     */
 
@@ -1111,29 +1170,25 @@ static const AsmList initPatch2v2 =
 
     // renderer modifications
 
-    // malloc logger, for some reason
+    //PATCHJUMP(0x004e0230, _naked_mallocHook), // malloc logger, for some reason// my beloved
 
-    PATCHJUMP(0x004e0230, _naked_mallocHook),
-
-    //{ ( void * ) (0x004b3b1d + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // malloc of the linkedListAllAssets
-    //{ ( void * ) (0x004b3b27 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }}, // memset of the linkedListAllAssets
-    //{ ( void * ) (0x00414ee0 + 1), { INLINE_DWORD(sizeof(LinkedListAssetElement)) }},
+    { ( void * ) (0x00414ee0 + 1), { INLINE_DWORD( sizeof(LinkedListRenderData) ) }}, // needed to increase the size of the list data, so i can fit my own shit in there
+    { ( void * ) (0x004162c8 + 1), { INLINE_DWORD( sizeof(LinkedListRenderData) ) }}, // unsure if needed, pretty confident it isnt actually, but just in case
         
     // find where the above things are copied, and patch them. im not even sure if my using the space i thought was mine but wasnt was causing these issues? but i need to be sure
-
-
-
+    
     //PATCHJUMP(0x00416329, _naked_getLinkedListElementCallback),
+    PATCHJUMP(0x004162b0, _naked_getLinkedListElementHook),
 
-    //PATCHJUMP(0x004331d4, _naked_modifyLinkedList), // the reason im doing this at 004331d4 and not 0040e48e is bc the game would close, but not actually exit the process. i need the mutex, i am hoping
-    //PATCHJUMP(0x0040e48e, _naked_modifyLinkedList),
+    PATCHJUMP(0x004331d4, _naked_modifyLinkedList1), // the reason im doing this at 004331d4 and not 0040e48e is bc the game would close, but not actually exit the process. i need the mutex, i am hoping
+    //PATCHJUMP(0x0040e48e, _naked_modifyLinkedList2),
 
     // all these patches are so i can track what is actually being drawn, per draw call. (there has to be an easier way of doing this)
     // something that, ugh. assuming i only overwrite instructions which properly align to 5 bytes, i could,, overwrite them, copy them into a func, but like at that point whatthefuck
 
-    //PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
-    //PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
-    //PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
+    PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
+    PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
+    PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
 
 };
 

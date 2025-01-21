@@ -7,6 +7,10 @@
 #include <array>
 #include "palettes/palettes.hpp"
 
+#ifndef F12PRESS 
+#define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
+#endif
+
 #define SAFEMOD(a, b) (((b) + ((a) % (b))) % (b))
 
 typedef struct RawInput {
@@ -675,6 +679,12 @@ void leaveStageSel() {
 
 void updateControls() {
 
+	static bool copyInputs = false;
+	if(F12PRESS) {
+		copyInputs = !copyInputs;
+		//log("copyInputs: %d", copyInputs);
+	}
+
 	// handle controls
 	// idk where i should grab controls from either, what reads the stuff melty writes to? or i could be safe with a direct melty write, but have to keep track 
 	// of presses myself
@@ -682,8 +692,12 @@ void updateControls() {
 
 	for(int i=0; i<4; i++) {
 
-		ourCSSData[i].input.set(i);
-
+		if(copyInputs) {
+			ourCSSData[i].input.set(0);
+		} else {
+			ourCSSData[i].input.set(i);
+		}
+		
 		BYTE pressDir = ourCSSData[i].pressDir();
 		pressDir |= ourCSSData[i].holdDir();
 		BYTE pressBtn = ourCSSData[i].pressBtn();

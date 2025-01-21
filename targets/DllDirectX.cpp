@@ -2178,6 +2178,7 @@ void drawHealthBar(int i, Bar& bar) {
 
 	if(hitFades[i] > 0.0f) {
 		hitFades[i] -= decVal;
+		hitFades[i] = MAX(hitFades[i], 0.0f); // prevent underflow from making the colors fucked
 		drawRect.p1.x = drawRect.p2.x - tempMaxHealthWidth;
 		DWORD col = (((BYTE)(0xFF * hitFades[i])) << 24) | 0x00FFFFFF;
 		RectDrawTex(drawRect, col);
