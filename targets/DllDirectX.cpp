@@ -369,7 +369,7 @@ void doUpdate() {
 	hasUpdated = true;
 
 	#ifdef BLEEDING
-		log("THIS IS A BLEEDING RELEASE, CHECKING UPDATE")
+		log("THIS IS A BLEEDING RELEASE, CHECKING UPDATE");
 		updateDLL();
 	#else
 		log("THIS IS NOT A BLEEDING RELEASE. RETURNING");
