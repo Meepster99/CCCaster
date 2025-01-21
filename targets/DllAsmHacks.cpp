@@ -16,7 +16,6 @@
 #include <regex>
 #include <stdexcept>
 #include <eh.h>
-#include <mutex>
 
 using namespace std;
 
@@ -24,7 +23,7 @@ using namespace std;
 #include <stdlib.h>
 #include <signal.h>
 #include <tchar.h>
-
+#include <mutex>
 #include <winnt.h>
 
 #include <excpt.h>
@@ -1666,27 +1665,50 @@ void modifyLinkedList() {
 
                     if(exists == 0 || source == 0xFE || palette != 26 || moon != 0 || charID != 12) {
                         shouldColor = false;
+                    } else {
+                        // i really should just import the list from training mode
+                        // basically, warc gets transformed into an effect for some reason.
+                        // i really should whitelist instead of blacklist here
+                        // ok tbh, this sucks, but i need to have this be a whitelist, not blacklist, if i ever want to sleep at night
+                        // or,,, i could see if i have a colision box? maybe? but thats just another bandaid solution
+
+                        switch(pattern) {
+                            case  80 ...  88: // god. visual studio doesnt have this. i really missed it
+                            case  90 ...  94:
+                            case  96 ...  99:
+                            case 102: // on frame 17 of this, warc flashes in for one frame. what? this looks like an unused move tbh, more similar to arc 5a. is eclipse warc in this mode?
+                            case 105:
+                            case 108:
+                            case 110:
+                            case 116 ... 123:
+                            case 133:
+                            case 136 ... 139:
+                            case 389 ... 390:
+                            case 404:
+                            case 443 ... 445:
+                            case 465:
+                            case 507 ... 508:
+                            case 533:
+                            case 536:
+                            case 538:
+                            case 539:
+                            case 550:
+                            case 555 ... 558:
+                                break;
+                            default:
+                                shouldColor = false;
+                                //log("Pattern %5d", pattern);
+                                break;
+                        }
+
                     }
 
-                    // i really should just import the list from training mode
-                    // basically, warc gets transformed into an effect for some reason.
-                    // i really should whitelist instead of blacklist here
-                    if(shouldColor) {
-                        if(pattern <= 79) { // ???
-                            shouldColor = false;
-                        } else if(pattern >= 223 && pattern <= 229) {
-                            shouldColor = false;
-                        } else if(pattern >= 260 && pattern <= 388) {
-                            shouldColor = false;
-                        }
-                    }
-                    
 
                     if(shouldColor) {
                         for(int i=0; i<4; i++) {
                             renderData->verts[i].specular = specular[i].getCol();
                         }
-                        log("%5d %d %08X %5d %-16s %-16s", index, data->verifyHash(), data->address, pattern, getListDrawString(data->drawType), getListRetString(data->retType));
+                        //log("%5d %d %08X %5d %-16s %-16s", index, data->verifyHash(), data->address, pattern, getListDrawString(data->drawType), getListRetString(data->retType));
                     }
                     
                 }
