@@ -5,6 +5,7 @@
 #include "DllTrialManager.hpp"
 #include "KeyboardState.hpp"
 #include "CharacterSelect.hpp"
+#include "SEHExceptions.hpp"
 
 #include <windows.h>
 

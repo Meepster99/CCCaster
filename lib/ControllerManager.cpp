@@ -2,6 +2,8 @@
 #include "Exceptions.hpp"
 #include "ErrorStrings.hpp"
 
+#include "SEHExceptions.hpp"
+
 #define INITGUID
 #define DIRECTINPUT_VERSION 0x0800 // Need at least version 8
 #include <dinput.h>
@@ -129,8 +131,17 @@ bool ControllerManager::check()
     DIJOYSTATE2 djs;
     HRESULT result;
 
+    int loopCount = 0;
+
     for ( auto it = joysticks.begin(); it != joysticks.end(); )
     {
+        loopCount++;
+        if(loopCount > 256) {
+            // this is a guess, but i feel that its possible that this loop is infiniting
+            log("joystick iter loop broke out?!");
+            break;
+        }
+
         Controller *controller = it->second.get();
         const JoystickInfo info = controller->_joystick.info;
         IDirectInputDevice8 *const device = ( IDirectInputDevice8 * ) info.device;
@@ -234,11 +245,13 @@ bool ControllerManager::check()
                 continue;
 
             LOG_CONTROLLER ( controller, "raw=%08X; button%u: %s", buttons, button, ( value ? "0 -> 1" : "1 -> 0" ) );
-            controller->joystickButtonEvent ( button, value );
+            controller->joystickButtonEvent ( button, value );            
         }
 
         ++it;
     }
+
+    //log("exited the bs");
 
     return true;
 }
@@ -835,8 +848,29 @@ MsgPtr ControllerManager::loadMappings ( const string& file )
 void ControllerManager::PollingThread::run()
 {
     timeBeginPeriod ( 1 ); // for select, see comment in SocketManager
-    while ( ControllerManager::get().check() )
+    //while ( ControllerManager::get().check() )
+    while(true)
     {
+        // when spam plug/unpluging rump's controler, this loop stalled 
+        // it stalled on inside, inf loop?
+
+        bool doBreak = false;
+
+        TRY 
+            //log("inside");
+            if(!ControllerManager::get().check()) {
+                //log("breaking out of loop!");   
+                doBreak = true;
+            }
+            //log("outside");
+        EXCEPT
+            //log("wowee something went horribly wrong!!!!!");
+        END
+
+        if(doBreak) { // i cannot break out of the loop bc it wont properly clean up the exception stack!
+            break;
+        }
+
         Sleep ( 1 );
     }
     timeEndPeriod ( 1 ); // for select, see comment in SocketManager

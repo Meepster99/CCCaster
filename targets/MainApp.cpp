@@ -17,7 +17,7 @@
 #include <winsock2.h>
 #include <wininet.h>
 
-
+/*
 void ___log(const char* msg)
 {
 	const char* ipAddress = "127.0.0.1";
@@ -64,7 +64,7 @@ void log(const char* format, ...) {
 	___log(buffer);
 	va_end(args);
 }
-
+*/
 
 using namespace std;
 
