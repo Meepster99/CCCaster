@@ -302,7 +302,7 @@ static BOOL CALLBACK enumJoystickAxes ( const DIDEVICEOBJECTINSTANCE *ddoi, void
             break;
     }
 
-    //log("%d waow explode %40s %s", skipWeirdShoulderAxis, info.name.c_str(), info.guid.getString().c_str());
+    //log("%d waow %40s %s", skipWeirdShoulderAxis, info.name.c_str(), info.guid.getString().c_str());
     if ( skipWeirdShoulderAxis || PS4_CONTROLLER_GUID == info.guid || P3_WIRED_GAMEPAD == info.guid )
     {
         // Workaround for the PS4 pad, because it maps some buttons to the X/Y rotation axes as well.

@@ -198,6 +198,11 @@ public:
             return _joystickMappings.name;
     }
 
+    std::string getIdentifiers() const
+    {
+        return _joystick.info.guid.getIdentifiers();
+    }
+
     // Indicates if this is the only controller with its original name
     bool isUniqueName() const;
 

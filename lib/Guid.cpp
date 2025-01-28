@@ -68,3 +68,14 @@ std::string Guid::getString() const {
 
     return res;
 }
+
+std::string Guid::getIdentifiers() const {
+
+    char buffer[32];
+
+    snprintf(buffer, sizeof(buffer), " %04X|%04X", vendorID, deviceID);
+
+    std::string res = std::string(buffer);
+
+    return res;
+}

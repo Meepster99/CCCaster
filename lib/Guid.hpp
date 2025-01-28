@@ -40,6 +40,8 @@ struct Guid
     void getGUID ( GUID& guid ) const;
 
     std::string getString() const;
+    std::string getIdentifiers() const;
+    
 };
 
 static_assert(sizeof(Guid) == 16, "Guid must be size 16");

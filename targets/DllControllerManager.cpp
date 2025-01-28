@@ -758,7 +758,7 @@ void DllControllerManager::handleMappingOverlay()
     text[1] = "Controllers\n";
     for ( const Controller *controller : _allControllers )
         if ( controller != _playerControllers[0] && controller != _playerControllers[1] )
-            text[1] += "\n" + controller->getName();
+            text[1] += "\n" + controller->getName() + controller->getIdentifiers();
 
     const size_t controllersHeight = 3 + _allControllers.size();
 
