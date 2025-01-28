@@ -517,6 +517,19 @@ static const Asm disableFpsCounter = { ( void * ) 0x41FD43, INLINE_NOP_THREE_TIM
 // Disable normal joystick and keyboard controls
 static const AsmList hijackControls =
 {
+
+    // just disable the findcontrollers func? this may not be ideal
+    // straight up, this might not be needed
+    { ( void * ) 0x004a00b0, { 0xC2, 0x08, 0x00 } }, // ret 0x8 
+
+    // this disables a call to IDirectInputDevice8_Acquire/DINPUT8.GetdfDIJoystick+280, which was causing race conditions with caster's own calls
+    // more things probs do things like this, and need to be looked for
+    // however, this also DISABLES esc being able to close shit?
+    // i,, ik that melty handles that but why not have caster do it
+    { ( void * ) 0x0041098c, INLINE_NOP_THREE_TIMES },
+
+    { ( void * ) 0x004a0090, { 0xC3 }},
+
     // Disable joystick controls
     { ( void * ) 0x41F098, INLINE_NOP_TWO_TIMES   },
     { ( void * ) 0x41F0A0, INLINE_NOP_THREE_TIMES },

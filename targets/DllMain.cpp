@@ -256,6 +256,13 @@ struct DllMain
                 // Update controller state once per frame
                 KeyboardState::update();
                 updateControls ( &localInputs[0] );
+
+                if( (GetAsyncKeyState(VK_ESCAPE) & 0x8000) && AsmHacks::enableEscapeToExit ) {
+                    // old melty handling of this is no longer called, due to race conditions with caster's own controller handling.
+                    // tis replaces it
+                    *(BYTE*)(0x005544f1) = 0x80;
+                }
+
                 while ( framestepEnabled && !netMan.config.mode.isOnline() ) {
                     if ( ( GetAsyncKeyState ( VK_F6 ) & 0x1 )  == 1 )
                         framestepEnabled = false;

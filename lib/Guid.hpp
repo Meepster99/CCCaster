@@ -5,7 +5,7 @@
 
 #include <cstring>
 #include <cstdint>
-
+#include <string>
 
 // Windows GUID type forward declaration
 typedef struct _GUID GUID;
@@ -14,7 +14,22 @@ typedef struct _GUID GUID;
 // Guid type
 struct Guid
 {
-    uint8_t guid[16];
+    union {
+        struct __attribute__((packed)) { // https://learn.microsoft.com/en-us/windows/win32/api/guiddef/ns-guiddef-guid
+            union {
+                // https://devicehunt.com/search/type/usb/vendor/any/device/any was helpful
+                struct __attribute__((packed)) {
+                    uint16_t vendorID;
+                    uint16_t deviceID;
+                };
+                uint32_t data1;
+            };
+            uint16_t data2;
+            uint16_t data3;
+            uint8_t data4[8];
+        };
+        uint8_t guid[16];
+    };
 
     Guid() {}
 
@@ -23,7 +38,13 @@ struct Guid
     Guid ( const GUID& guid );
 
     void getGUID ( GUID& guid ) const;
+
+    std::string getString() const;
+    std::string getIdentifiers() const;
+    
 };
+
+static_assert(sizeof(Guid) == 16, "Guid must be size 16");
 
 
 // Hash function
