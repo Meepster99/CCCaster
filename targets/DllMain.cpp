@@ -260,13 +260,17 @@ struct DllMain
                 // Update controller state once per frame
                 KeyboardState::update();
                 updateControls ( &localInputs[0] );
-                while ( framestepEnabled && !netMan.config.mode.isOnline() ) {
-                    if ( ( GetAsyncKeyState ( VK_F6 ) & 0x1 )  == 1 )
+                while ( framestepEnabled && !netMan.config.mode.isOnline() ) { // this loop is what,, bugs out when,, weird shit happens with unplugging? might have been the above code though, it is identical, and the compiler could be moving things around
+                    log("loop start");
+                    if ( ( GetAsyncKeyState ( VK_F6 ) & 0x1 )  == 1 ) {
                         framestepEnabled = false;
+                    }
                     KeyboardState::update();
                     updateControls ( &localInputs[0] );
-                    if ( ( GetAsyncKeyState ( VK_F7 ) & 0x1 )  == 1 )
+                    if ( ( GetAsyncKeyState ( VK_F7 ) & 0x1 )  == 1 ) {
                         break;
+                    }
+                    log("loop end");
                 }
 
                 if ( DllOverlayUi::isEnabled() )                                            // Overlay UI controls

@@ -52,9 +52,9 @@ LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
 
-# Tool chain
+# Tool chain. remember to -save-temps=obj if asm goes wrong
 PREFIX = i686-w64-mingw32-
-GCC = $(PREFIX)gcc -static
+GCC = $(PREFIX)gcc -static 
 CXX = $(PREFIX)g++ -static
 WINDRES = windres
 STRIP = strip

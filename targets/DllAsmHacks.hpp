@@ -160,6 +160,13 @@ static const Asm disableFpsCounter = { ( void * ) 0x41FD43, INLINE_NOP_THREE_TIM
 // Disable normal joystick and keyboard controls
 static const AsmList hijackControls =
 {
+    // just disable the findcontrollers func? this may not be ideal
+    // straight up, this might not be needed
+    { ( void * ) 0x004a00b0, { 0xC2, 0x08, 0x00 } }, // ret 0x8 
+
+    // this disables a call to IDirectInputDevice8_Acquire/DINPUT8.GetdfDIJoystick+280, which was causing race conditions with caster's own calls, when using the same controller
+    { ( void * ) 0x0041098c, INLINE_NOP_THREE_TIMES },
+
     // Disable joystick controls
     { ( void * ) 0x41F098, INLINE_NOP_TWO_TIMES   },
     { ( void * ) 0x41F0A0, INLINE_NOP_THREE_TIMES },
@@ -504,6 +511,5 @@ static const AsmList addExtraTextures =
          0xC3
     } },
 };
-
 
 } // namespace AsmHacks
