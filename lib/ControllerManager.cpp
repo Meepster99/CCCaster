@@ -108,25 +108,12 @@ void ControllerManager::savePrevStates()
 
 bool ControllerManager::check()
 {
-    static DWORD* state = NULL;
-    if(state == NULL) {
-        state = (DWORD*)malloc(1 * sizeof(DWORD));
-        log("t:%04X state at %08X", GetCurrentThreadId(), (DWORD)state);
-    }
 
-    static_assert(sizeof(void*) == 4, "what");
-
-    *state = 0;
-    //log("getting mutex");
     LOCK ( mutex );
-    *state = 1;
-    //log("got mutex");
 
     if ( ! initialized )
         return false;
 
-    *state = 2;
-    //log("getting keyboard");
     if ( windowHandle == ( void * ) GetForegroundWindow() )
     {
         // Update keyboard controller state
@@ -141,17 +128,12 @@ bool ControllerManager::check()
                 keyboard._state |= ( 1u << i );
         }
     }
-    *state = 3;
-    //log("got keyboard");
 
     DIJOYSTATE2 djs;
     HRESULT result;
 
-    *state = 4;
-    //log("getting joysticks");
     for ( auto it = joysticks.begin(); it != joysticks.end(); )
     {
-        *state = 0xFFFFFFFE;
 
         Controller *controller = it->second.get();
         const JoystickInfo info = controller->_joystick.info;
@@ -163,36 +145,18 @@ bool ControllerManager::check()
         controller->_joystick.prevState = controller->_joystick.state;
 
         // Poll device state
-        *state = 0xFFFFFFFD;
-        TRY(wishTherewasanotherway)
-            result = IDirectInputDevice8_Poll ( device );
-        EXCEPT(wishTherewasanotherway)
-            log("caught IDirectInputDevice8_Poll exception!!!! wow!!");
-        END(wishTherewasanotherway)
-        *state = 0xFFFFFFFC;
+        
+        result = IDirectInputDevice8_Poll ( device );
         if ( result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED )
         {
-            
-            // idea: there is no reason for this to not work. maybe, melty also calls this func, and im hitting a race condition
-            // or,, check event viewer, gives Metadata staging failed, result=0x80070490 for container '{D388B9C3-6A8B-5140-B4C0-E349A95762C6}'
-            *state = 0xFFFFFFFB;
-
-            DWORD eip = getEIP();
-            log("device lost. pray. EIP: %08X", eip);
-            
-            NOPS;
+        
             result = IDirectInputDevice8_Acquire ( device );
-            NOPS;
 
-            *state = 0xFFFFFFFA;
             if(SUCCEEDED(result)) {
                 result = IDirectInputDevice8_Poll ( device );
             }
             
         }
-        *state = 0xFFFFFFF0;
-
-        *state = 5;
 
         if ( FAILED ( result ) )
         {
@@ -206,15 +170,11 @@ bool ControllerManager::check()
         result = IDirectInputDevice8_GetDeviceState ( device, sizeof ( DIJOYSTATE2 ), &djs );
         if ( result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED )
         {
-            *state = 0xFFFFFF0B;
             result = IDirectInputDevice8_Acquire ( device );
-            *state = 0xFFFFFF0A;
             if(SUCCEEDED(result)) {
                 result = IDirectInputDevice8_GetDeviceState ( device, sizeof ( DIJOYSTATE2 ), &djs );
             }
         }
-
-        *state = 6;
 
         if ( FAILED ( result ) )
         {
@@ -223,8 +183,6 @@ bool ControllerManager::check()
             detachJoystick ( ( it++ )->first );
             continue;
         }
-
-        *state = 7;
 
         const uint8_t axisMask = info.axisMask;
         uint8_t *const axes = controller->_joystick.state.axes;
@@ -251,8 +209,6 @@ bool ControllerManager::check()
 
         uint8_t *const prevAxes = controller->_joystick.prevState.axes;
 
-        *state = 8;
-
         for ( axis = 0; axis < info.numAxes; ++axis )
         {
             if ( axes[axis] == prevAxes[axis] )
@@ -261,8 +217,6 @@ bool ControllerManager::check()
             LOG_CONTROLLER ( controller, "axis%u: %u -> %u", axis, prevAxes[axis], axes[axis] );
             controller->joystickAxisEvent ( axis, axes[axis] );
         }
-
-        *state = 9;
 
         uint8_t *const hats = controller->_joystick.state.hats;
         uint8_t *const prevHats = controller->_joystick.prevState.hats;
@@ -277,8 +231,6 @@ bool ControllerManager::check()
             LOG_CONTROLLER ( controller, "hat%u: %u -> %u", hat, prevHats[hat], hats[hat] );
             controller->joystickHatEvent ( hat, hats[hat] );
         }
-
-        *state = 10;
 
         uint32_t& buttons = controller->_joystick.state.buttons;
         buttons = 0;
@@ -299,9 +251,7 @@ bool ControllerManager::check()
 
         ++it;
     }
-    *state = 0xFFFFFFFF;
-    //log("got joysticks");
-
+    
     return true;
 }
 
@@ -897,35 +847,8 @@ MsgPtr ControllerManager::loadMappings ( const string& file )
 void ControllerManager::PollingThread::run()
 {
     timeBeginPeriod ( 1 ); // for select, see comment in SocketManager
-    //while ( ControllerManager::get().check() )
-    while(true)
+    while(ControllerManager::get().check())
     {
-        // when spam plug/unpluging rump's controler, this loop stalled 
-        // it stalled on inside, inf loop?
-        
-        // have xbox controller plugged in before caster opens
-        // boot melty
-        // move around a bit on css
-        // bind controls, mess around a bit
-        // unplug(THE USB FROM THE PC), replug, crash on replug
-
-        bool doBreak = false;
-
-        TRY(omfg);
-            //log("inside");
-            if(!ControllerManager::get().check()) {
-                //log("breaking out of loop!");   
-                doBreak = true;
-            }
-            //log("outside");
-        EXCEPT(omfg);
-            log("wowee something went horribly wrong!!!!!");
-        END(omfg);
-
-        if(doBreak) { // i cannot break out of the loop bc it wont properly clean up the exception stack!
-            break;
-        }
-
         Sleep ( 1 );
     }
     timeEndPeriod ( 1 ); // for select, see comment in SocketManager

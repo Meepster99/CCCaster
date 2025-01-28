@@ -44,7 +44,7 @@ static inline char getAxisSign ( uint8_t value )
     return '0';
 }
 
-static inline string getHatString ( uint8_t value )
+static inline string getHatString ( uint8_t value ) 
 {
     switch ( value )
     {
