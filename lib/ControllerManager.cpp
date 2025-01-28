@@ -145,7 +145,6 @@ bool ControllerManager::check()
         controller->_joystick.prevState = controller->_joystick.state;
 
         // Poll device state
-        
         result = IDirectInputDevice8_Poll ( device );
         if ( result == DIERR_INPUTLOST || result == DIERR_NOTACQUIRED )
         {
@@ -287,7 +286,24 @@ static BOOL CALLBACK enumJoystickAxes ( const DIDEVICEOBJECTINSTANCE *ddoi, void
     CHECK_ADD_AXIS ( 1, GUID_YAxis, "Y-Axis" );
     CHECK_ADD_AXIS ( 2, GUID_ZAxis, "Z-Axis" );
 
-    if ( PS4_CONTROLLER_GUID == info.guid || P3_WIRED_GAMEPAD == info.guid )
+    bool skipWeirdShoulderAxis = false;
+
+    // this list is definitely NOT exhaustive.  need more
+    // https://devicehunt.com/search/type/usb/vendor/any/device/any
+    // https://wiki.gentoo.org/wiki/Sony_DualShock
+    switch(info.guid.deviceID) {
+        case 0x0CE6: // dualsense
+        case 0x09CC: // dualshock4 second gen
+        case 0x05C4: // dualshock4
+        case 0x0268: // dualshock3/sixaxis?
+            skipWeirdShoulderAxis = true;
+            break;
+        default:
+            break;
+    }
+
+    //log("%d waow explode %40s %s", skipWeirdShoulderAxis, info.name.c_str(), info.guid.getString().c_str());
+    if ( skipWeirdShoulderAxis || PS4_CONTROLLER_GUID == info.guid || P3_WIRED_GAMEPAD == info.guid )
     {
         // Workaround for the PS4 pad, because it maps some buttons to the X/Y rotation axes as well.
         // These buttons are mapped to min/max values so they end up eating all the inputs. So we ignore them...
