@@ -262,7 +262,7 @@ public:
 
     // Get the raw joystick state
     const JoystickState& getJoystickState() const { return _joystick.state; }
-
+    
     friend class ControllerManager;
     friend class DllControllerManager;
 
