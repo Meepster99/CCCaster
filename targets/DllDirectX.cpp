@@ -1669,30 +1669,29 @@ void CharRectDraw() {
 
 	static IDirect3DPixelShader9* testPixelShader = NULL;
 	static IDirect3DVertexShader9* testVertexShader = NULL;
-
 	
-	/*
+	#ifdef NBLEEDING
 	if(SHIFTHELD && DOWNPRESS) {
 		if(testPixelShader != NULL) {
 			testPixelShader->Release();
 			testPixelShader = NULL;
+			testPixelShader = loadPixelShaderFromFile("testPixelShader.hlsl");
 		}
 		if(testVertexShader != NULL) {
 			testVertexShader->Release();
 			testVertexShader = NULL;
+			testVertexShader = loadVertexShaderFromFile("testVertexShader.hlsl");
 		}
 	}
-	*/
+	#endif
 
 	if(testPixelShader == NULL) {
 		//log("reloading pixel shader");
-		//testPixelShader = loadPixelShaderFromFile("testPixelShader.hlsl");
 		testPixelShader = getCharRectPixelShader();
 	}
 
 	if(testVertexShader == NULL) {
 		//log("reloading vertex shader");
-		//testVertexShader = loadVertexShaderFromFile("testVertexShader.hlsl");
 		testVertexShader = getCharRectVertexShader();
 	}
 
