@@ -971,8 +971,6 @@ void DllControllerManager::handleMappingOverlayOld()
 
 void DllControllerManager::handleMappingOverlay() {
 
-    log("enter");
-
     for(Controller *controller : _allControllers) {
         int pressDir = getDirection(controller);\
         constexpr int tempUnmapDirections[2] = { 6, 4 };
@@ -980,8 +978,9 @@ void DllControllerManager::handleMappingOverlay() {
             if(pressDir == tempUnmapDirections[i]) {
                 if(controller == _playerControllers[i]) {
                     // this if checks if its NOT a keyboard mapping directions
-                    // TODO, excend this to deadzone stuff please
-                    if (!(controller->isKeyboard() && controller->isMapping() && _overlayPositions[i] >= 1 && _overlayPositions[i] <= 4)) {
+                    bool isKeyboardMappingDirections = controller->isKeyboard() && controller->isMapping() && _overlayPositions[i] >= 1 && _overlayPositions[i] <= 4;
+                    bool isJoystickMappingDeadzone = controller->isJoystick() && _overlayPositions[i] == 10;
+                    if (!isKeyboardMappingDirections && !isJoystickMappingDeadzone) {
                         _playerControllers[i]->cancelMapping();
                         _playerControllers[i] = 0;
                     }
@@ -996,8 +995,6 @@ void DllControllerManager::handleMappingOverlay() {
         }
     }
 
-    log("1");
-
     array<string, 3> text;
 
     // Display all controllers
@@ -1007,8 +1004,6 @@ void DllControllerManager::handleMappingOverlay() {
             text[1] += "\n" + controller->getName() + controller->getIdentifiers();
         }
     }
-
-    log("2");
 
     const size_t controllersHeight = 3 + _allControllers.size();
 
@@ -1072,8 +1067,6 @@ void DllControllerManager::handleMappingOverlay() {
         }
     }
 
-    log("3");
-
     // Update player controllers
     for (uint8_t i=0; i<_playerControllers.size(); ++i) {
 
@@ -1091,19 +1084,40 @@ void DllControllerManager::handleMappingOverlay() {
         constexpr int tempDeleteMappingDirections[2] = { 4, 6 };
         vector<string>& options = allOptions[i];
 
-        if(pressDir == tempDeleteMappingDirections[i]) {
-            deleteMapping = true;
-        } else if(_playerControllers[i]->isKeyboard() && KeyboardState::isReleased(VK_RETURN) && (_overlayPositions[i] >= 1 && _overlayPositions[i] <= 4)) {
-            // checks if we are a keyboard, and in the direction mapping section
-            mapDirections = true;
-        } else if(_playerControllers[i]->isKeyboard() && KeyboardState::isPressed(VK_RETURN) && (_overlayPositions[i] >= 1 && _overlayPositions[i] <= 4)) {
-            deleteMapping = true;
-        } else if(pressDir == 2) { // move selector down
-            _overlayPositions[i] = ( _overlayPositions[i] + 1 ) % options.size();
-            changedPosition = true;
-        } else if(pressDir == 8) { // move selector up
-            _overlayPositions[i] = ( _overlayPositions[i] - 1 ) % options.size();
-            changedPosition = true;
+        if(controller->isJoystick() && _overlayPositions[i] == 10) {
+            // handles deadzone changes            
+            if(pressDir == 4) {
+                float deadZone = _playerControllers[i]->getDeadzone();
+                deadZone -= 0.05f;
+                _playerControllers[i]->setDeadzone(deadZone);
+                saveMappings(_playerControllers[i]);
+            } else if(pressDir == 6) {
+                float deadZone = _playerControllers[i]->getDeadzone();
+                deadZone += 0.05f;
+                _playerControllers[i]->setDeadzone(deadZone);
+                saveMappings(_playerControllers[i]);
+            } else if(pressDir == 2) { // move selector down
+                _overlayPositions[i] = ( _overlayPositions[i] + 1 ) % options.size();
+                changedPosition = true;
+            } else if(pressDir == 8) { // move selector up
+                _overlayPositions[i] = ( _overlayPositions[i] - 1 ) % options.size();
+                changedPosition = true;
+            }
+        } else {
+            if(pressDir == tempDeleteMappingDirections[i]) {
+                deleteMapping = true;
+            } else if(_playerControllers[i]->isKeyboard() && KeyboardState::isReleased(VK_RETURN) && (_overlayPositions[i] >= 1 && _overlayPositions[i] <= 4)) {
+                // checks if we are a keyboard, and in the direction mapping section
+                mapDirections = true;
+            } else if(_playerControllers[i]->isKeyboard() && KeyboardState::isPressed(VK_RETURN) && (_overlayPositions[i] >= 1 && _overlayPositions[i] <= 4)) {
+                deleteMapping = true;
+            } else if(pressDir == 2) { // move selector down
+                _overlayPositions[i] = ( _overlayPositions[i] + 1 ) % options.size();
+                changedPosition = true;
+            } else if(pressDir == 8) { // move selector up
+                _overlayPositions[i] = ( _overlayPositions[i] - 1 ) % options.size();
+                changedPosition = true;
+            }
         }
 
         if(deleteMapping || mapDirections || changedPosition || _finishedMapping[i]) {
@@ -1135,8 +1149,6 @@ void DllControllerManager::handleMappingOverlay() {
         }
     }
 
-    log("4");
-
     // actually update the displays
     for (uint8_t i=0; i<_playerControllers.size(); ++i) {
         if (_playerControllers[i] == NULL) {
@@ -1162,8 +1174,6 @@ void DllControllerManager::handleMappingOverlay() {
         }
     }
 
-    log("5");
-
     DllOverlayUi::updateText (text);
 
     // Enable Escape to exit if neither controller is being mapped
@@ -1171,8 +1181,6 @@ void DllControllerManager::handleMappingOverlay() {
     for (uint8_t i = 0; i <_playerControllers.size(); ++i) {
         AsmHacks::enableEscapeToExit &= (!_playerControllers[i] || _overlayPositions[i] == 0);
     }
-
-    log("6");
 
     // check if overlay should be disabled
     bool shouldDisableOverlay = false;

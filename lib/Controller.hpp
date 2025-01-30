@@ -239,6 +239,11 @@ public:
     float getDeadzone() { return _joystickMappings.deadzone / 32767.0f; }
     void setDeadzone ( float deadzone )
     {
+        if(deadzone < 0.10f) {
+            deadzone = 0.10f;
+        } else if(deadzone >= 0.90f) {
+            deadzone = 0.90f;
+        }
         _joystickMappings.deadzone = ( uint32_t ) clamped<float> ( deadzone * 32767, MIN_DEADZONE, MAX_DEADZONE );
         _joystickMappings.invalidate();
     }
@@ -262,7 +267,7 @@ public:
 
     // Get the raw joystick state
     const JoystickState& getJoystickState() const { return _joystick.state; }
-    
+
     friend class ControllerManager;
     friend class DllControllerManager;
 
