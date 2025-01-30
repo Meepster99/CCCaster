@@ -12,6 +12,6 @@ extern "C" {
 
 __attribute__((noinline)) void stageSelCallback();
 
-void updateCSSStuff(IDirect3DDevice9 *device);
+void updateCSSStuff();
 
 int getCharMoon(int playerIndex);

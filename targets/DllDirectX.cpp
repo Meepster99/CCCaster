@@ -7,6 +7,7 @@
 #include "resource.h"
 #include "DllAsmHacks.hpp"
 #include "DllOverlayUi.hpp"
+#include "DllCSS.hpp"
 #include "aacc_2v2_ui_elements.h"
 #include <regex>
 #include <optional>
@@ -31,6 +32,9 @@ switch to only one vert format
 also, evictresources needs to be hooked too!!
 
 */
+
+#define HEALTHWIDTH ((float)186.0f)
+#define METERWIDTH ((float)194.0f)
 
 void ___log(const char* msg)
 {
@@ -390,7 +394,6 @@ BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f) {
 
 	return res;
 }
-
 
 void debugLinkedList();
 void displayDebugInfo();
@@ -1309,6 +1312,42 @@ void RectDrawTex(const Rect& rect, DWORD ARGB) {
 
 }
 
+void RectDrawUI(const Rect& rect, DWORD ARGB) {
+
+	// draws a rect with a texture, for very annoying reasons
+
+	float x = rect.x1;
+	float y = rect.y1;
+	float w = rect.x2 - rect.x1;
+	float h = rect.y2 - rect.y1;
+
+	if(shouldReverseDraws) {
+		x = 640.0f - x;
+		x -= w;
+	}
+
+	x /= 480.0f;
+	w /= 480.0f;
+	y /= 480.0f;
+	h /= 480.0f;
+
+	y = 1 - y;
+
+	PosColTexVert v1 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, 0) };
+	PosColTexVert v2 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0.001, 0) };
+	PosColTexVert v3 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, 0.001) };
+	PosColTexVert v4 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0.001, 0.001) };
+
+	scaleVertex(v1.position);
+	scaleVertex(v2.position);
+	scaleVertex(v3.position);
+	scaleVertex(v4.position);
+
+	uiVertData.add(v1, v2, v3);
+	uiVertData.add(v2, v3, v4);
+
+}
+
 void BorderDrawTex(const Rect& rect, DWORD ARGB) {
 	
 	float x = rect.x1;
@@ -1556,11 +1595,12 @@ void drawChevronOnPlayer(int p, int c) {
 
 }
 
-std::vector<std::pair<Rect, DWORD>> CharRects;
+std::vector<std::pair<Rect, DWORD>> charRects;
 std::vector<std::pair<Rect, DWORD>> animatedRects;
+std::vector<std::pair<Rect, DWORD>> meterRects;
 
 void addCharRect(const Rect& r, DWORD ARGB) {
-	CharRects.push_back(std::pair<Rect, DWORD>(r, ARGB));
+	charRects.push_back(std::pair<Rect, DWORD>(r, ARGB));
 }
 
 void addAnimatedRect(const Rect& r, DWORD ARGB) {
@@ -1576,6 +1616,21 @@ void addAnimatedRect(const Rect& r, DWORD ARGB) {
 	}
 
 	animatedRects.push_back(std::pair<Rect, DWORD>(temp, ARGB));
+}
+
+void addMeterRect(const Rect& r, DWORD ARGB) {
+	
+	Rect temp = r;
+
+	if(shouldReverseDraws) {
+		
+		temp.x1 = 640 - temp.x1;
+		temp.x2 = 640 - temp.x2;
+
+		std::swap(temp.x1, temp.x2);
+	}
+
+	meterRects.push_back({temp, ARGB});
 }
 
 IDirect3DPixelShader9* getCharRectPixelShader() {
@@ -1661,15 +1716,18 @@ IDirect3DVertexShader9* getCharRectVertexShader() {
 	)");
 }
 
-void CharRectDraw() {
+void charRectDraw() {
 
-	if(CharRects.size() == 0 && animatedRects.size() == 0) { 
+	shouldReverseDraws = false;
+
+	if(charRects.size() == 0 && animatedRects.size() == 0) { 
 		return;
 	}
 
 	static IDirect3DPixelShader9* testPixelShader = NULL;
 	static IDirect3DVertexShader9* testVertexShader = NULL;
 	
+	/*
 	#ifdef NBLEEDING
 	if(SHIFTHELD && DOWNPRESS) {
 		if(testPixelShader != NULL) {
@@ -1684,6 +1742,7 @@ void CharRectDraw() {
 		}
 	}
 	#endif
+	*/
 
 	if(testPixelShader == NULL) {
 		//log("reloading pixel shader");
@@ -1709,10 +1768,17 @@ void CharRectDraw() {
 	//UIManager::add("xOffset", &xOffset);
 	//UIManager::add("yOffset", &yOffset);
 
-	for(int i=0; i<CharRects.size(); i++) {
-		//BorderDraw(CharRects[i].first, 0xFFFFFFFF);	
-		Rect tempRect = CharRects[i].first;
-		RectDrawTex(tempRect, CharRects[i].second);
+	if(posColTexVertData.vertexIndex != 0) {
+		log("charRectDraw was trying to add things to posColTexVertData when it had undrawn things!");
+		charRects.clear();
+		animatedRects.clear();
+		return;
+	}
+
+	for(int i=0; i<charRects.size(); i++) {
+		//BorderDraw(charRects[i].first, 0xFFFFFFFF);	
+		Rect tempRect = charRects[i].first;
+		RectDrawTex(tempRect, charRects[i].second);
 
 		Point drawPoint(0,0);
 		switch(i) {
@@ -1760,9 +1826,266 @@ void CharRectDraw() {
 	device->SetPixelShader(pixelShaderBackup);
 	device->SetVertexShader(vertexShaderBackup);
 
-	CharRects.clear();
+	charRects.clear();
 	animatedRects.clear();
 
+}
+
+IDirect3DPixelShader9* getMeterRectPixelShader() {
+
+	return createPixelShader(R"(
+
+float4 frameFloatOffset : register(c223);
+float4 frameDegOffset : register(c222);
+
+struct VS_INPUT {
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texCoord : TEXCOORD0;
+};
+
+struct VS_OUTPUT {
+	float4 position : POSITION;
+	float4 color : COLOR;
+	float2 texCoord : TEXCOORD0;
+};
+
+sampler2D textureSampler : register(s0); // is using this low of a reg ok?
+sampler2D textureSampler2 : register(s1); 
+
+// start HSL helper funcs
+
+static const float PI = 3.141592f; 
+static const float EPSILON = 1e-10;
+
+float3 HUEtoRGB(in float hue)
+{
+    // Hue [0..1] to RGB [0..1]
+    // See http://www.chilliant.com/rgb2hsv.html
+    float3 rgb = abs(hue * 6. - float3(3, 2, 4)) * float3(1, -1, -1) + float3(-1, 2, 2);
+    return clamp(rgb, 0., 1.);
+}
+
+float3 RGBtoHCV(float3 rgb)
+{
+    // RGB [0..1] to Hue-Chroma-Value [0..1]
+    // Based on work by Sam Hocevar and Emil Persson
+    float4 p = (rgb.g < rgb.b) ? float4(rgb.bg, -1., 2. / 3.) : float4(rgb.gb, 0., -1. / 3.);
+    float4 q = (rgb.r < p.x) ? float4(p.xyw, rgb.r) : float4(rgb.r, p.yzx);
+    float c = q.x - min(q.w, q.y);
+    float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+    return float3(h, c, q.x);
+}
+
+float3 HSVtoRGB(float3 hsv)
+{
+    // Hue-Saturation-Value [0..1] to RGB [0..1]
+    float3 rgb = HUEtoRGB(hsv.x);
+    return ((rgb - 1.) * hsv.y + 1.) * hsv.z;
+}
+
+float3 HSLtoRGB(float3 hsl)
+{
+    // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+    float3 rgb = HUEtoRGB(hsl.x);
+    float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+    return (rgb - 0.5) * c + hsl.z;
+}
+
+float3 RGBtoHSV(float3 rgb)
+{
+    // RGB [0..1] to Hue-Saturation-Value [0..1]
+    float3 hcv = RGBtoHCV(rgb);
+    float s = hcv.y / (hcv.z + EPSILON);
+    return float3(hcv.x, s, hcv.z);
+}
+
+float3 RGBtoHSL(float3 rgb)
+{
+    // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+    float3 hcv = RGBtoHCV(rgb);
+    float z = hcv.z - hcv.y * 0.5;
+    float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+    return float3(hcv.x, s, z);
+}
+// end HSL helper funcs
+
+float fract(float f) {
+	return f - floor(f);
+}
+
+float idk(float x, float n) {
+	return 2 * PI * abs(fract(x - n) - 0.5);
+}
+
+float4 main(VS_OUTPUT data) : COLOR {
+
+	float2 uv = data.texCoord * 1000;
+	
+	float4 res = data.color;
+	
+	float n = frameFloatOffset.y;
+	
+	//float c = a((pi / 4.0) * uv.x, n);
+	float c = 2 * PI * abs(fract(0.5 * uv.x - n) - 0.5);
+	c = sin(c);
+	
+	c = clamp(c, 0.5, 1.0);
+	
+	float3 hsl = RGBtoHSL(res);
+	
+	//res.xyz = c;
+	
+	hsl.z = max(hsl.z, c);
+	
+	res.xyz = HSLtoRGB(hsl);
+	
+	//res = max(c, data.color);
+	//res = data.color;
+	
+	res.w = 1.0f;
+
+	
+	return res;
+}
+
+
+
+			
+	)");
+
+}
+
+IDirect3DVertexShader9* getMeterRectVertexShader() {
+	return createVertexShader(R"(
+		
+		float4 frameFloatOffset : register(c223);
+		float4 frameDegOffset : register(c222);
+
+		struct VS_INPUT {
+			float4 position : POSITION;
+			float4 color : COLOR;
+			float2 texCoord : TEXCOORD0;
+		};
+
+		struct VS_OUTPUT {
+			float4 position : POSITION;
+			float4 color : COLOR;
+			float2 texCoord : TEXCOORD0;
+		};
+
+		VS_OUTPUT main(VS_INPUT input) {
+			VS_OUTPUT output;
+			
+			output.position = input.position;
+			output.color = input.color;
+			output.texCoord = input.texCoord;
+		
+			return output;
+		}
+	)");
+}
+
+void meterRectDraw() {
+
+	if(meterRects.size() == 0) {
+		return;
+	}
+
+	if(uiVertData.vertexIndex != 0) {
+		log("meterRectDraw was trying to add things to posColTexVertData when it had undrawn things!");
+		meterRects.clear();
+		return;
+	}
+
+	shouldReverseDraws = false;
+
+	static IDirect3DPixelShader9* testPixelShader = NULL;
+	static IDirect3DVertexShader9* testVertexShader = NULL;
+	
+	#ifdef NBLEEDING
+	if(SHIFTHELD && DOWNPRESS) {
+		if(testPixelShader != NULL) {
+			testPixelShader->Release();
+			testPixelShader = NULL;
+			testPixelShader = loadPixelShaderFromFile("testPixelShader.hlsl");
+		}
+		if(testVertexShader != NULL) {
+			testVertexShader->Release();
+			testVertexShader = NULL;
+			testVertexShader = loadVertexShaderFromFile("testVertexShader.hlsl");
+		}
+	}
+	#endif
+
+	if(testPixelShader == NULL) {
+		//log("reloading pixel shader");
+		testPixelShader = getMeterRectPixelShader();
+	}
+
+	if(testVertexShader == NULL) {
+		//log("reloading vertex shader");
+		testVertexShader = getMeterRectVertexShader();
+	}
+
+	for(int i=0; i<meterRects.size(); i++) {
+		Rect tempRect = meterRects[i].first;
+		DWORD ARGB = meterRects[i].second;
+
+		// in this case, i need custom UVs, not 0,1 for the animations to look right
+
+		/*
+		float x = tempRect.x1;
+		float y = tempRect.y1;
+		float w = tempRect.x2 - tempRect.x1;
+		float h = tempRect.y2 - tempRect.y1;
+
+		float wPercent = abs(w / METERWIDTH);
+
+		x /= 480.0f;
+		w /= 480.0f;
+		y /= 480.0f;
+		h /= 480.0f;
+
+		y = 1 - y;
+
+		float u = 0.001 * wPercent;
+		float v = 0.001;
+
+		PosColTexVert v1 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, 0) };
+		PosColTexVert v2 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y + 0) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(u, 0) };
+		PosColTexVert v3 = { D3DVECTOR(((x + 0) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(0, v) };
+		PosColTexVert v4 = { D3DVECTOR(((x + w) * 1.5f) - 1.0f, ((y - h) * 2.0f) - 1.0f, 0.5f), ARGB, D3DXVECTOR2(u, v) };
+
+		scaleVertex(v1.position);
+		scaleVertex(v2.position);
+		scaleVertex(v3.position);
+		scaleVertex(v4.position);
+
+		posColTexVertData.add(v1, v2, v3);
+		posColTexVertData.add(v2, v3, v4);
+		*/
+	
+		RectDrawUI(tempRect, ARGB);
+
+	}
+
+	IDirect3DPixelShader9* pixelShaderBackup = NULL;	
+	IDirect3DVertexShader9* vertexShaderBackup = NULL;
+
+	device->GetPixelShader(&pixelShaderBackup); // does this inc the refcount?
+	device->GetVertexShader(&vertexShaderBackup);
+
+	device->SetPixelShader(testPixelShader);
+	device->SetVertexShader(testVertexShader);
+	
+	uiVertData.draw(); // this is incredibly sloppy. not efficient at all
+	
+	device->SetPixelShader(pixelShaderBackup);
+	device->SetVertexShader(vertexShaderBackup);
+
+	meterRects.clear();
+	
 }
 
 // -----
@@ -2108,6 +2431,81 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 
 // -----
 
+void updateGameState() {
+	
+    for(int i=0; i<4; i++) {
+        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
+            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
+        }
+        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
+		// this is the write which properly updates the moon state ingame.
+        //*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
+		*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = getCharMoon(i);
+    }
+
+	/*
+	if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
+	//if(true) {
+
+	} else {
+		return;
+	}
+
+	*/
+
+	// this code needs a refactor. but i am tired
+	static DWORD FN1States[4] = {0, 0, 0, 0}; 
+	DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+	for(int i=0; i<4; i++) {
+		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
+		fn1 &= 0b1;
+
+		if(!FN1States[i] && fn1) {
+			//log("P%d: %d", i, fn1);
+			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
+		}		
+		
+		FN1States[i] = fn1;
+	}
+
+	bool deadState[4];
+	for(int i=0; i<4; i++) {
+		deadState[i] = (*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0);
+	}
+
+	for(int i=0; i<4; i++) {
+		if(i & 1) { // team 2
+			// todo, have it not switch looking at when both die. this needs to be tested!!!!!!!!
+			if(deadState[0] && !deadState[2]) {
+				AsmHacks::naked_charTurnAroundState[i] = 1;
+			} else if(deadState[2] && !deadState[0]) {
+				AsmHacks::naked_charTurnAroundState[i] = 0;
+			}
+		} else { // team 1
+			if(deadState[1] && !deadState[3]) { 
+				AsmHacks::naked_charTurnAroundState[i] = 1;
+			} else if(deadState[3] && !deadState[1]) {
+				AsmHacks::naked_charTurnAroundState[i] = 0;
+			}
+		}
+	}
+
+	for(int i=0; i<4; i++) {
+
+		DWORD target = AsmHacks::naked_charTurnAroundState[i];
+		target <<= 1;
+		if((i & 1) == 0) {
+			target++;
+		}
+
+		// i wonder if this could have solved all port problems earlier. im not even going to test to see though
+		// todo, what is this number by default and does it matter
+		// todo, does this have horrendous consequences
+		
+		*(DWORD*)(0x00555130 + 0x2C0 + (i * 0xAFC)) = 0x00555130 + 0x4 + (target * 0xAFC);
+	}
+}
+
 const float healthBarSmoothValue = 0.005f;
 typedef struct Bar {
 	Smooth<float> yellowHealth = Smooth<float>(1.0f, healthBarSmoothValue);
@@ -2137,7 +2535,7 @@ void drawHealthBar(int i, Bar& bar) {
 
 	static float height = 12.0f;
 
-	static float maxHealthWidth = 186;
+	static float maxHealthWidth = HEALTHWIDTH;
 
 	//UIManager::add("base", &base);
 	//UIManager::add("off", &offset);
@@ -2194,7 +2592,7 @@ void drawMeterBar(int i, Bar& bar) {
 
 	float meterDivisor = *(DWORD*)(0x0055513C + (i * 0xAFC)) == 2 ? 20000.0f : 30000.0f;
 	DWORD meterRaw = *(DWORD*)(0x00555210 + (i * 0xAFC));
-	float meterVal = ((float)*(DWORD*)(0x00555210 + (i * 0xAFC))) / meterDivisor;
+	float meterVal = ((float)meterRaw) / meterDivisor;
 	bar.meter = meterVal;
 
 	float currentMeterWidth = 0.0f;
@@ -2216,13 +2614,13 @@ void drawMeterBar(int i, Bar& bar) {
 	)
 
 	// there are contrast issues with these vs the white border line spliting 100/200/300/100
-	const DWORD meterRedCol =    0xFFFF0000;
-	const DWORD meterYellowCol = 0xFFFFFF00; // it might just be my eye issues, but is this yellow like,, is it horrid to see the white meter lines?
-	const DWORD meterGreenCol =  0xFF00FF00;
+	const DWORD meterRedCol =    0xFFC80000;
+	const DWORD meterYellowCol = 0xFFC8C800; // it might just be my eye issues, but is this yellow like,, is it horrid to see the white meter lines?
+	const DWORD meterGreenCol =  0xFF00C800;
 	const DWORD meterHeatCol =   0xFF0000FF;
-	const DWORD meterMaxCol =    0xFFFFA500;
-	const DWORD meterBloodCol =  0xFFDDDDDD;
-	const DWORD meterBreakCol =  0xFF800080;
+	const DWORD meterMaxCol =    0xFFFAA000;
+	const DWORD meterBloodCol =  0xFFB4B4B4;
+	const DWORD meterBreakCol =  0xFFBE64C8;
 
 	if(*(WORD*)(0x00555234 + (i * 0xAFC)) == 110) { // means this its a ex penalty meter debuff
 		circuitBreakTimer = 0;
@@ -2269,7 +2667,7 @@ void drawMeterBar(int i, Bar& bar) {
 		meterString = "BREAK";
 	}
 	
-	static float meterWidth = 194;
+	static float meterWidth = METERWIDTH;
 	static float meterSize = 10.0f;
 	static Point pBase(32.0f, 436);
 	static Point pOffset(32.0f, 449);
@@ -2303,11 +2701,22 @@ void drawMeterBar(int i, Bar& bar) {
 	
 	drawRect.p2.x += displayWidth;	
 
-	UIDraw(UI::CircuitShade, drawRect, meterCol);
+	//UIDraw(UI::CircuitShade, drawRect, meterCol);
+
+	Rect drawRectDupe = drawRect;
+	if(shouldReverseDraws) {
+		std::swap(drawRectDupe.x1, drawRectDupe.x2); // reverse the coords so the meter anim goes the correct way
+	}
+
+	if(!useNormalMeter) { // we are in a non normal meter state like max/heat/break, reverse the rect to reverse the uvs
+		std::swap(drawRectDupe.x1, drawRectDupe.x2);
+	}
+
+	addMeterRect(drawRectDupe, meterCol);
 
 	if(moon == 2) {
 		float midX = drawRect.x1 + (meterWidth * 0.5f);
-		//LineDrawPrio(midX, drawRect.y1, midX, drawRect.y2, 0xFFFFFFFF);
+		//LineDrawPrio(midX, drawRect.y1, midX, drawRect.y2, 0xFFFFFFFF
 		RectDrawPrio(midX - 1, drawRect.y1, 2, meterSize, 0xFFFFFFFF);
 	} else {	
 		float onethird = drawRect.x1 + (meterWidth * 0.333f);
@@ -2773,83 +3182,12 @@ void drawPlayerInfo() {
 
 	}
 
-
 }
 
 void drawNewUI() {
-	
-	shouldReverseDraws = false;
 
-    for(int i=0; i<4; i++) {
-        if(*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0) { // is knocked down
-            *(BYTE*)(0x005552A8 + (i * 0xAFC)) = 0x01; // sets isBackground flag
-        }
-        // doing this write here is dumb. p3p4 moon stuff isnt inited properly, i want to go to sleep
-		// this is the write which properly updates the moon state ingame.
-        //*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = *(DWORD*)(0x0074d840 + 0xC + (i * 0x2C));
-		*(DWORD*)(0x00555130 + 0xC + (i * 0xAFC)) = getCharMoon(i);
-    }
-
-	/*
-	if(*((uint8_t*)0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) { // check if ingame
-	//if(true) {
-
-	} else {
-		return;
-	}
-
-	*/
-
-	// this code needs a refactor. but i am tired
-	static DWORD FN1States[4] = {0, 0, 0, 0}; 
-	DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
-	for(int i=0; i<4; i++) {
-		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
-		fn1 &= 0b1;
-
-		if(!FN1States[i] && fn1) {
-			//log("P%d: %d", i, fn1);
-			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
-		}		
-		
-		FN1States[i] = fn1;
-	}
-
-	bool deadState[4];
-	for(int i=0; i<4; i++) {
-		deadState[i] = (*(BYTE*)(0x00555130 + 0x1B6 + (i * 0xAFC)) != 0);
-	}
-
-	for(int i=0; i<4; i++) {
-		if(i & 1) { // team 2
-			// todo, have it not switch looking at when both die. this needs to be tested!!!!!!!!
-			if(deadState[0] && !deadState[2]) {
-				AsmHacks::naked_charTurnAroundState[i] = 1;
-			} else if(deadState[2] && !deadState[0]) {
-				AsmHacks::naked_charTurnAroundState[i] = 0;
-			}
-		} else { // team 1
-			if(deadState[1] && !deadState[3]) { 
-				AsmHacks::naked_charTurnAroundState[i] = 1;
-			} else if(deadState[3] && !deadState[1]) {
-				AsmHacks::naked_charTurnAroundState[i] = 0;
-			}
-		}
-	}
-
-	for(int i=0; i<4; i++) {
-
-		DWORD target = AsmHacks::naked_charTurnAroundState[i];
-		target <<= 1;
-		if((i & 1) == 0) {
-			target++;
-		}
-
-		// i wonder if this could have solved all port problems earlier. im not even going to test to see though
-		// todo, what is this number by default and does it matter
-		// todo, does this have horrendous consequences
-		
-		*(DWORD*)(0x00555130 + 0x2C0 + (i * 0xAFC)) = 0x00555130 + 0x4 + (target * 0xAFC);
+	if(!(*(BYTE*)(0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled())) {
+		//return;	
 	}
 
 	shouldReverseDraws = false;
@@ -2871,30 +3209,26 @@ void drawNewUI() {
 	static Point winsPoint(190, 78);
 	//UIManager::add("wins", &winsPoint);
 
-	if(*(BYTE*)(0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled()) {
-	//if(true) {
+	for(int i=0; i<2; i++) {
+		shouldReverseDraws = (i == 1); 
 
-		for(int i=0; i<2; i++) {
-			shouldReverseDraws = (i == 1); 
+		UIDraw(topBars[i], topBarsPoint, topBarsScale, 0xFFFFFFFF);
 
-			UIDraw(topBars[i], topBarsPoint, topBarsScale, 0xFFFFFFFF);
+		UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), meterScale, 0xFFFFFFFF);
 
-			UIDraw(meterBars[i], Point(0, 480 - (UI::size * meterBars[i].h())), meterScale, 0xFFFFFFFF);
-
-			int winCount = *(int*)(0x0077497c + (i * 4));
-			TextDraw(winsPoint, 8, 0xFFFFFFFF, "%d %s", winCount, (winCount != 1) ? "WINS" : "WIN");
-		}
-
-		// above are texture draws. below is the bar draws
-
-		#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
-
-		drawPlayerInfo();
-		LOOP4(drawMeterBar);
-		LOOP4(drawHealthBar);
-		LOOP4(drawGuardBar);
-		LOOP4(drawFacing);
+		int winCount = *(int*)(0x0077497c + (i * 4));
+		TextDraw(winsPoint, 8, 0xFFFFFFFF, "%d %s", winCount, (winCount != 1) ? "WINS" : "WIN");
 	}
+
+	// above are texture draws. below is the bar draws
+	#define LOOP4(func) for(int i=0; i<4; i++) { func(i, bars[i]); }
+
+	drawPlayerInfo();
+	LOOP4(drawMeterBar);
+	LOOP4(drawHealthBar);
+	LOOP4(drawGuardBar);
+	LOOP4(drawFacing);
+	
 
 }
 
@@ -2916,9 +3250,13 @@ void _drawGeneralCalls() {
 
 	device->BeginScene();
 
+	// i really should rewrite this whole system with a priority/layer system, like the one melty uses.
+
 	posColVertData.draw();
 
 	uiVertData.draw();
+
+	meterRectDraw();
 
 	posColTexVertData.draw();
 
@@ -2927,7 +3265,7 @@ void _drawGeneralCalls() {
 	meltyVertData.draw();
 	meltyLineData.draw();
 
-	CharRectDraw();
+	charRectDraw();
 
 	device->EndScene();
 }
@@ -2988,6 +3326,11 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	device->SetVertexShaderConstantF(223, (float*)&frameFloatOffset, 1);
 
 	doUpdate();
+	
+    updateCSSStuff();
+    
+	updateGameState();
+
 	drawNewUI();
 
 	//UIDraw(Rect(Point(0, 0), 1, 1), Rect(Point(100, 100), 100, 100), 0xFFFFFFFF);

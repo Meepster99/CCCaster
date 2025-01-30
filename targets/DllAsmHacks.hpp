@@ -169,7 +169,7 @@ packedStruct RenderList {
 
             // dawg. i got NO FUCKING CLUE WHATS HAPPENING
             // basically, if this ptr + 4 is nonzero, then hit it with the switch at 004c03cb
-            // and its an alloc size 94. if not, then just keep chugging down the list??!
+            // and its an alloc size 94. if not, then just keep chugging down the list!
 
             // if this is a nextElement, [choice + 4] == 0
             // if this is an actual fucking thing with draw details, [choice + 4] != 0

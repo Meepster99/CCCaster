@@ -4,6 +4,10 @@ files="netplay/*.cpp netplay/*.hpp tools/*.cpp targets/*.cpp targets/*.hpp lib/*
 
 branch=`git rev-parse --abbrev-ref HEAD`
 
+# i dont know what this does exactly, but if it would make it such that i no longer have to touch a bunch of files to get shit to compile, i would love that
+# ok, this does run, but it takes forever, i swear it normally inf loops
+# i hope/assume its worth it
+
 # echo Checking dependencies...
 
 tail -n +1 -- `ls -1 $files | sort | paste -sd " " -` | grep "^#include \"\|^==>" > tmp_include
@@ -17,12 +21,14 @@ if [ $? -ne 0 ]; then
 
     echo "Regenerating .depend_$branch"
 
-    $1 $2 -std=c++11 -MM sequences/*.cpp sequences/*.hpp > tmp_depend0 & \
-    $1 $2 -std=c++11 -MM netplay/*.cpp   netplay/*.hpp   > tmp_depend1 & \
-    $1 $2 -std=c++11 -MM tools/*.cpp                     > tmp_depend2 & \
-    $1 $2 -std=c++11 -MM targets/*.cpp   targets/*.hpp   > tmp_depend3 & \
-    $1 $2 -std=c++11 -MM lib/*.cpp       lib/*.hpp       > tmp_depend4 & \
-    $1 $2 -std=c++11 -MM tests/*.cpp     tests/*.hpp     > tmp_depend5
+    $1 $2 -std=c++11 -MM sequences/*.cpp sequences/*.hpp > tmp_depend0 & 
+    $1 $2 -std=c++11 -MM netplay/*.cpp   netplay/*.hpp   > tmp_depend1 & 
+    $1 $2 -std=c++11 -MM tools/*.cpp                     > tmp_depend2 & 
+    $1 $2 -std=c++11 -MM targets/*.cpp   targets/*.hpp   > tmp_depend3 & 
+    $1 $2 -std=c++11 -MM lib/*.cpp       lib/*.hpp       > tmp_depend4 & 
+    $1 $2 -std=c++11 -MM tests/*.cpp     tests/*.hpp     > tmp_depend5 &
+
+    echo waiting
 
     wait
 

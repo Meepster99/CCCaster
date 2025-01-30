@@ -6,6 +6,7 @@
 #include "aacc_2v2_ui_elements.h"
 #include <array>
 #include "palettes/palettes.hpp"
+#include "DllOverlayUi.hpp"
 
 #ifndef F12PRESS 
 #define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
@@ -812,7 +813,13 @@ void drawCSS() {
 	
 }
 
-void updateCSSStuff(IDirect3DDevice9 *device) {
+void updateCSSStuff() {
+
+	if(!(*((uint8_t*) 0x0054EEE8) == 0x14 && DllOverlayUi::isDisabled())) { // check if in css
+		return;
+	}
+
+	shouldReverseDraws = false;
 
 	updateControls();
 

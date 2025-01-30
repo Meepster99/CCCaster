@@ -227,7 +227,7 @@ public:
 		T* temp = (T*)realloc(data, maxSize * sizeof(T));
 		
 		if (temp == (T*)NULL) {
-			log("vec resize failed??!");
+			log("vec resize failed!");
 			return;
 		}
 
@@ -240,7 +240,7 @@ public:
 		T* temp = (T*)realloc(data, maxSize * sizeof(T));
 
 		if (temp == (T*)NULL) {
-			log("Vec realloc failed??!");
+			log("Vec realloc failed!");
 			return;
 		}
 
@@ -623,6 +623,7 @@ public:
 	}
 
 	void add(const Quad<T>& quad) {
+		// this scales things twice, when its not needed.
 		addScale(quad.v1, quad.v2, quad.v3);
 		addScale(quad.v2, quad.v3, quad.v4);
 	}
