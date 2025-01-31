@@ -4,6 +4,8 @@
 #include "Exceptions.hpp"
 #include "ErrorStrings.hpp"
 
+#include "NetLogger.hpp"
+
 #include <windows.h>
 
 #include <cstdlib>

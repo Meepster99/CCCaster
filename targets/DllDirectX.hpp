@@ -11,6 +11,8 @@
 #include <map>
 #include <functional>
 
+#include "NetLogger.hpp"
+
 // i am being so so real with you
 // if you are getting a bunch of errors with this file for _D3DVECTOR
 // go and just add that constructor to the fuckin file
@@ -35,9 +37,9 @@ extern bool updateOccured;
 
 const char* getCharName(int id);
 
-void __stdcall ___log(const char* msg);
+//void __stdcall ___log(const char* msg);
 
-void __stdcall log(const char* format, ...);
+//void __stdcall log(const char* format, ...);
 
 void __stdcall printDirectXError(HRESULT hr);
 

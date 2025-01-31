@@ -1069,7 +1069,7 @@ void DllControllerManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, b
 {
     Lock lock ( ControllerManager::get().mutex );
 
-    for ( uint8_t i = 0; i < 2; ++i )
+    for ( uint8_t i = 0; i < USEDCONTROLLERCOUNT; ++i )
     {
         if ( _playerControllers[i] && _playerControllers[i]->isKeyboard()
                 && _overlayPositions[i] >= 1 && _overlayPositions[i] < gameInputBits.size() + 1 )
@@ -1134,7 +1134,7 @@ void DllControllerManager::controllerKeyMapped ( Controller *controller, uint32_
     {
         saveMappings ( controller );
 
-        for ( uint8_t i = 0; i < 4; ++i )
+        for ( uint8_t i = 0; i < USEDCONTROLLERCOUNT; ++i )
         {
             if ( controller == _playerControllers[i]
                     && _overlayPositions[i] >= 1 && _overlayPositions[i] < gameInputBits.size() + 1  )
