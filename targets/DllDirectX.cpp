@@ -3187,7 +3187,7 @@ void drawPlayerInfo() {
 void drawNewUI() {
 
 	if(!(*(BYTE*)(0x0054EEE8) == 0x01 && DllOverlayUi::isDisabled())) {
-		//return;	
+		return;	
 	}
 
 	shouldReverseDraws = false;
