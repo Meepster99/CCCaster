@@ -1049,6 +1049,11 @@ struct Smooth {
 		return res; 
 	} 
 
+	void setVal(const T& value) {
+		current = value;
+		goal = value;
+	}
+
 	// todo, add arithmetic overloads
 
     T current;

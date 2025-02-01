@@ -300,6 +300,37 @@ static Smooth<Point> moonPositions[4][3] = {
 	{ startingMoonSmoothPoint, startingMoonSmoothPoint, startingMoonSmoothPoint }
 };
 
+std::function<float(const float& current, const float& goal, const float& rate)> moonAlphaFunc = [](const float& current, const float& goal, const float& rate) -> float {
+
+	float delta = goal - current;
+	
+	return delta * rate;
+};
+
+static Smooth<float> smoothMoonAlpha = Smooth<float>(1.0f, 0.1, moonAlphaFunc);
+static Smooth<float> moonAlphas[4][3] = {
+	{ smoothMoonAlpha, smoothMoonAlpha, smoothMoonAlpha },
+	{ smoothMoonAlpha, smoothMoonAlpha, smoothMoonAlpha },
+	{ smoothMoonAlpha, smoothMoonAlpha, smoothMoonAlpha },
+	{ smoothMoonAlpha, smoothMoonAlpha, smoothMoonAlpha }
+};	
+
+const Rect* moonRects[] = {
+	&UI::MoonCrescent,
+	&UI::MoonFull,
+	&UI::MoonHalf,
+	&UI::MoonEclipse
+};
+
+static Point moonOffset(40, -180);
+static float moonScale = 4.0f;
+
+static Point otherMoonOffset(20, 0);
+static float moonTransparency = 0.33;
+static float otherMoonScale = 4.0f;
+
+static Point readyMoonOffset(0, 85);
+
 static Point paletteRate(0.15, 0.15);
 std::array<std::array<Smooth<Point>, 36>, 4> palettePositions = []() { // i actually despise how this is the best option i have for doing this. and it isnt even proper bc i still need a () constructor
     
@@ -334,15 +365,6 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 		ourCSSData[playerIndex].randomPalette = false;
 	}
 
-	const Rect* moonRects[] = {
-		&UI::MoonCrescent,
-		&UI::MoonFull,
-		&UI::MoonHalf,
-		&UI::MoonEclipse
-	};
-	
-	static Point moonOffset(40, -180);
-	static float moonScale = 4.0f;
 	//UIManager::add("moonOffset", &moonOffset);
 	//UIManager::add("moonScale", &moonScale);
 
@@ -350,12 +372,10 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 	int prevMoonIndex = SAFEMOD(moonIndex - 1, 3);
 	int nextMoonIndex = SAFEMOD(moonIndex + 1, 3);
 	
-	static Point otherMoonOffset(20, 0);
-	static float moonTransparency = 0.33;
-	static float otherMoonScale = 4.0f;
 	//UIManager::add("otherMoonOffset", &otherMoonOffset);
 	//UIManager::add("moonTransparency", &moonTransparency);
-	//UIManager::add("otherMoonScale", &otherMoonScale);	
+	//UIManager::add("otherMoonScale", &otherMoonScale);
+
 	DWORD moonCol = (((BYTE)(0xFF * moonTransparency)) << 24) | 0x00FFFFFF;
 
 	moonPositions[playerIndex][moonIndex] = Point(0, 0);
@@ -377,6 +397,11 @@ std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerInde
 
 	UIDraw(*moonRects[moonIndex], centerPos, moonScale, 0xFFFFFFFF); // so many issues would have been solved if i scaled this function to draw at texture center
 	
+	// update the alphas of moonAlphas
+	moonAlphas[playerIndex][prevMoonIndex].setVal(moonTransparency);
+	moonAlphas[playerIndex][nextMoonIndex].setVal(moonTransparency);
+
+	moonAlphas[playerIndex][moonIndex].setVal(1.0f);
 
 };
 
@@ -605,6 +630,46 @@ void drawCharSelectRect(int playerIndex) {
 
 }
 
+void drawMoonAfterSelect(int playerIndex, Point p) {
+
+	// draws the moon after a player has already selected it.
+
+	if(ourCSSData[playerIndex].selectIndex < 2) { // we are selecting char/selecting moon. do nothing.
+		for(int i=0; i<3; i++) { // reset moon alphas to 1
+			moonAlphas[playerIndex][i].current = 1.0f;
+			moonAlphas[playerIndex][i].goal = 1.0f;
+		}
+		return;
+	}
+
+	//UIManager::add("readyMoonOffset", &readyMoonOffset);
+
+	int moonIndex = CLAMP(players[playerIndex]->moon, 0, 3);
+	int prevMoonIndex = SAFEMOD(moonIndex - 1, 3);
+	int nextMoonIndex = SAFEMOD(moonIndex + 1, 3);
+
+	moonAlphas[playerIndex][prevMoonIndex] = 0.0f;
+	moonAlphas[playerIndex][nextMoonIndex] = 0.0f;
+	moonAlphas[playerIndex][moonIndex] = 1.0f;
+
+	moonPositions[playerIndex][prevMoonIndex] = readyMoonOffset;
+	moonPositions[playerIndex][nextMoonIndex] = readyMoonOffset;
+	moonPositions[playerIndex][moonIndex] = readyMoonOffset;
+
+	Point centerPos = p + moonOffset + moonPositions[playerIndex][moonIndex];
+	Point leftPos =   p + moonOffset + moonPositions[playerIndex][prevMoonIndex];
+	Point rightPos =  p + moonOffset + moonPositions[playerIndex][nextMoonIndex];
+
+	DWORD leftMoonColor  = (((BYTE)(0xFF * moonAlphas[playerIndex][prevMoonIndex])) << 24) | 0x00FFFFFF;
+	DWORD rightMoonColor = (((BYTE)(0xFF * moonAlphas[playerIndex][nextMoonIndex])) << 24) | 0x00FFFFFF;
+
+	UIDraw(*moonRects[prevMoonIndex], leftPos, otherMoonScale, leftMoonColor);
+	UIDraw(*moonRects[nextMoonIndex], rightPos, otherMoonScale, rightMoonColor);
+
+	UIDraw(*moonRects[moonIndex], centerPos, moonScale, 0xFFFFFFFF); // so many issues would have been solved if i scaled this function to draw at texture center
+	
+}
+
 // ------
 
 const int menuOptionCount = sizeof(ControlFuncs) / sizeof(ControlFuncs[0]);
@@ -809,6 +874,8 @@ void drawCSS() {
 		drawCharSelectRect(i);
 
 		DrawFuncs[ourCSSData[i].selectIndex](i, p);
+
+		drawMoonAfterSelect(i, p);
 	}
 	
 }

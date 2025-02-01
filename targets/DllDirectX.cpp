@@ -3249,9 +3249,11 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	//UIDraw(Rect(Point(0, 0), 1, 1), Point(0, 0), 0xFFFFFFFF);
 	//UIDraw(UI::test, Point(0, 0), 0xFFFFFFFF);
 	
+	#ifdef NBLEEDING
 	if(SHIFTHELD && UPPRESS) {
 		UIManager::reload();
 	}
+	#endif
 
 	static D3DXVECTOR4 frameFloatOffset(0.0f, 0.0f, 0.0f, 0.0f);
 
