@@ -352,6 +352,9 @@ std::array<std::array<Smooth<Point>, 36>, 4> palettePositions = []() { // i actu
 
 std::function<void(int playerIndex, Point p)> drawCharSelect = [](int playerIndex, Point p) mutable -> void {
 	// since the css grid thingys are always drawn, this func doesnt do much, but im leaving it here for consistency
+	for(int i=0; i<3; i++) {
+		moonPositions[playerIndex][i].setVal(Point(0, 0)); // reset moon positions
+	}
 };
 
 std::function<void(int playerIndex, Point p)> drawMoonSelect = [](int playerIndex, Point p) mutable -> void {
@@ -636,8 +639,7 @@ void drawMoonAfterSelect(int playerIndex, Point p) {
 
 	if(ourCSSData[playerIndex].selectIndex < 2) { // we are selecting char/selecting moon. do nothing.
 		for(int i=0; i<3; i++) { // reset moon alphas to 1
-			moonAlphas[playerIndex][i].current = 1.0f;
-			moonAlphas[playerIndex][i].goal = 1.0f;
+			moonAlphas[playerIndex][i].setVal(1.0f);
 		}
 		return;
 	}
