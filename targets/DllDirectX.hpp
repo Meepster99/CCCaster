@@ -45,9 +45,13 @@ void __stdcall printDirectXError(HRESULT hr);
 
 void doUpdate();
 
+typedef struct BGRAColor BGRAColor;
+typedef struct ARGBColor ARGBColor;
+
 typedef struct BGRAColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT NOTICE BC IT WORKED FOR PALETTES
 	BGRAColor() {}
 	BGRAColor(DWORD d) : col(d) {}
+	BGRAColor(ARGBColor c);
 	union { 
 		struct {
 			BYTE a = 0xFF;
@@ -58,6 +62,7 @@ typedef struct BGRAColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT N
 		DWORD col;
 	};
 	operator DWORD() const { return col; } // this is super nice syntax. i wonder if i could have defined it with enums? would have saved a lot of casting back with GBAStranger
+	operator ARGBColor() const;
 } BGRAColor;
 
 static_assert(sizeof(BGRAColor) == 4, "BGRAColor struct must be 4 bytes");
@@ -65,6 +70,7 @@ static_assert(sizeof(BGRAColor) == 4, "BGRAColor struct must be 4 bytes");
 typedef struct ARGBColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT NOTICE BC IT WORKED FOR PALETTES
 	ARGBColor() {}
 	ARGBColor(DWORD d) : col(d) {}
+	ARGBColor(BGRAColor c);
 	union { 
 		struct {
 			BYTE b = 0;
@@ -75,6 +81,7 @@ typedef struct ARGBColor { // WEE WOO WEE WOO THIS USES BGRA!!!!!! AND I DIDNT N
 		DWORD col;
 	};
 	operator DWORD() const { return col; }
+	operator BGRAColor() const;
 } ARGBColor;
 
 static_assert(sizeof(ARGBColor) == 4, "ARGBColor struct must be 4 bytes");
@@ -95,8 +102,7 @@ typedef struct FloatColor { // here just so i can load colors from UImanager wit
 		};
 	};
 
-	DWORD getCol() {
-
+	operator ARGBColor() const {
 		ARGBColor res;
 
 		res.a = (BYTE)(a * 255.0);
@@ -107,9 +113,18 @@ typedef struct FloatColor { // here just so i can load colors from UImanager wit
 		return res;
 	}
 
+	operator BGRAColor() const {
+		BGRAColor res;
+
+		res.a = (BYTE)(a * 255.0);
+		res.r = (BYTE)(r * 255.0);
+		res.g = (BYTE)(g * 255.0);
+		res.b = (BYTE)(b * 255.0);
+
+		return res;
+	}
+
 } FloatColor;
-
-
 
 BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f);
 
@@ -340,9 +355,6 @@ typedef struct Point {
 	bool inside(const Rect& rect) const;
 
 	bool outside(const Rect& rect) const;
-
-	
-
 
 } Point;
 

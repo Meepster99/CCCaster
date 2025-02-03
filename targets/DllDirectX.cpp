@@ -334,6 +334,18 @@ void doUpdate() {
 
 }
 
+ARGBColor::ARGBColor(BGRAColor c) {
+	b = c.b; g = c.g; r = c.r; a = c.a;
+}
+
+BGRAColor::BGRAColor(ARGBColor c) {
+	b = c.b; g = c.g; r = c.r; a = c.a;
+}
+
+ARGBColor::operator BGRAColor() const { return BGRAColor(*this); }
+
+BGRAColor::operator ARGBColor() const { return ARGBColor(*this); }
+
 BGRAColor avgColors(BGRAColor col1, BGRAColor col2, float f) {
 	
 	f = CLAMP(f, 0.0f, 1.0f);
