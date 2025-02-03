@@ -1577,12 +1577,54 @@ void modifyLinkedList() {
     }
     */
 
-    FloatColor specular[4] = {
+    // ----- 
+
+    static FloatColor hWarcDiffuse[4] = {
+        FloatColor(1.0, 0.0, 0.0, 0.0),
+        FloatColor(1.0, 0.0, 0.0, 0.0),
+        FloatColor(1.0, 0.0, 0.0, 0.0),
+        FloatColor(1.0, 0.0, 0.0, 0.0)
+    };
+
+    static FloatColor hWarcSpecular[4] = {
+        FloatColor(0.0, 1.0, 0.0, 0.5),
+        FloatColor(0.0, 0.5, 0.0, 0.25),
+        FloatColor(0.0, 0.5, 0.0, 0.25),
+        FloatColor(0.0, 0.25, 0.0, 0.125)
+    };
+
+    // -----
+
+    static FloatColor cWarcSpecular[4] = {
         FloatColor(0.0, 0.0, 1.0,  1.0),
         FloatColor(0.0, 0.0, 0.75, 1.0),
         FloatColor(0.0, 0.0, 0.75, 1.0),
         FloatColor(0.0, 0.0, 0.25, 1.0)
     };
+
+    // -----
+
+    static FloatColor diffuse[4] = {
+        FloatColor(0.0, 0.0, 0.0, 0.0),
+        FloatColor(0.0, 0.0, 0.0, 0.0),
+        FloatColor(0.0, 0.0, 0.0, 0.0),
+        FloatColor(0.0, 0.0, 0.0, 0.0)
+    };
+
+    static FloatColor specular[4] = {
+        FloatColor(0.0, 0.0, 1.0,  1.0),
+        FloatColor(0.0, 0.0, 0.75, 1.0),
+        FloatColor(0.0, 0.0, 0.75, 1.0),
+        FloatColor(0.0, 0.0, 0.25, 1.0)
+    };
+
+    FloatColor* activeDiffuse = NULL;
+    FloatColor* activeSpecular = NULL;
+
+    for(int i=0; i<4; i++) {
+        UIManager::add("diffuse"  + std::to_string(i), &diffuse[i]);
+        UIManager::add("specular" + std::to_string(i), &specular[i]);
+    }
 
     /*UIManager::add("diffuse", &diffuse[0]);
     UIManager::add("specular", &specular[0]);
@@ -1670,7 +1712,18 @@ void modifyLinkedList() {
                     moon = *(BYTE*)(playerAddr + 0xC);
                     palette = *(BYTE*)(playerAddr + 0xA);
 
-                    if(exists == 0 || source == 0xFE || palette != 26 || moon != 0 || charID != 12) {
+                    bool shouldCheckPattern = false;
+
+                    if(exists != 0 && source != 0xFE) {
+                        if(palette == 26 && moon == 0) {
+                            shouldCheckPattern = true;
+                        } else if(palette == 15 && moon == 2) {
+                            shouldCheckPattern = true;
+                        }
+                    }
+
+                    //if(exists == 0 || source == 0xFE || palette != 26 || moon != 0 || charID != 12) {
+                    if(!shouldCheckPattern) {
                         shouldColor = false;
                     } else {
                         // i really should just import the list from training mode
@@ -1708,13 +1761,31 @@ void modifyLinkedList() {
                                 break;
                         }
 
+
+                        if(moon == 0) { 
+                            activeDiffuse = NULL;
+                            activeSpecular = cWarcSpecular;
+                        } else if(moon == 2) {
+                            activeDiffuse = hWarcDiffuse;
+                            activeSpecular = hWarcSpecular;
+                        }
+
                     }
 
 
                     if(shouldColor) {
                         for(int i=0; i<4; i++) {
-                            renderData->verts[i].specular = (ARGBColor)specular[i];
+                            if(activeDiffuse != NULL) {
+                                renderData->verts[i].diffuse = (ARGBColor)activeDiffuse[i];
+                            }
+                            if(activeSpecular) {
+                                renderData->verts[i].specular = (ARGBColor)activeSpecular[i];
+                            }
                         }
+
+                        activeDiffuse = NULL;
+                        activeSpecular = NULL;
+
                         //log("%5d %d %08X %5d %-16s %-16s", index, data->verifyHash(), data->address, pattern, getListDrawString(data->drawType), getListRetString(data->retType));
                     }
                     
