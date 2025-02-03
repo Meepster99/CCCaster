@@ -2,6 +2,7 @@
 import os
 import re
 import importlib.util
+import shutil
 
 os.chdir(os.path.dirname(__file__))
 
@@ -87,6 +88,7 @@ basePaletteColors = {
 
 for charID in sorted(basePaletteColors.keys()):
 	for i in range(36, 64):
+		# default paletteSelect color
 		basePaletteColors[charID][i] = 0xFF000000;
 	
 	
@@ -110,6 +112,37 @@ def getPalSelColor(colors):
 	
 	return res
 	
+# remove all pngs currently in base directory
+files = [ f for f in os.listdir("./") ]
+for file in files:
+	if file.endswith(".png"):
+		os.remove(file)
+		
+folders = [f for f in os.listdir("./easier") if os.path.isdir(os.path.join("./easier", f))]
+
+for folder in folders:
+	
+	pattern = r"(\d+)\_(.+)" # best to not upload these. copyright
+	match = re.match(pattern, folder)
+	
+	if match:
+		id, char = match.group(1), match.group(2)
+		
+		files = [ f for f in os.listdir("./easier/" + folder) ]
+	
+		paletteIndex = 36
+		
+		for file in files:
+			oldFileName = "./easier/" + folder + "/" + file
+			newFileName = f"{id}_{paletteIndex}.png"
+			
+			shutil.copy2(oldFileName, newFileName)
+			
+			paletteIndex += 1
+		
+# copy all the files from the "easier" folder into base dir
+
+
 files = [ f for f in os.listdir("./") ]
 files.sort()
 

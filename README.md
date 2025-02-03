@@ -90,3 +90,7 @@ Palette Credits:
     bakamangaka
 
     aohada
+
+    morrocoy
+
+    yakuza5remastered

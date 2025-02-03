@@ -1713,7 +1713,7 @@ void modifyLinkedList() {
 
                     if(shouldColor) {
                         for(int i=0; i<4; i++) {
-                            renderData->verts[i].specular = specular[i].getCol();
+                            renderData->verts[i].specular = (ARGBColor)specular[i];
                         }
                         //log("%5d %d %08X %5d %-16s %-16s", index, data->verifyHash(), data->address, pattern, getListDrawString(data->drawType), getListRetString(data->retType));
                     }

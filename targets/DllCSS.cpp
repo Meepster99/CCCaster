@@ -520,6 +520,8 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 
 			Rect drawRectOrig = drawRect;
 
+			bool isPaletteSlotUsed = true;
+
 			if(!isRandomDraw) {
 				drawRect.p1 = baseDrawPoint + paletteColorOffset;
 				drawRect.p2 = baseDrawPoint + paletteColorOffset + paletteColorSize;
@@ -530,6 +532,10 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 					int tempIndex = (((palX + x) % 6) * 6) + y + offsetPaletteVal;
 					tempIndex = CLAMP(tempIndex, 0, 63);
 					palColor = paletteColorMap[charID][tempIndex];
+
+					if(palColor == 0xFF000000) {
+						isPaletteSlotUsed = false;
+					}
 				}
 
 				if(x != 0) {
@@ -556,7 +562,7 @@ std::function<void(int playerIndex, Point p)> drawPaletteSelect = [](int playerI
 				Point temp = shouldReverseDraws ? Point(2, 0) : Point(0, 0);
 				if(y == 6) {
 					TextDraw(textPoint + paletteFontOffset + temp - Point(8, 0), fontSize, 0xFFFFFFFF, "RND");
-				} else {
+				} else if(isPaletteSlotUsed) {
 					TextDraw(textPoint + paletteFontOffset + temp, fontSize, 0xFFFFFFFF, "%02d", dispPaletteIndex + offsetPaletteVal + 1);
 				}
 			}
@@ -900,6 +906,8 @@ void updateCSSStuff() {
 	TextDraw(10, 10 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
 	TextDraw(10, 10 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
 	TextDraw(10, 10 + (2 * 8), 8, 0xFFFFFFFF, ":3");
+
+	TextDraw(10, 450 + (2 * 8), 8, 0xFFFFFFFF, "Press C and D to switch to custom palettes"); 
 	
 	shouldReverseDraws = false;
 	if(updateOccured) {
