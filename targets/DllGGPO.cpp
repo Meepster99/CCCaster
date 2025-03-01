@@ -51,7 +51,7 @@ void advanceFrame() {
     // this stupid thing fixes that
 
     static bool firstRun = true;
-    log("in advanceFrame what firstRun: %d", firstRun); 
+    //log("in advanceFrame what firstRun: %d", firstRun); 
 
     
     /*if(firstRun) {
@@ -59,12 +59,12 @@ void advanceFrame() {
         return;
     }*/
 
-    log("writing GGPO inputs");
+    //log("writing GGPO inputs");
 
     GGPO::writeAllGGPOInputs(); 
 
     
-    log("trying func 1");
+    //log("trying func 1");
 
     PUSH_ALL;
     // this func updates controls. i think. not sure
@@ -73,7 +73,7 @@ void advanceFrame() {
     
 
     
-    log("trying func 2");
+    //log("trying func 2");
 
     PUSH_ALL;
     // this func takes eax as an input.
@@ -96,14 +96,14 @@ void advanceFrame() {
     isInAdvanceFrame = false;
     */
 
-    log("exited advanceframe melty fuckery");
+    //log("exited advanceframe melty fuckery");
 
     ggpo_advance_frame(GGPO::ggpo);
-    ggpo_idle(GGPO::ggpo, 5);
+    ggpo_idle(GGPO::ggpo, 3);
     int disconnectFlags;
     ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
 
-    log("exited advanceFrame");
+    //log("exited advanceFrame");
 
 }
 
@@ -164,16 +164,16 @@ void ggpoAdvanceFrame() {
         return;
     }
 
-    logY("inside ggpoAdvanceFrame");
+    //logY("inside ggpoAdvanceFrame");
 
-    log("calling ggpo_advance_frame");
+    //log("calling ggpo_advance_frame");
     ggpo_advance_frame(GGPO::ggpo);
 
-    log("calling ggpo_idle");
-    ggpo_idle(GGPO::ggpo, 5);
+    //log("calling ggpo_idle");
+    ggpo_idle(GGPO::ggpo, 3);
 
-    int disconnectFlags;
-    ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
+    //int disconnectFlags;
+    //ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
 
 }
 
