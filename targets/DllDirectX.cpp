@@ -3292,9 +3292,11 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	device->SetPixelShaderConstantF(223, (float*)&frameFloatOffset, 1); // why the hell did i go with 223 here?
 	device->SetVertexShaderConstantF(223, (float*)&frameFloatOffset, 1);
 
+	#ifndef BLEEDING
 	if(ONEPRESS) {
 		GGPO::initGGPO();
 	}
+	#endif
 		
 
 	doUpdate();
