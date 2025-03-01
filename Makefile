@@ -96,6 +96,7 @@ DEFINES += -DCOMPILETIMESTAMP='"$(shell date -u +"%Y-%m-%d %H:%M:%S")"'
 INCLUDES = -I$(CURDIR) -I$(CURDIR)/netplay -I$(CURDIR)/lib -I$(CURDIR)/tests -I$(CURDIR)/3rdparty -I$(CURDIR)/sequences
 INCLUDES += -I$(CURDIR)/3rdparty/cereal/include -I$(CURDIR)/3rdparty/gtest/include -I$(CURDIR)/3rdparty/minhook/include
 INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(CURDIR)/3rdparty/imgui -I$(CURDIR)/3rdparty/imgui/backends
+INCLUDES += -I$(CURDIR)/3rdparty/ggpo/src/include
 CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 
 ifeq ($(origin BLEEDING), undefined)
@@ -111,7 +112,8 @@ endif
 
 
 # Linker flags
-LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 
+# order matters an annoying amount here. ggpo MUST come before???? ws2_32 for this to work
+LD_FLAGS = -m32 -static -L./lib/ -lGGPO -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 
 
 # Build options
 # DEFINES += -DDISABLE_LOGGING

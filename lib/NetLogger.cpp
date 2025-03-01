@@ -8,7 +8,6 @@ void ___log(const char* msg)
 {
 	const char* ipAddress = "127.0.0.1";
 	unsigned short port = 17474;
-	int msgLen = strlen(msg);
 	const char* message = msg;
 	WSADATA wsaData;
 	int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -50,3 +49,44 @@ void log(const char* format, ...) {
 	___log(buffer);
 	va_end(args);
 }
+
+void logR(const char* format, ...) {
+	constexpr int numBackTicks = 1;
+	static char buffer[1024] = {'`'};
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer+numBackTicks, 1024-numBackTicks, format, args); // why cant i use the safe version here?? only god knows
+	___log(buffer);
+	va_end(args);
+}
+
+void logG(const char* format, ...) {
+	constexpr int numBackTicks = 2;
+	static char buffer[1024] = {'`', '`'};
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer+numBackTicks, 1024-numBackTicks, format, args); // why cant i use the safe version here?? only god knows
+	___log(buffer);
+	va_end(args);
+}
+
+void logB(const char* format, ...) {
+	constexpr int numBackTicks = 3;
+	static char buffer[1024] = {'`', '`', '`'};
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer+numBackTicks, 1024-numBackTicks, format, args); // why cant i use the safe version here?? only god knows
+	___log(buffer);
+	va_end(args);
+}
+
+void logY(const char* format, ...) {
+	constexpr int numBackTicks = 4;
+	static char buffer[1024] = {'`', '`', '`', '`'};
+	va_list args;
+	va_start(args, format);
+	vsnprintf(buffer+numBackTicks, 1024-numBackTicks, format, args); // why cant i use the safe version here?? only god knows
+	___log(buffer);
+	va_end(args);
+}
+

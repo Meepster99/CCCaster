@@ -266,7 +266,12 @@ typedef RenderList::LinkedListAllAssets::LinkedListAssetsList                   
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
 #define RIGHTPRESS (GetAsyncKeyState(VK_RIGHT) & 0x0001)
-#define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
+#define F12PRESS   (GetAsyncKeyState(VK_F12)   & 0x0001)
+
+#define ONEPRESS  (GetAsyncKeyState('1')   & 0x0001)
+#define TWOPRESS   (GetAsyncKeyState('2')     & 0x0001)
+#define THREEPRESS  (GetAsyncKeyState('3')  & 0x0001)
+#define FOURPRESS  (GetAsyncKeyState('4')   & 0x0001)
 
 // i wish i ever got the raw strings thing to work
 #define __asmStart __asm__ __volatile__ (".intel_syntax noprefix;"); __asm__ __volatile__ (

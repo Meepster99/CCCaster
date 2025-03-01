@@ -13,6 +13,8 @@
 
 #include "NetLogger.hpp"
 
+#include "DllGGPO.hpp"
+
 // i am being so so real with you
 // if you are getting a bunch of errors with this file for _D3DVECTOR
 // go and just add that constructor to the fuckin file
@@ -463,6 +465,8 @@ extern Point mousePos; // no use getting this multiple times a frame
 void logMatrix(const D3DMATRIX& matrix);
 
 void writeClipboard(const std::string& text);
+
+long long safeStoll(const std::string& s);
 
 // -----
 
