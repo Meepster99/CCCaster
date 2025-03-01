@@ -22,6 +22,273 @@ GGPOPlayer GGPO::players[GGPOPLAYERNUM + GGPOSPECTATENUM];
 
 GGPOInput GGPO::inputs[4];
 
+MemDumpList GGPO::rollbackAddrs;
+
+// -----
+
+// rollback addrs
+
+static const std::vector<MemDump> playerAddrs =
+{
+    { 0x555130, 0x555140 }, // ??? 0x555130 1 byte: some timer flag
+    { 0x555140, 0x555160 },
+    { 0x555160, 0x555180 }, // ???
+    { 0x555180, 0x555188 },
+    { 0x555188, 0x555190 }, // ???
+    { 0x555190, 0x555240 },
+    ( uint32_t * ) 0x555240, // ???
+    { 0x555244, 0x555284 },
+    ( uint32_t * ) 0x555284, // ???
+    { 0x555288, 0x5552EC },
+    ( uint32_t * ) 0x5552EC, // ???
+    { 0x5552F0, 0x5552F4 },
+    { 0x5552F4, 0x555310 }, // ??? 0x5552F6, 2 bytes: Sion bullets, inverse counter
+    { 0x555310, 0x55532C },
+
+    { ( void * ) 0x55532C, 4 },
+    // { ( void * ) 0x55532C, 4, {
+    //     MemDumpPtr ( 0, 0x24, 1 ), // segfaulted on this once
+    //     MemDumpPtr ( 0, 0x30, 2 ),
+    // } },
+
+    { 0x555330, 0x55534C }, // ???
+    { 0x55534C, 0x55535C },
+    { 0x55535C, 0x5553CC }, // ???
+
+    { ( void * ) 0x5553CC, 4 }, // pointer to player struct?
+
+    { 0x5553D0, 0x5553EC }, // ???
+
+    { ( void * ) 0x5553EC, 4 }, // pointer to player struct?
+    { ( void * ) 0x5553F0, 4 }, // pointer to player struct?
+
+    { 0x5553F4, 0x5553FC },
+
+    { ( void * ) 0x5553FC, 4 }, // pointer to player struct?
+    { ( void * ) 0x555400, 4 }, // pointer to player struct?
+
+    { 0x555404, 0x555410 }, // ???
+    { 0x555410, 0x55542C },
+    ( uint32_t * ) 0x55542C, // ???
+    { 0x555430, 0x55544C },
+
+    { ( void * ) 0x55544C, 4 }, // graphics pointer? this is accessed all the time even when paused
+
+    { ( void * ) 0x555450, 4 }, // graphics pointer? this is accessed all the time even when paused
+    // { ( void * ) 0x555450, 4, {
+    //     MemDumpPtr ( 0, 0x00, 2 ),
+    //     MemDumpPtr ( 0, 0x0C, 2 ),
+    //     MemDumpPtr ( 0, 0x0E, 1 ),
+    //     MemDumpPtr ( 0, 0x0F, 1 ),
+    //     MemDumpPtr ( 0, 0x10, 2 ),
+    //     MemDumpPtr ( 0, 0x12, 2 ),
+    //     MemDumpPtr ( 0, 0x16, 2 ),
+    //     MemDumpPtr ( 0, 0x1B, 1 ),
+    //     MemDumpPtr ( 0, 0x1C, 1 ),
+    //     MemDumpPtr ( 0, 0x2E, 2 ),
+    //     MemDumpPtr ( 0, 0x38, 4, {
+    //         MemDumpPtr ( 0, 0x00, 4, {
+    //             MemDumpPtr ( 0, 0x00, 1 ),
+    //             MemDumpPtr ( 0, 0x02, 2 ),
+    //             MemDumpPtr ( 0, 0x04, 2 ),
+    //             MemDumpPtr ( 0, 0x06, 1 ),
+    //             MemDumpPtr ( 0, 0x08, 1 ),
+    //         } ),
+    //         MemDumpPtr ( 0, 0x08, 4, {
+    //             MemDumpPtr ( 0, 0x00, 1 ),
+    //             MemDumpPtr ( 0, 0x02, 1 ),
+    //             MemDumpPtr ( 0, 0x06, 2 ),
+    //             MemDumpPtr ( 0, 0x0C, 4 ),
+    //         } ),
+    //         MemDumpPtr ( 0, 0x0C, 1 ),
+    //         MemDumpPtr ( 0, 0x11, 1 ),
+    //         MemDumpPtr ( 0, 0x14, 1 ),
+    //     } ),
+    //     MemDumpPtr ( 0, 0x40, 1 ),
+    //     MemDumpPtr ( 0, 0x41, 1 ),
+    //     MemDumpPtr ( 0, 0x42, 1 ),
+    //     MemDumpPtr ( 0, 0x44, 4 ), // more to this?
+    //     MemDumpPtr ( 0, 0x4C, 4, {
+    //         MemDumpPtr ( 0, 0, 4, {
+    //             MemDumpPtr ( 0, 0x00, 2 ),
+    //             MemDumpPtr ( 0, 0x02, 2 ),
+    //             MemDumpPtr ( 0, 0x04, 2 ),
+    //             MemDumpPtr ( 0, 0x06, 2 ),
+    //         } ),
+    //     } ),
+    // } },
+
+    { ( void * ) 0x555454, 4 }, // graphics pointer? this is accessed all the time even when paused
+
+    { ( void * ) 0x555458, 4 }, // pointer to player struct?
+
+    { 0x55545C, 0x555460 },
+
+    // graphics pointer(s)? these are accessed all the time even when paused
+    { ( void * ) 0x555460, 4 },
+    // { ( void * ) 0x555460, 4, {
+    //     MemDumpPtr ( 0, 0x0, 4, {
+    //         MemDumpPtr ( 0, 0x4, 4, {
+    //             MemDumpPtr ( 0, 0xC, 4 )
+    //         } )
+    //     } )
+    // } },
+
+    { 0x555464, 0x55546C },
+
+    { ( void * ) 0x55546C, 4 }, // graphics pointer? this is accessed all the time even when paused
+
+    { 0x555470, 0x55550C },
+    ( uint32_t * ) 0x55550C, // ???
+    { 0x555510, 0x555518 },
+
+    { 0x555518, 0x55561A }, // input history (directions)
+    { 0x55561A, 0x55571C }, // input history (A button)
+    { 0x55571C, 0x55581E }, // input history (B button)
+    { 0x55581E, 0x555920 }, // input history (C button)
+    { 0x555920, 0x555A22 }, // input history (D button)
+    { 0x555A22, 0x555B24 }, // input history (E button)
+
+    { 0x555B24, 0x555B2C },
+    { 0x555B2C, 0x555C2C }, // ???
+};
+
+static const std::vector<MemDump> miscAddrs =
+{
+    // The stack range before calling the main dll callback
+    // { 0x18FEA0, 0x190000 },
+
+    // Game state
+    CC_ROUND_TIMER_ADDR,
+    CC_REAL_TIMER_ADDR,
+    CC_WORLD_TIMER_ADDR,
+    CC_SLOW_TIMER_INIT_ADDR,
+    CC_SLOW_TIMER_ADDR,
+    CC_INTRO_STATE_ADDR,
+    CC_INPUT_STATE_ADDR,
+    CC_SKIPPABLE_FLAG_ADDR,
+
+    CC_RNG_STATE0_ADDR,
+    CC_RNG_STATE1_ADDR,
+    CC_RNG_STATE2_ADDR,
+    { CC_RNG_STATE3_ADDR, CC_RNG_STATE3_SIZE },
+
+    // Unknown states
+    ( uint32_t * ) 0x563864,
+    ( uint32_t * ) 0x56414C,
+
+    // Graphical effects
+    { CC_GRAPHICS_ARRAY_ADDR, CC_GRAPHICS_ARRAY_SIZE },
+    CC_GRAPHICS_COUNTER,
+
+    CC_SUPER_FLASH_PAUSE_ADDR,
+    CC_SUPER_FLASH_TIMER_ADDR,
+
+    { CC_SUPER_STATE_ARRAY_ADDR, CC_SUPER_STATE_ARRAY_SIZE },
+
+    // Player state
+    { CC_P1_EXTRA_STRUCT_ADDR, CC_EXTRA_STRUCT_SIZE },
+    { CC_P2_EXTRA_STRUCT_ADDR, CC_EXTRA_STRUCT_SIZE },
+
+    CC_P1_WINS_ADDR,
+    CC_P2_WINS_ADDR,
+
+    CC_P1_GAME_POINT_FLAG_ADDR,
+    CC_P2_GAME_POINT_FLAG_ADDR,
+
+    // HUD misc graphics
+    CC_METER_ANIMATION_ADDR,
+    CC_P1_SPELL_CIRCLE_ADDR,
+    CC_P2_SPELL_CIRCLE_ADDR,
+
+    // HUD status message graphics
+    { CC_P1_STATUS_MSG_ARRAY_ADDR, CC_STATUS_MSG_ARRAY_SIZE },
+    { CC_P2_STATUS_MSG_ARRAY_ADDR, CC_STATUS_MSG_ARRAY_SIZE },
+
+    // Intro / outro graphics
+    ( uint32_t * ) 0x74D9D0,
+    ( uint32_t * ) 0x74E4E4,
+    ( float * ) 0x74E4E8,
+    // ( uint32_t * ) 0x76E79C,
+
+    // Intro graphics/music/voice
+    ( uint32_t * ) 0x74D598,
+    ( uint32_t * ) 0x74E5B0,
+    ( uint32_t * ) 0x74E768,
+    { 0x74E770, 0x74E784 },
+    { 0x74E78C, 0x74E798 },
+    { 0x74E79C, 0x74E7A8 },
+    { 0x74E7AC, 0x74E7C0 },
+    { 0x74E7C8, 0x74E7D8 },
+    { 0x74E7DC, 0x74E7E0 },
+    { 0x74E7E4, 0x74E7F4 },
+    { 0x74E7F8, 0x74E808 },
+    { 0x74E80C, 0x74E810 },
+    { 0x74E814, 0x74E828 },
+    { 0x74E82C, 0x74E834 },
+    { 0x74E838, 0x74E84C },
+    { 0x74E850, 0x74E858 },
+    { 0x74E85C, 0x74E86C },
+
+    // Intro graphics state part 2
+    { 0x76E780, 0x76E78C },
+
+    // Camera position state
+    ( uint32_t * ) 0x555124,
+    ( uint32_t * ) 0x555128,
+    { 0x5585E8, 0x5585F4 },
+    { 0x55DEC4, 0x55DED0 },
+    { 0x55DEDC, 0x55DEE8 },
+    { 0x564B14, 0x564B20 },
+
+    // More camera position state
+    ( uint16_t * ) 0x564B10,
+    ( uint32_t * ) 0x563750,
+    ( uint32_t * ) 0x557DB0,
+    ( uint32_t * ) 0x557DB4,
+
+    ( uint8_t * ) 0x557D2B,
+    ( uint16_t * ) 0x557DAC,
+    ( uint16_t * ) 0x559546,
+    ( uint16_t * ) 0x564B00,
+    ( uint32_t * ) 0x76E6F8,
+    ( uint32_t * ) 0x76E6FC,
+    ( uint32_t * ) 0x7B1D2C,
+
+    // Camera scaling state
+    ( uint32_t * ) 0x55D204,
+    ( uint32_t * ) 0x56357C,
+    ( uint32_t * ) 0x55DEE8,
+    ( uint32_t * ) 0x564B0C,
+    ( uint32_t * ) 0x564AF8,
+    ( uint32_t * ) 0x564B24,
+    ( uint32_t * ) 0x76E6F4,
+
+    CC_CAMERA_SCALE_1_ADDR,
+    CC_CAMERA_SCALE_2_ADDR,
+    CC_CAMERA_SCALE_3_ADDR,
+};
+
+static const MemDump firstEffect ( CC_EFFECTS_ARRAY_ADDR, CC_EFFECT_ELEMENT_SIZE, {
+    MemDumpPtr ( 0x320, 0x38, 4, {
+        MemDumpPtr ( 0, 0, 4, {
+            MemDumpPtr ( 0, 0, 4 )
+        } )
+    } )
+} );
+
+static const std::vector<MemDump> extra2v2Addrs = 
+{
+    // specific bs for 2v2
+    // no clue if this will work
+
+    { (void*)&AsmHacks::naked_charTurnAroundState[0], sizeof(AsmHacks::naked_charTurnAroundState) },
+    { (void*)&AsmHacks::FN1States[0], sizeof(AsmHacks::FN1States) }
+
+    
+};
+
+
 // -----
 
 static bool isInAdvanceFrame = false;
@@ -111,7 +378,7 @@ void advanceFrame() {
 
 void ggpoControllerHook() {
 
-    log("inside ggpoControllerHook");
+    //log("inside ggpoControllerHook");
 
     int i = GGPO::ourPlayerNum;
 
@@ -124,6 +391,8 @@ void ggpoControllerHook() {
     GGPO::inputs[i].read(i);
 
     result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
+
+    GGPO::inputs[i].log();
 
     if(result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
         log("not synced. omfg ourPlayerNum == %d", i);
@@ -211,7 +480,6 @@ void _naked_ggpoAdvanceFrame() {
     ASMRET;
 }
 
-
 static const AsmHacks::AsmList patchGGPO = {
 
     PATCHJUMP(0x0040e390, _naked_ggpoControllerHook),
@@ -232,6 +500,8 @@ void GGPO::initGGPO() {
     if(isGGPOOnline) {
         return;
     }
+
+    updateRollbackAddresses();
 
     isGGPOOnline = true;
 
@@ -400,7 +670,7 @@ bool GGPO::mb_save_game_state_callback(unsigned char **buffer, int *len, int *ch
     newSave->save();
     *buffer = (unsigned char *)newSave;
 
-    *checksum = 0;
+    *checksum = newSave->hash();
 
     logB("wowee mb_save_game_state_callback");
     
@@ -423,97 +693,151 @@ bool GGPO::mb_log_game_state(char *filename, unsigned char *buffer, int) {
 * Free a save state buffer previously returned in vw_save_game_state_callback.
 */
 void GGPO::mb_free_buffer(void *buffer) {
-    free(buffer);
+    SaveState* newSave = (SaveState*)buffer;
+    delete newSave;
+}
+
+void GGPO::updateRollbackAddresses() {
+
+    rollbackAddrs.append ( miscAddrs );
+
+    rollbackAddrs.append ( playerAddrs );                            // Player 1
+    rollbackAddrs.append ( playerAddrs, CC_PLR_STRUCT_SIZE );        // Player 2
+    rollbackAddrs.append ( playerAddrs, 2 * CC_PLR_STRUCT_SIZE );    // Puppet 1
+    rollbackAddrs.append ( playerAddrs, 3 * CC_PLR_STRUCT_SIZE );    // Puppet 2
+
+    for ( size_t i = 0; i < CC_EFFECTS_ARRAY_COUNT; ++i )
+        rollbackAddrs.append ( firstEffect, CC_EFFECT_ELEMENT_SIZE * i );
+
+    /*
+    
+    issues.
+    turning around is a 2v2 variable, and is NOT synced properly in here!
+
+    rng might be fucked still
+    not might, definitely
+    
+    */
+
+    rollbackAddrs.append ( extra2v2Addrs );
+
+    rollbackAddrs.update();
+
 }
 
 // -----
 
+int totalSaveStates = 0;
+
+SaveState::SaveState() {
+    data = (char*)malloc(GGPO::rollbackAddrs.totalSize);
+    totalSaveStates++;
+    if(data == NULL) {
+        logR("SaveState malloc FAILED!!!!!!! %08X per, %d total", GGPO::rollbackAddrs.totalSize, totalSaveStates);
+    }
+}
+
+SaveState::~SaveState() {
+    if(data != NULL) {
+        free(data);
+        totalSaveStates--;
+        data = NULL;
+    }
+}
+
 void SaveState::save() {
 
-	slowMo = *(WORD*)(0x0055d208);
-	//reallyNotSure = *(DWORD*)(0x0055FD04);
-	
-	//GlobalFreeze              = *(BYTE*) (0x00400000 + adGlobalFreeze				 );
-	//SaveDestinationCamX       = *(DWORD*)(0x00400000 + adSaveDestinationCamX		 );
-	//SaveDestinationCamY       = *(DWORD*)(0x00400000 + adSaveDestinationCamY		 );
-	
-	//SaveCurrentCamX           = *(DWORD*)(0x00400000 + adSaveCurrentCamX			 );
-	//SaveCurrentCamXCopy       = *(DWORD*)(0x00400000 + adSaveCurrentCamXCopy		 );
-	//SaveCurrentCamY           = *(DWORD*)(0x00400000 + adSaveCurrentCamY			 );
-	//SaveCurrentCamYCopy       = *(DWORD*)(0x00400000 + adSaveCurrentCamYCopy		 );
-	//SaveCurrentCamZoom        = *(DWORD*)(0x00400000 + adSaveCurrentCamZoom			 );
-	//SaveDestinationCamZoom    = *(DWORD*)(0x00400000 + adSaveDestinationCamZoom		 );
-	//P1ControlledCharacter     = *(DWORD*)(0x00400000 + adP1ControlledCharacter		 );
-	//P1NextControlledCharacter = *(DWORD*)(0x00400000 + adP1NextControlledCharacter	 );
-	//P2ControlledCharacter     = *(DWORD*)(0x00400000 + adP2ControlledCharacter		 );
-	//P2NextControlledCharacter = *(DWORD*)(0x00400000 + adP2NextControlledCharacter	 );
-//
-	//P1Inactionable            = *(int*)(0x00400000 + adP1Inaction);
-	//P2Inactionable            = *(int*)(0x00400000 + adP2Inaction);
-	//FrameTimer                = *(int*)(0x00400000 + adFrameCount);
-	//TrueFrameTimer            = *(int*)(0x00400000 + adTrueFrameCount);
-	
-	//memcpy((void*)&playerSaves, (void*)0x00555130, 0xAFC * 4);
+    // ok, for this shit, please check out caster's generator.cpp
 
-	memcpy((void*)&players[0], (void*)(0x00555130 + (0xAFC * 0)), 0x33C);
-	memcpy((void*)&players[1], (void*)(0x00555130 + (0xAFC * 1)), 0x33C);
-	memcpy((void*)&players[2], (void*)(0x00555130 + (0xAFC * 2)), 0x33C);
-	memcpy((void*)&players[3], (void*)(0x00555130 + (0xAFC * 3)), 0x33C);
-
-	// should we also save hit effect data? (would need to fix hit effect pausing for that)
-
-	// effects start at 0x0067BDE8
-
-    // i deserve all your ram
-    for (int index = 0; index < 100; index += 1) { // should be 1000, im being generous
-        effects.push_back(EffectSave()); 
-        memcpy(&effects[effects.size() - 1], (void*)(0x0067BDE8 + (0x33C * index)), 0x33C);
+    if(data == NULL) {
+        logR("SaveState save buffer was NULL??");
+        return;
     }
+
+    fegetenv(&fp_env);
+
+    char* tempData = data;
+
+    for ( const MemDump& mem : GGPO::rollbackAddrs.addrs )
+        mem.saveDump ( tempData );
+
 }
 
 void SaveState::load() {
 
-    //log("in SaveState load");
+    if(data == NULL) {
+        logR("SaveState load buffer was NULL??");
+        return;
+    }
 
-	*(WORD*)(0x0055d208) = slowMo;
-	//*(DWORD*)(0x0055FD04) = reallyNotSure;
+    fesetenv(&fp_env);
 
-	//*(BYTE*) (0x00400000 + adGlobalFreeze				 ) = GlobalFreeze              ;
-	//*(DWORD*)(0x00400000 + adSaveDestinationCamX		 ) = SaveDestinationCamX       ;
-	//*(DWORD*)(0x00400000 + adSaveDestinationCamY		 ) = SaveDestinationCamY       ;
-	
-	//*(DWORD*)(0x00400000 + adSaveCurrentCamX			 ) = SaveCurrentCamX           ;
-	//*(DWORD*)(0x00400000 + adSaveCurrentCamXCopy		 ) = SaveCurrentCamXCopy       ;	 
-	//*(DWORD*)(0x00400000 + adSaveCurrentCamY			 ) = SaveCurrentCamY           ;
-	//*(DWORD*)(0x00400000 + adSaveCurrentCamYCopy		 ) = SaveCurrentCamYCopy       ;
-	//*(DWORD*)(0x00400000 + adSaveCurrentCamZoom			 ) = SaveCurrentCamZoom        ;
-	//*(DWORD*)(0x00400000 + adSaveDestinationCamZoom		 ) = SaveDestinationCamZoom    ;
-	//*(DWORD*)(0x00400000 + adP1ControlledCharacter		 ) = P1ControlledCharacter     ;
-	//*(DWORD*)(0x00400000 + adP1NextControlledCharacter	 ) = P1NextControlledCharacter ;
-	//*(DWORD*)(0x00400000 + adP2ControlledCharacter		 ) = P2ControlledCharacter     ;
-	//*(DWORD*)(0x00400000 + adP2NextControlledCharacter	 ) = P2NextControlledCharacter ;
-//
-	//*(int*)(0x00400000 + adP1Inaction                    ) = P1Inactionable;
-	//*(int*)(0x00400000 + adP2Inaction                    ) = P2Inactionable;
-	//*(int*)(0x00400000 + adFrameCount                    ) = FrameTimer;
-	//*(int*)(0x00400000 + adTrueFrameCount                ) = TrueFrameTimer;
+    const char* tempData = data;
 
-	//memcpy((void*)0x00555130, (void*)&playerSaves, 0xAFC * 4);
-	
-	memcpy((void*)(0x00555130 + (0xAFC * 0)), (void*)&players[0], 0x33C);
-	memcpy((void*)(0x00555130 + (0xAFC * 1)), (void*)&players[1], 0x33C);
-    memcpy((void*)(0x00555130 + (0xAFC * 2)), (void*)&players[2], 0x33C);
-    memcpy((void*)(0x00555130 + (0xAFC * 3)), (void*)&players[3], 0x33C);
-	
-	// restore effects
-    memcpy((void*)0x0067BDE8, effects.data(), effects.size() * sizeof(EffectSave));
-
-    //log("exit SaveState load");
-
+    for ( const MemDump& mem : GGPO::rollbackAddrs.addrs )
+        mem.loadDump ( tempData );
+    
 }
+
+static inline uint32_t murmur_32_scramble(uint32_t k) {
+    // credits to wikipedia for these https://en.wikipedia.org/wiki/MurmurHash
+    k *= 0xcc9e2d51;
+    k = (k << 15) | (k >> 17);
+    k *= 0x1b873593;
+    return k;
+}
+
+uint32_t murmur3_32(const uint8_t* key, size_t len, uint32_t seed) { // being able to chaing hashes together like this is super nice
+	uint32_t h = seed;
+    uint32_t k;
+    /* Read in groups of 4. */
+    for (size_t i = len >> 2; i; i--) {
+        // Here is a source of differing results across endiannesses.
+        // A swap here has no effects on hash properties though.
+        memcpy(&k, key, sizeof(uint32_t));
+        key += sizeof(uint32_t);
+        h ^= murmur_32_scramble(k);
+        h = (h << 13) | (h >> 19);
+        h = h * 5 + 0xe6546b64;
+    }
+    /* Read the rest. */
+    k = 0;
+    for (size_t i = len & 3; i; i--) {
+        k <<= 8;
+        k |= key[i - 1];
+    }
+    // A swap is *not* necessary here because the preceding loop already
+    // places the low bytes in the low places according to whatever endianness
+    // we use. Swaps only apply when the memory is copied in a chunk.
+    h ^= murmur_32_scramble(k);
+    /* Finalize. */
+	h ^= len;
+	h ^= h >> 16;
+	h *= 0x85ebca6b;
+	h ^= h >> 13;
+	h *= 0xc2b2ae35;
+	h ^= h >> 16;
+	return h;
+}
+
+int SaveState::hash() {
+    
+    uint32_t hash = 0x00000001;
+
+    //hash = murmur3_32((uint8_t*)&players[0], sizeof(players), hash);
+
+    //hash = murmur3_32((uint8_t*)effects.data(), sizeof(effects[0]) * effects.size(), hash);
+
+    hash = murmur3_32((uint8_t*)data, GGPO::rollbackAddrs.totalSize, hash);
+
+    return hash;
+}
+
+// -----
 
 void GGPOInput::read(int p) {
 
+    /*
     DWORD baseAddr = 0x00771398 + (0x2C * p); // im not sure if this is the ideal addr to use for controls! maybe look at 00770F30?
 
     dir = *(BYTE*)(baseAddr + 0);
@@ -522,11 +846,42 @@ void GGPOInput::read(int p) {
     btn |= *(BYTE*)(baseAddr + 2) ? 0x02 : 0x00;
     btn |= *(BYTE*)(baseAddr + 3) ? 0x04 : 0x00;
     btn |= *(BYTE*)(baseAddr + 4) ? 0x08 : 0x00;
+    */
+
+    char *const baseAddr = * ( char ** ) CC_PTR_TO_WRITE_INPUT_ADDR; // how the hell did he figure this out
+
+    switch ( p )
+    {
+        case 0:
+            dir = ( * ( uint16_t * ) ( baseAddr + CC_P1_OFFSET_DIRECTION ) );
+            btn = ( * ( uint16_t * ) ( baseAddr + CC_P1_OFFSET_BUTTONS ) );
+            break;
+
+        case 1:
+            dir = ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_DIRECTION ) );
+            btn = ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_BUTTONS ) );
+            break;
+
+        case 2:
+            dir = ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_DIRECTION ) );
+            btn = ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_BUTTONS ) );
+            break;
+
+        case 3:
+            dir = ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_DIRECTION ) );
+            btn = ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_BUTTONS ) );
+            break;
+
+        default:
+            ASSERT_IMPOSSIBLE;
+            break;
+    }
 
 }
 
 void GGPOInput::write(int p) {
 
+    /*
     DWORD baseAddr = 0x00771398 + (0x2C * p); // im not sure if this is the ideal addr to use for controls! maybe look at 00770F30?
 
     *(BYTE*)(baseAddr + 0) = dir;
@@ -535,5 +890,45 @@ void GGPOInput::write(int p) {
     *(BYTE*)(baseAddr + 2) = !!(btn & 0x02);
     *(BYTE*)(baseAddr + 3) = !!(btn & 0x04);
     *(BYTE*)(baseAddr + 4) = !!(btn & 0x08);
+    */
+
+    char *const baseAddr = * ( char ** ) CC_PTR_TO_WRITE_INPUT_ADDR; // how the hell did he figure this out
+
+    switch ( p )
+    {
+        case 0:
+            ( * ( uint16_t * ) ( baseAddr + CC_P1_OFFSET_DIRECTION ) ) = dir;
+            ( * ( uint16_t * ) ( baseAddr + CC_P1_OFFSET_BUTTONS ) ) = btn;
+            break;
+
+        case 1:
+            ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_DIRECTION ) ) = dir;
+            ( * ( uint16_t * ) ( baseAddr + CC_P2_OFFSET_BUTTONS ) ) = btn;
+            break;
+
+        case 2:
+            ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_DIRECTION ) ) = dir;
+            ( * ( uint16_t * ) ( baseAddr + CC_P3_OFFSET_BUTTONS ) ) = btn;
+            break;
+
+        case 3:
+            ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_DIRECTION ) ) = dir;
+            ( * ( uint16_t * ) ( baseAddr + CC_P4_OFFSET_BUTTONS ) ) = btn;
+            break;
+
+        default:
+            ASSERT_IMPOSSIBLE;
+            break;
+    }
 
 }
+
+void GGPOInput::log(int p) {
+    if(p == -1) {
+        logG("%d %04X", dir, btn);
+    } else {
+        logG("P%d %d %04X", p, dir, btn);
+    }
+}
+
+

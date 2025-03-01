@@ -2419,18 +2419,20 @@ void updateGameState() {
 	*/
 
 	// this code needs a refactor. but i am tired
-	static DWORD FN1States[4] = {0, 0, 0, 0}; 
+	// fnstates was POSSIBLY fucking with,, something!
+	// moving it next to naked_charTurnAroundState
+	//static DWORD FN1States[4] = {0, 0, 0, 0}; 
 	DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
 	for(int i=0; i<4; i++) {
 		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
 		fn1 &= 0b1;
 
-		if(!FN1States[i] && fn1) {
+		if(!AsmHacks::FN1States[i] && fn1) {
 			//log("P%d: %d", i, fn1);
 			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
 		}		
 		
-		FN1States[i] = fn1;
+		AsmHacks::FN1States[i] = fn1;
 	}
 
 	bool deadState[4];
@@ -3303,7 +3305,7 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	
     updateCSSStuff();
     
-	updateGameState();
+	//updateGameState();
 
 	drawNewUI();
 

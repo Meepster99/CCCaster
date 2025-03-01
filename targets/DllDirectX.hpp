@@ -769,6 +769,8 @@ typedef struct MeltyVert { // if having all these initializers causes slowdown, 
 
 } MeltyVert;
 
+__attribute__((noinline, cdecl)) void updateGameState();
+
 extern size_t fontBufferSize;
 extern BYTE* fontBuffer; // this is purposefully not freed on evict btw
 extern IDirect3DTexture9* fontTexture;

@@ -10,6 +10,12 @@
 
 #include "DllAsmHacks.hpp"
 
+#include "Constants.hpp"
+#include "MemDump.hpp"
+
+#include <fenv.h>
+
+
 /*
 
 fuck all of this, everyone, and the existence of computers in general
@@ -48,13 +54,17 @@ ill fix that when i get to it i guess
 
 typedef struct GGPOInput {
 
-    BYTE dir = 0;
-    BYTE btn = 0;
+    uint16_t dir = 0;
+    uint16_t btn = 0;
 
     void read(int p);
     void write(int p);
 
+    void log(int p = -1);
+
 } GGPOInput;
+
+static_assert(sizeof(GGPOInput) == 4, "GGPOInput must be size 4");
 
 
 __attribute__((noinline, cdecl)) void ggpoAdvanceFrame();
@@ -85,6 +95,9 @@ namespace GGPO {
     void writeAllGGPOInputs();
 
     void initGGPO();
+
+    extern MemDumpList rollbackAddrs;
+    void updateRollbackAddresses();
 
     bool __cdecl mb_begin_game_callback(const char *);
     bool __cdecl mb_on_event_callback(GGPOEvent *info);
@@ -122,31 +135,24 @@ typedef struct EffectSave {
 	BYTE data[0x33C];
 } EffectSave;
 
-typedef struct SaveState {
+class SaveState {
+public:
 
     /*
     lots of stuff is todo here. 
     camera, rng, etc    
     */
 
-	PlayerSave players[4];
-	
-	std::vector<EffectSave> effects;
+    SaveState();
+    ~SaveState();
 
-	DWORD P1ControlledCharacter;
-	DWORD P1NextControlledCharacter;
-	DWORD P2ControlledCharacter;
-	DWORD P2NextControlledCharacter;
-
-	DWORD slowMo;
-
-	int P1Inactionable;
-	int P2Inactionable;
-	int FrameTimer;
-	int TrueFrameTimer;
+    char* data = NULL;
+    fenv_t fp_env;
 
 	void save();
 	void load();
 
-} SaveState;
+    int hash();
+
+};
 

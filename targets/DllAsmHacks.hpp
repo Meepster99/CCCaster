@@ -891,6 +891,7 @@ __attribute__((naked, noinline)) void _naked_battleResetCallback();
 
 extern "C" {
     extern DWORD naked_charTurnAroundState[4];
+    extern DWORD FN1States[4];
 }
 
 __attribute__((naked, noinline)) void _naked_charTurnAround();
@@ -984,7 +985,12 @@ extern "C" {
     __attribute__((noinline, cdecl)) void mallocCallback(DWORD naked_mallocHook_ret, DWORD naked_mallocHook_result, DWORD naked_mallocHook_size);
     __attribute__((naked, noinline)) void _naked_mallocCallback();
     __attribute__((naked, noinline)) void _naked_mallocHook();
+
+    __attribute__((naked, noinline)) void _naked_updateGameStateHook();
+    __attribute__((naked, noinline)) void _naked_updateGameStateCallback();
 }
+
+
 
 static const AsmList initPatch2v2 =
 { 
@@ -1207,6 +1213,9 @@ static const AsmList initPatch2v2 =
     PATCHJUMP(0x0041b3c9, _naked_trackListCharacterDraw),
     PATCHJUMP(0x0041b47c, _naked_trackListShadowDraw),
     PATCHJUMP(0x0045410a, _naked_trackListEffectDraw),
+
+    // this patch is here so that the part of 2v2 which updates facing is a part of the rest of the control update func, so that GGPO cooperates
+    PATCHJUMP(0x0048e0a0, _naked_updateGameStateHook),
 
 };
 

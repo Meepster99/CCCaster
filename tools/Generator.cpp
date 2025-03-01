@@ -9,44 +9,6 @@ using namespace std;
 
 #define LOG_FILE "generator.log"
 
-
-#define CC_P1_EXTRA_STRUCT_ADDR     ( ( char * )     0x557DB8 )
-#define CC_P2_EXTRA_STRUCT_ADDR     ( ( char * )     0x557FC4 )
-#define CC_EXTRA_STRUCT_SIZE        ( 0x20C )
-
-#define CC_P1_SPELL_CIRCLE_ADDR     ( ( float * )    0x5641A4 )
-#define CC_P2_SPELL_CIRCLE_ADDR     ( ( float * )    0x564200 )
-
-#define CC_METER_ANIMATION_ADDR     ( ( uint32_t * ) 0x7717D8 )
-
-#define CC_EFFECTS_ARRAY_ADDR       ( ( char * )     0x67BDE8 )
-#define CC_EFFECTS_ARRAY_COUNT      ( 1000 )
-#define CC_EFFECT_ELEMENT_SIZE      ( 0x33C )
-
-#define CC_SUPER_FLASH_PAUSE_ADDR   ( ( uint32_t * ) 0x5595B4 )
-#define CC_SUPER_FLASH_TIMER_ADDR   ( ( uint32_t * ) 0x562A48 )
-
-#define CC_SUPER_STATE_ARRAY_ADDR   ( ( char * )     0x558608 )
-#define CC_SUPER_STATE_ARRAY_SIZE   ( 5 * 0x30C )
-
-#define CC_P1_STATUS_MSG_ARRAY_ADDR ( ( char * )     0x563580 )
-#define CC_P2_STATUS_MSG_ARRAY_ADDR ( ( char * )     0x5635F4 )
-#define CC_STATUS_MSG_ARRAY_SIZE    ( 0x60 )
-
-#define CC_CAMERA_SCALE_1_ADDR      ( ( float * )    0x54EB70 ) // zoom
-#define CC_CAMERA_SCALE_2_ADDR      ( ( float * )    0x54EB74 ) // zoom
-#define CC_CAMERA_SCALE_3_ADDR      ( ( float * )    0x54EB78 )
-
-#define CC_INPUT_STATE_ADDR         ( ( uint8_t * )  0x562A6F ) // TODO figure out what the values mean
-#define CC_SLOW_TIMER_INIT_ADDR     ( ( uint16_t * ) 0x562A6C ) // Initializes the slowdown timer
-#define CC_SLOW_TIMER_ADDR          ( ( uint16_t * ) 0x55D208 ) // Slowdown timer
-
-#define CC_GRAPHICS_ARRAY_ADDR      ( ( char * )     0x61E170 )
-#define CC_GRAPHICS_ARRAY_SIZE      ( 4000 * 0x60 )
-
-#define CC_GRAPHICS_COUNTER         ( ( uint32_t * ) 0x67BD78 )
-
-
 static const vector<MemDump> playerAddrs =
 {
     { 0x555130, 0x555140 }, // ??? 0x555130 1 byte: some timer flag

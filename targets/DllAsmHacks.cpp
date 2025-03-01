@@ -426,6 +426,7 @@ extern "C" {
     DWORD naked_charTurnAroundParam1 = 0;
     DWORD naked_charTurnAroundParam2 = 0;
     DWORD naked_charTurnAroundState[4] = { 0, 0, 1, 1 };
+    DWORD FN1States[4] = {0, 0, 0, 0};
     DWORD charTurnAround_ECX;
     DWORD charTurnAround_EBP;
     void charTurnAround();
@@ -1305,6 +1306,42 @@ void _naked_paletteCallback() {
 
     PUSH_ALL;
     palettePatcher();
+    POP_ALL;
+
+    ASMRET;
+}
+
+void _naked_updateGameStateHook() {
+
+    // patched at 0048e0a0
+
+    __asmStart R"(
+    
+        // as is tradition, this func doesnt take params, so i can push my own ret value onto the stack
+        // eax SHOULD be safe to clobber, not 100% sure tho
+
+        mov eax, OFFSET __naked_updateGameStateCallback;
+        push eax; // add our ret
+    
+    )" __asmEnd
+
+    // overwritten asm
+
+    emitByte(0x83);
+    emitByte(0xEC);
+    emitByte(0x1C);
+
+    emitByte(0x53);
+    emitByte(0x55);
+
+    emitJump(0x0048e0a5);
+
+}
+
+void _naked_updateGameStateCallback() {
+
+    PUSH_ALL;
+    updateGameState();
     POP_ALL;
 
     ASMRET;
