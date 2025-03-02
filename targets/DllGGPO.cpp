@@ -336,9 +336,7 @@ void advanceFrame() {
 
     // this isnt needed bc this gets called in the,,, controller callback right?
     // NO THATS AT START OF GAMELOOP 0, NOT THIS
-    int disconnectFlags;
-    ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
-
+    //int disconnectFlags;
     
     //log("trying func 1");
 
@@ -376,16 +374,14 @@ void advanceFrame() {
 
     GGPOErrorCode result;
 
-    result = ggpo_advance_frame(GGPO::ggpo);
+    /*result = ggpo_advance_frame(GGPO::ggpo);
 
     if(!GGPO_SUCCEEDED(result)) {
-        logR("advanceFrame's ggpo_advance_frame returned %d", result);
-    }
+        logR("advanceFrame's ggpo_advance_fram returned %d", result);
+    }*/
 
     //ggpo_idle(GGPO::ggpo, 3);
-    //int disconnectFlags;
-    //ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
-
+   
     //log("exited advanceFrame");
 
 }
@@ -465,16 +461,11 @@ void ggpoAdvanceFrame() {
 
     //logY("inside ggpoAdvanceFrame");
 
-    //log("calling ggpo_advance_frame");
-
     // this call is JUSTIFIED bc it ONLY OCCURS during non rollback frames
     ggpo_advance_frame(GGPO::ggpo);
 
     //log("calling ggpo_idle");
     ggpo_idle(GGPO::ggpo, 3);
-
-    //int disconnectFlags;
-    //ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
 
 }
 
@@ -768,9 +759,9 @@ bool GGPO::mb_advance_frame_callback(int) {
 
     /*
     * advance_frame - Called during a rollback.  You should advance your game
-    * state by exactly one frame.  Before each frame, call ggpo_synchronize_input
+    * state by exactly one frame.  Before each frame, call ggpo_synchronize_inpu
     * to retrieve the inputs you should use for that frame.  After each frame,
-    * you should call ggpo_advance_frame to notify GGPO.net that you're
+    * you should call ggpo_advance_fram to notify GGPO.net that you're
     * finished.
     *
     * The flags parameter is reserved.  It can safely be ignored at this time.
