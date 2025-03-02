@@ -20,7 +20,7 @@ GGPOPlayerHandle GGPO::handles[GGPOPLAYERNUM + GGPOSPECTATENUM];
 
 GGPOPlayer GGPO::players[GGPOPLAYERNUM + GGPOSPECTATENUM];
 
-GGPOInput GGPO::inputs[4];
+GGPOInput GGPO::inputs[GGPOPLAYERNUM];
 
 MemDumpList GGPO::rollbackAddrs;
 
@@ -293,6 +293,10 @@ static const std::vector<MemDump> extra2v2Addrs =
 
 static bool isInAdvanceFrame = false;
 
+extern "C" {
+    DWORD _naked_shouldUpdateGameState = 0;
+}
+
 void advanceFrame() {
     /*
         Advances the game state by exactly 1 frame using the inputs specified
@@ -330,6 +334,11 @@ void advanceFrame() {
 
     GGPO::writeAllGGPOInputs(); 
 
+    // this isnt needed bc this gets called in the,,, controller callback right?
+    // NO THATS AT START OF GAMELOOP 0, NOT THIS
+    int disconnectFlags;
+    ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
+
     
     //log("trying func 1");
 
@@ -365,16 +374,21 @@ void advanceFrame() {
 
     //log("exited advanceframe melty fuckery");
 
-    ggpo_advance_frame(GGPO::ggpo);
-    ggpo_idle(GGPO::ggpo, 3);
-    int disconnectFlags;
-    ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
+    GGPOErrorCode result;
+
+    result = ggpo_advance_frame(GGPO::ggpo);
+
+    if(!GGPO_SUCCEEDED(result)) {
+        logR("advanceFrame's ggpo_advance_frame returned %d", result);
+    }
+
+    //ggpo_idle(GGPO::ggpo, 3);
+    //int disconnectFlags;
+    //ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
 
     //log("exited advanceFrame");
 
 }
-
-// -----
 
 void ggpoControllerHook() {
 
@@ -382,22 +396,29 @@ void ggpoControllerHook() {
 
     int i = GGPO::ourPlayerNum;
 
-    GGPOErrorCode result;
+    GGPOErrorCode result = GGPO_OK;
 
     int disconnectFlags; // no clue
 
     retryInputs:
 
+    // putting this here, because,,, thats the one thing that this loop doesnt do, but now im calling idle all over the place?
+    // and this is called before the next frame even starts?????
+    // yea that fixed it. this is CRUCIAL.
+    ggpo_idle(GGPO::ggpo, 5);
+
     GGPO::inputs[i].read(i);
 
-    result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
-
-    GGPO::inputs[i].log();
+    if(GGPO::handles[i] != GGPO_INVALID_HANDLE) { // why is this here? no clue, but im just emulating vectorwar with christian like suspicion
+        result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
+    }
+    
+    //GGPO::inputs[i].log();
 
     if(result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
-        log("not synced. omfg ourPlayerNum == %d", i);
-        Sleep(1000);
-        goto retryInputs;
+        //log("not synced. omfg ourPlayerNum == %d", i);
+        //Sleep(50);
+        //goto retryInputs;
     }
 
     //log("local result %d", result);
@@ -410,9 +431,18 @@ void ggpoControllerHook() {
             ///* pass both inputs to our advance function */
             //AdvanceGameState(&p[0], &p[1], &gamestate);
             // normally here, i would call advance gamestate, but returning from this function literally does that because its hooked
+            // this is actually a massive issue, because by hanging gamestate in this func, other GGPO callbacks 
+            // never occur.
+            // the solution to this is,,,, not ideal 
+            // i might have to add 2 more patches to 0x0048e0a0 and 0x00432c50 to only exec if a boolean is true.
+            // ill patch the calls of those funcs, and not the funcs themselves, bc i am already patching the inside of one of them
+
+            _naked_shouldUpdateGameState = 1;
             return;
         }
     }
+
+    _naked_shouldUpdateGameState = 0;
 
     goto retryInputs;
 
@@ -436,6 +466,8 @@ void ggpoAdvanceFrame() {
     //logY("inside ggpoAdvanceFrame");
 
     //log("calling ggpo_advance_frame");
+
+    // this call is JUSTIFIED bc it ONLY OCCURS during non rollback frames
     ggpo_advance_frame(GGPO::ggpo);
 
     //log("calling ggpo_idle");
@@ -480,10 +512,58 @@ void _naked_ggpoAdvanceFrame() {
     ASMRET;
 }
 
+void _naked_checkIfShouldRunControls() {
+
+    // patched at 0x0040e410
+
+    __asmStart R"(
+        cmp dword ptr __naked_shouldUpdateGameState, 0;
+        JE _naked_checkIfShouldRunControls_SKIP;
+    )" __asmEnd
+
+    emitCall(0x0048e0a0);   
+   
+    __asmStart R"(
+        _naked_checkIfShouldRunControls_SKIP:
+    )" __asmEnd
+
+    emitJump(0x0040e415);
+
+}
+
+void _naked_checkIfShouldUpdateGame() {
+
+    // patched at 0x0040e471
+
+    __asmStart R"(
+        cmp dword ptr __naked_shouldUpdateGameState, 1;
+        JE _naked_checkIfShouldUpdateGame_CONTINUE;
+    )" __asmEnd
+
+    // on return from this function, eax seems to normally be set to 1
+    // this emulates that
+    __asmStart R"(
+        mov eax, 1;
+    )" __asmEnd
+
+    emitJump(0x0040e476); // this jumps to after the call would have happened
+
+    __asmStart R"(
+        _naked_checkIfShouldUpdateGame_CONTINUE:
+    )" __asmEnd
+
+    emitCall(0x00432c50);
+    emitJump(0x0040e476);
+
+}
+
 static const AsmHacks::AsmList patchGGPO = {
 
     PATCHJUMP(0x0040e390, _naked_ggpoControllerHook),
-    PATCHJUMP(0x0040e513, _naked_ggpoAdvanceFrame)
+    PATCHJUMP(0x0040e513, _naked_ggpoAdvanceFrame),
+
+    //PATCHJUMP(0x0040e410, _naked_checkIfShouldRunControls), 
+    //PATCHJUMP(0x0040e471, _naked_checkIfShouldUpdateGame),
 
 };
 
@@ -523,15 +603,6 @@ void GGPO::initGGPO() {
     cb.free_buffer =     mb_free_buffer;
     cb.on_event =        mb_on_event_callback;
 
-    // is the input param sizeof(inputs) or sizeof(inputs[0])????
-    //result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 8001); // todo, need to actually grab the port correctly!!
-
-    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
-
-    ggpo_set_disconnect_timeout(ggpo, 3000);
-    ggpo_set_disconnect_notify_start(ggpo, 1000);
-
-
     // read the stupid config file to get connection info
     ourPlayerNum = -1;
     std::ifstream inFile("2v2Settings.txt");
@@ -541,6 +612,8 @@ void GGPO::initGGPO() {
         return;
     }
 
+    unsigned short tempLocalPort = -1;
+
     // how the FUCK do spectators fit in here.
     int fileIndex = 0;
     std::vector<std::string> lines;
@@ -549,8 +622,31 @@ void GGPO::initGGPO() {
         std::string tempLine = UIManager::strip(line);
         if(tempLine.size() > 0) {
             lines.push_back(tempLine);
+            
+            bool hasColon = false;
+            for(int i=0; i<tempLine.size(); i++) {
+                if(tempLine[i] == ':') {
+                    hasColon = true;
+                    break;
+                }
+            }
+
+            if(!hasColon) {
+                tempLocalPort = std::stoi(tempLine);
+            }
+
         }
     }
+
+    // is the input param sizeof(inputs) or sizeof(inputs[0])????
+    
+    result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
+
+    //result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+
+    ggpo_set_disconnect_timeout(ggpo, 3000);
+    ggpo_set_disconnect_notify_start(ggpo, 1000);
+
 
     // parse IP addrs for players, and set them up and spectators tooo
     std::regex re(R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?:?(\d+))");
@@ -589,6 +685,11 @@ void GGPO::initGGPO() {
     for(int i = 0; i < GGPOPLAYERNUM + GGPOSPECTATENUM; i++) {
         log("doing player %d", i);
         result = ggpo_add_player(ggpo, &players[i], &handles[i]);
+
+        //players[i].connect_progress = 0;
+        //players[i].state = Connecting;
+
+        ggpo_set_frame_delay(ggpo, handles[i], 2);
     }
 
     ggpo_idle(ggpo, 5);
@@ -609,7 +710,50 @@ bool GGPO::mb_begin_game_callback(const char *) {
 * text at the bottom of the screen to notify the user.
 */
 bool GGPO::mb_on_event_callback(GGPOEvent *info) {
-    logB("wowee mb_on_event_callback");
+    logR("wowee mb_on_event_callback");
+    
+    int progress;
+    switch (info->code) {
+        case GGPO_EVENTCODE_CONNECTED_TO_PEER:
+            logY("GGPO_EVENTCODE_CONNECTED_TO_PEER");
+            //ngs.SetConnectState(info->u.connected.player, Synchronizing);
+            break;
+        case GGPO_EVENTCODE_SYNCHRONIZING_WITH_PEER:
+            logY("GGPO_EVENTCODE_SYNCHRONIZING_WITH_PEER");
+            //progress = 100 * info->u.synchronizing.count / info->u.synchronizing.total;
+            //ngs.UpdateConnectProgress(info->u.synchronizing.player, progress);
+            break;
+        case GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER:
+            logY("GGPO_EVENTCODE_SYNCHRONIZED_WITH_PEER");
+            //ngs.UpdateConnectProgress(info->u.synchronized.player, 100);
+            break;
+        case GGPO_EVENTCODE_RUNNING:
+            logY("GGPO_EVENTCODE_RUNNING");
+            //ngs.SetConnectState(Running);
+            //renderer->SetStatusText("");
+            break;
+        case GGPO_EVENTCODE_CONNECTION_INTERRUPTED:
+            logY("GGPO_EVENTCODE_CONNECTION_INTERRUPTED");
+            //ngs.SetDisconnectTimeout(info->u.connection_interrupted.player,
+            //timeGetTime(),
+            //info->u.connection_interrupted.disconnect_timeout);
+            break;
+        case GGPO_EVENTCODE_CONNECTION_RESUMED:
+            logY("GGPO_EVENTCODE_CONNECTION_RESUMED");
+            //ngs.SetConnectState(info->u.connection_resumed.player, Running);
+            break;
+        case GGPO_EVENTCODE_DISCONNECTED_FROM_PEER:
+            logY("GGPO_EVENTCODE_DISCONNECTED_FROM_PEER");
+            //ngs.SetConnectState(info->u.disconnected.player, Disconnected);
+            break;
+        case GGPO_EVENTCODE_TIMESYNC:
+            logY("GGPO_EVENTCODE_TIMESYNC");
+            //Sleep(1000 * info->u.timesync.frames_ahead / 60);
+            break;
+        default:
+            logR("unknown event callback wtf");
+            break;
+    }
     return true;
 }
 
@@ -672,7 +816,7 @@ bool GGPO::mb_save_game_state_callback(unsigned char **buffer, int *len, int *ch
 
     *checksum = newSave->hash();
 
-    logB("wowee mb_save_game_state_callback");
+    logB("leaving mb_save_game_state_callback");
     
     return true;
 }
@@ -760,6 +904,9 @@ void SaveState::save() {
 
     for ( const MemDump& mem : GGPO::rollbackAddrs.addrs )
         mem.saveDump ( tempData );
+
+    // more info is DEF needed here! please check caster's DllRollbackManager.cpp
+
 
 }
 

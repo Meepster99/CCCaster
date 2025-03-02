@@ -66,6 +66,7 @@ typedef struct GGPOInput {
 
 static_assert(sizeof(GGPOInput) == 4, "GGPOInput must be size 4");
 
+__attribute__((noinline, cdecl)) void advanceFrame();
 
 __attribute__((noinline, cdecl)) void ggpoAdvanceFrame();
 __attribute__((naked, noinline, cdecl)) void _naked_ggpoAdvanceFrame();
@@ -73,8 +74,11 @@ __attribute__((naked, noinline, cdecl)) void _naked_ggpoAdvanceFrame();
 __attribute__((noinline, cdecl)) void ggpoControllerHook();
 __attribute__((naked, noinline, cdecl)) void _naked_ggpoControllerHook();
 
-#define GGPOPLAYERNUM (4)
-#define GGPOSPECTATENUM (1) 
+__attribute__((naked, noinline, cdecl)) void _naked_checkIfShouldRunControls();
+__attribute__((naked, noinline, cdecl)) void _naked_checkIfShouldUpdateGame();
+
+#define GGPOPLAYERNUM (2)
+#define GGPOSPECTATENUM (0) 
 
 namespace GGPO {
 
@@ -91,7 +95,7 @@ namespace GGPO {
 
     extern int ourPlayerNum;
 
-    extern GGPOInput inputs[4];
+    extern GGPOInput inputs[GGPOPLAYERNUM];
     void writeAllGGPOInputs();
 
     void initGGPO();
