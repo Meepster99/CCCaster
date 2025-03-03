@@ -8,6 +8,7 @@
 
 #include "DllDirectX.hpp"
 
+
 bool GGPO::isGGPOOnline = false;
 
 GGPOSession* GGPO::ggpo = NULL;
@@ -288,274 +289,124 @@ static const std::vector<MemDump> extra2v2Addrs =
     
 };
 
-
 // -----
 
-static bool isInAdvanceFrame = false;
+/*
 
-extern "C" {
-    DWORD _naked_shouldUpdateGameState = 0;
-}
+GGPO is a mysterious black box, where i have NO clue whats happening most of the time
+things that could be issues are: 
 
-void advanceFrame() {
-    /*
-        Advances the game state by exactly 1 frame using the inputs specified
-        for player 1 and player 2.
-    */
+    vw_on_event_callback not being emulated properly
 
-    // strong chance this doesnt work. i dont know where or when caster writes its inputs, god that section of code is fucked
-    // but if its AFTER this, or threaded, (both are true i think??) then this just doesnt work
-    // in an amazing stroke of luck, im actually ok.
-    // caster does its shit at 0040d330
-    // caster frameStepNormal MIGHT have something for me, if it isnt abstracted to hell
-    // yup, abstracted to hell
+    config error? not properly,,, idek 
 
-    /*
+    my calls being inaccurate
+        best way to fix calls is to essentially copy vectorwar's state EXACTLY 
+        difficult, requires some fucking around with gameloop0, but is preferable to whatever i have going on rn
+
+    ok, great, i redid everything, still shitting itself
+
+*/
+
+void advanceFrame() { // emulates VectorWar_AdvanceFrame
     
-    as far as i know, 00432c50 updates the game state.
-    and 0040e390 is a full loop, including render
-    
-    
-    */
-
-    // i hook the end of the func when ggpo init is called, which is during draw, which means that advance gets called before a framestate even occurs
-    // this stupid thing fixes that
-
-    static bool firstRun = true;
-    //log("in advanceFrame what firstRun: %d", firstRun); 
-
-    
-    /*if(firstRun) {
-        firstRun = false;
-        return;
-    }*/
-
-    //log("writing GGPO inputs");
-
     GGPO::writeAllGGPOInputs(); 
 
-    // this isnt needed bc this gets called in the,,, controller callback right?
-    // NO THATS AT START OF GAMELOOP 0, NOT THIS
-    //int disconnectFlags;
-    
-    //log("trying func 1");
+    // i WOULD recreate and reverse gameloop0, but i hook those funcs. in the rest of 2v2. i cant have that 
+    // god there are SO many issues here
 
     PUSH_ALL;
-    // this func updates controls. i think. not sure
     emitCall(0x0048e0a0);
     POP_ALL; 
-    
-
-    
-    //log("trying func 2");
 
     PUSH_ALL;
-    // this func takes eax as an input.
-    // im very very tired your honor
-    // maybe not needed?
     emitCall(0x00432c50);
     POP_ALL;
-    
 
-    /*
-    log("trying func 3");
-    isInAdvanceFrame = true;
-
-    PUSH_ALL;
-    // this is lazy, i should do something to cut out the renderering part of this. or like,, 
-    // ugh
-    emitCall(0x0040e390);
-    POP_ALL;
-
-    isInAdvanceFrame = false;
-    */
-
-    //log("exited advanceframe melty fuckery");
-
-    GGPOErrorCode result;
-
-    /*result = ggpo_advance_frame(GGPO::ggpo);
-
-    if(!GGPO_SUCCEEDED(result)) {
-        logR("advanceFrame's ggpo_advance_fram returned %d", result);
-    }*/
-
-    //ggpo_idle(GGPO::ggpo, 3);
-   
-    //log("exited advanceFrame");
-
+    ggpo_advance_frame(GGPO::ggpo);
 }
 
-void ggpoControllerHook() {
+void drawFrame() {
 
-    //log("inside ggpoControllerHook");
+    static AsmHacks::AsmList patchOutFrameAdvance = {
+        {(void*)(0x0040e410), {0xBB, 0x01, 0x00, 0x00, 0x00}}, // mov ebx, 1; // not sure if this is needed
+        {(void*)(0x0040e471), {0xB8, 0x01, 0x00, 0x00, 0x00}}, // mov eax, 1
+    };
 
-    int i = GGPO::ourPlayerNum;
+    for ( const AsmHacks::Asm& hack : patchOutFrameAdvance )
+        WRITE_ASM_HACK ( hack );
+    
+
+    PUSH_ALL;
+    emitCall(0x0040e390); // calls gameloop0
+    POP_ALL;
+
+    
+    for ( const AsmHacks::Asm& hack : patchOutFrameAdvance )
+        REVERT_ASM_HACK ( hack );
+    
+    
+}
+
+void runFrame() {
+
+    // this func is designed to (as closely as i can) emulate VectorWar_RunFrame
+
+    // call this at the TOP of gameloop0
+
+    ggpo_idle(GGPO::ggpo, 5); // vectorwar idle calls idle
 
     GGPOErrorCode result = GGPO_OK;
-
-    int disconnectFlags; // no clue
-
-    retryInputs:
-
-    // putting this here, because,,, thats the one thing that this loop doesnt do, but now im calling idle all over the place?
-    // and this is called before the next frame even starts?????
-    // yea that fixed it. this is CRUCIAL.
-    ggpo_idle(GGPO::ggpo, 5);
+    int i = GGPO::ourPlayerNum;
+    int disconnectFlags;
 
     GGPO::inputs[i].read(i);
 
-    if(GGPO::handles[i] != GGPO_INVALID_HANDLE) { // why is this here? no clue, but im just emulating vectorwar with christian like suspicion
-        result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
-    }
-    
-    //GGPO::inputs[i].log();
-
-    if(result == GGPO_ERRORCODE_NOT_SYNCHRONIZED) {
-        //log("not synced. omfg ourPlayerNum == %d", i);
-        //Sleep(50);
-        //goto retryInputs;
-    }
-
-    //log("local result %d", result);
+    result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
 
     if (GGPO_SUCCEEDED(result)) {
-        result = ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags); 
-        //log("sync result %d", result);
+        result = ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags);
         if (GGPO_SUCCEEDED(result)) {
-            GGPO::writeAllGGPOInputs();
-            ///* pass both inputs to our advance function */
-            //AdvanceGameState(&p[0], &p[1], &gamestate);
-            // normally here, i would call advance gamestate, but returning from this function literally does that because its hooked
-            // this is actually a massive issue, because by hanging gamestate in this func, other GGPO callbacks 
-            // never occur.
-            // the solution to this is,,,, not ideal 
-            // i might have to add 2 more patches to 0x0048e0a0 and 0x00432c50 to only exec if a boolean is true.
-            // ill patch the calls of those funcs, and not the funcs themselves, bc i am already patching the inside of one of them
-
-            _naked_shouldUpdateGameState = 1;
-            return;
+            // ok, this shit is ASS
+            // i think that,,, doing a boolean to enable/disable this bs would be better 
+            advanceFrame();
         }
     }
 
-    _naked_shouldUpdateGameState = 0;
+    drawFrame();
 
-    goto retryInputs;
-
+    //ggpo_advance_frame(GGPO::ggpo);
 }
 
-void ggpoAdvanceFrame() {
+void _naked_runFrame() {
 
-    // i hook the end of the func when ggpo init is called, which is during draw, which means that advance gets called before a framestate even occurs
-    // this stupid thing fixes that
+    // patched at 0x0040d350
 
-    if(isInAdvanceFrame) { // should this check go before or after firstrun?????
-        return; 
-    }
-
-    static bool firstRun = true;
-    if(firstRun) {
-        firstRun = false;
-        return;
-    }
-
-    //logY("inside ggpoAdvanceFrame");
-
-    // this call is JUSTIFIED bc it ONLY OCCURS during non rollback frames
-    ggpo_advance_frame(GGPO::ggpo);
-
-    //log("calling ggpo_idle");
-    ggpo_idle(GGPO::ggpo, 3);
-
-}
-
-void _naked_ggpoControllerHook() {
-
-    // patched at 0x0040e390.
-    // top of frame
-
-    // overwritten asm:
-    emitByte(0x51);
-
-    emitByte(0x8B);
-    emitByte(0x0D);
-    emitByte(0xB0);
-    emitByte(0xE6);
-    emitByte(0x76);
-    emitByte(0x00);
-
+    //PUSH_ALL;
+    //advanceFrame();
+    //POP_ALL;
+    
     PUSH_ALL;
-    ggpoControllerHook();
+    runFrame();
+    //drawFrame();
     POP_ALL;
 
-    emitJump(0x0040e397);
-
-}
-
-void _naked_ggpoAdvanceFrame() {
-
-    // patched at 0040e5b3
-
-    PUSH_ALL;
-    ggpoAdvanceFrame();
-    POP_ALL;
-
-    ASMRET;
-}
-
-void _naked_checkIfShouldRunControls() {
-
-    // patched at 0x0040e410
-
     __asmStart R"(
-        cmp dword ptr __naked_shouldUpdateGameState, 0;
-        JE _naked_checkIfShouldRunControls_SKIP;
+        mov eax, 1; // this var controls when the game exits, need to pass it from the actual func!!! except its,,, grabbed from the controller funcs. omfg
     )" __asmEnd
 
-    emitCall(0x0048e0a0);   
-   
-    __asmStart R"(
-        _naked_checkIfShouldRunControls_SKIP:
-    )" __asmEnd
-
-    emitJump(0x0040e415);
-
-}
-
-void _naked_checkIfShouldUpdateGame() {
-
-    // patched at 0x0040e471
-
-    __asmStart R"(
-        cmp dword ptr __naked_shouldUpdateGameState, 1;
-        JE _naked_checkIfShouldUpdateGame_CONTINUE;
-    )" __asmEnd
-
-    // on return from this function, eax seems to normally be set to 1
-    // this emulates that
-    __asmStart R"(
-        mov eax, 1;
-    )" __asmEnd
-
-    emitJump(0x0040e476); // this jumps to after the call would have happened
-
-    __asmStart R"(
-        _naked_checkIfShouldUpdateGame_CONTINUE:
-    )" __asmEnd
-
-    emitCall(0x00432c50);
-    emitJump(0x0040e476);
+    emitJump(0x0040d355);
 
 }
 
 static const AsmHacks::AsmList patchGGPO = {
+    PATCHJUMP(0x0040d350, _naked_runFrame),
 
-    PATCHJUMP(0x0040e390, _naked_ggpoControllerHook),
-    PATCHJUMP(0x0040e513, _naked_ggpoAdvanceFrame),
+    {(void*)(0x0040e410), {INLINE_NOP_FIVE_TIMES}},
+    {(void*)(0x0040e471), {INLINE_NOP_FIVE_TIMES}},
 
-    //PATCHJUMP(0x0040e410, _naked_checkIfShouldRunControls), 
-    //PATCHJUMP(0x0040e471, _naked_checkIfShouldUpdateGame),
-
+    //{(void*)(0x0040e410), {0xBB, 0x01, 0x00, 0x00, 0x00}}, // mov ebx, 1; // not sure if this is needed
+    //{(void*)(0x0040e471), {0xB8, 0x01, 0x00, 0x00, 0x00}}, // mov eax, 1
 };
 
 // -----
@@ -571,10 +422,11 @@ void GGPO::initGGPO() {
     if(isGGPOOnline) {
         return;
     }
+    isGGPOOnline = true;
 
     updateRollbackAddresses();
 
-    isGGPOOnline = true;
+    
 
     logG("Attempting to init GGPO. PLAYER %d");
     logG("patching ASM");
@@ -582,6 +434,8 @@ void GGPO::initGGPO() {
     for ( const AsmHacks::Asm& hack : patchGGPO ) {
         WRITE_ASM_HACK ( hack );
     }
+
+    //return;
 
     logG("doing actual ggpo bs");
 
@@ -631,9 +485,9 @@ void GGPO::initGGPO() {
 
     // is the input param sizeof(inputs) or sizeof(inputs[0])????
     
-    result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
+    //result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
 
-    //result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
 
     ggpo_set_disconnect_timeout(ggpo, 3000);
     ggpo_set_disconnect_notify_start(ggpo, 1000);
@@ -754,7 +608,7 @@ bool GGPO::mb_on_event_callback(GGPOEvent *info) {
 * Notification from GGPO we should step foward exactly 1 frame
 * during a rollback.
 */
-bool GGPO::mb_advance_frame_callback(int) {
+bool GGPO::mb_advance_frame_callback(int) { // emulates vw_advance_frame_callback
     logB("wowee mb_advance_frame_callback");
 
     /*

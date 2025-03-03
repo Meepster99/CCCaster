@@ -3295,9 +3295,9 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	device->SetVertexShaderConstantF(223, (float*)&frameFloatOffset, 1);
 
 	#ifndef BLEEDING
-	//if(ONEPRESS) {
+	if(ONEPRESS) {
 		GGPO::initGGPO();
-	//}
+	}
 	#endif
 		
 

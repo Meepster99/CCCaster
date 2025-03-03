@@ -371,6 +371,16 @@ typedef RenderList::LinkedListAllAssets::LinkedListAssetsList                   
         }                                                                                                           \
     } while ( 0 )
 
+#define REVERT_ASM_HACK(ASM_HACK)                                                                                    \
+    do {                                                                                                            \
+        const int error = ASM_HACK.revert();                                                                         \
+        if ( error != 0 ) {                                                                                         \
+            LOG ( "[%d] %s; %s failed; addr=%08x",                                                                  \
+                  error, WinException::getAsString ( error ), #ASM_HACK, ASM_HACK.addr );                           \
+            exit ( -1 );                                                                                            \
+        }                                                                                                           \
+    } while ( 0 )
+
 
 #define INLINE_DWORD(X)                                                         \
     static_cast<unsigned char> ( unsigned ( X ) & 0xFF ),                       \
