@@ -448,7 +448,7 @@ static const AsmHacks::AsmList patchGGPO = {
 // -----
 
 void GGPO::writeAllGGPOInputs() {
-    for(int i=0; i<4; i++) {
+    for(int i=0; i<GGPOPLAYERNUM; i++) {
         inputs[i].write(i);
     }
 }
@@ -462,7 +462,6 @@ void GGPO::initGGPO() {
 
     updateRollbackAddresses();
 
-    
 
     logG("Attempting to init GGPO. PLAYER %d");
     logG("patching ASM");
@@ -521,9 +520,9 @@ void GGPO::initGGPO() {
 
     // is the input param sizeof(inputs) or sizeof(inputs[0])????
     
-    //result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
+    result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
 
-    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+    //result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
 
     ggpo_set_disconnect_timeout(ggpo, 3000);
     ggpo_set_disconnect_notify_start(ggpo, 1000);
@@ -570,7 +569,8 @@ void GGPO::initGGPO() {
         //players[i].connect_progress = 0;
         //players[i].state = Connecting;
 
-        ggpo_set_frame_delay(ggpo, handles[i], 2);
+        // SETTING NONZERO DELAY WAS CAUSING THE CRASHES??? WHYYY
+        ggpo_set_frame_delay(ggpo, handles[i], 0);
     }
 
     ggpo_idle(ggpo, 5);
