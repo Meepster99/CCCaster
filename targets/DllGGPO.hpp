@@ -70,6 +70,7 @@ __attribute__((noinline, cdecl)) void advanceFrame();
 __attribute__((noinline, cdecl)) void drawFrame();
 __attribute__((noinline, cdecl)) void runFrame();
 __attribute__((naked, noinline, cdecl)) void _naked_runFrame();
+__attribute__((naked, noinline, cdecl)) void _naked_advanceFramePreCheck();
 
 #define GGPOPLAYERNUM (2)
 #define GGPOSPECTATENUM (0) 

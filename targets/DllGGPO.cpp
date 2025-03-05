@@ -308,15 +308,18 @@ things that could be issues are:
 
 */
 
+extern "C" {
+    DWORD _naked_shouldAdvanceFrame = 0;
+}
+
 void advanceFrame() { // emulates VectorWar_AdvanceFrame
     
     GGPO::writeAllGGPOInputs(); 
 
     // i WOULD recreate and reverse gameloop0, but i hook those funcs. in the rest of 2v2. i cant have that 
     // god there are SO many issues here
-
     PUSH_ALL;
-    emitCall(0x0048e0a0);
+    emitCall(0x0048e0a0); // this function IS needed in here, no clue what it do?! but it do be needed
     POP_ALL; 
 
     PUSH_ALL;
@@ -328,13 +331,15 @@ void advanceFrame() { // emulates VectorWar_AdvanceFrame
 
 void drawFrame() {
 
+    /*
     static AsmHacks::AsmList patchOutFrameAdvance = {
-        {(void*)(0x0040e410), {0xBB, 0x01, 0x00, 0x00, 0x00}}, // mov ebx, 1; // not sure if this is needed
-        {(void*)(0x0040e471), {0xB8, 0x01, 0x00, 0x00, 0x00}}, // mov eax, 1
+        //{(void*)(0x0040e410), {0xBB, 0x01, 0x00, 0x00, 0x00}}, // mov ebx, 1; // not sure if this is needed
+        //{(void*)(0x0040e471), {0xB8, 0x01, 0x00, 0x00, 0x00}}, // mov eax, 1
     };
 
     for ( const AsmHacks::Asm& hack : patchOutFrameAdvance )
         WRITE_ASM_HACK ( hack );
+    */
     
 
     PUSH_ALL;
@@ -342,9 +347,10 @@ void drawFrame() {
     POP_ALL;
 
     
+    /*
     for ( const AsmHacks::Asm& hack : patchOutFrameAdvance )
         REVERT_ASM_HACK ( hack );
-    
+    */
     
 }
 
@@ -364,18 +370,28 @@ void runFrame() {
 
     result = ggpo_add_local_input(GGPO::ggpo, GGPO::handles[i], &GGPO::inputs[i], sizeof(GGPO::inputs[i]));
 
+    _naked_shouldAdvanceFrame = 0;
+
     if (GGPO_SUCCEEDED(result)) {
         result = ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags);
         if (GGPO_SUCCEEDED(result)) {
             // ok, this shit is ASS
             // i think that,,, doing a boolean to enable/disable this bs would be better 
-            advanceFrame();
+            //advanceFrame();
+            _naked_shouldAdvanceFrame = 1;
         }
     }
 
+    GGPO::writeAllGGPOInputs(); 
+
     drawFrame();
 
-    //ggpo_advance_frame(GGPO::ggpo);
+    if(_naked_shouldAdvanceFrame == 1) {
+        ggpo_advance_frame(GGPO::ggpo);
+    }
+
+    _naked_shouldAdvanceFrame = 0;
+
 }
 
 void _naked_runFrame() {
@@ -399,11 +415,31 @@ void _naked_runFrame() {
 
 }
 
+void _naked_advanceFramePreCheck() {
+
+    __asmStart R"(
+        cmp dword ptr __naked_shouldAdvanceFrame, 0;
+        JE _naked_advanceFramePreCheck_skipAdvanceFrame;
+    )" __asmEnd
+
+    emitCall(0x00432c50);
+
+    __asmStart R"(
+    _naked_advanceFramePreCheck_skipAdvanceFrame:
+        mov eax, 1;
+    )" __asmEnd
+
+    emitJump(0x0040e476); 
+
+}
+
 static const AsmHacks::AsmList patchGGPO = {
     PATCHJUMP(0x0040d350, _naked_runFrame),
 
-    {(void*)(0x0040e410), {INLINE_NOP_FIVE_TIMES}},
-    {(void*)(0x0040e471), {INLINE_NOP_FIVE_TIMES}},
+    PATCHJUMP(0x0040e471, _naked_advanceFramePreCheck),
+
+    //{(void*)(0x0040e410), {INLINE_NOP_FIVE_TIMES}}, // this func literally makes no difference when commented out
+    //{(void*)(0x0040e471), {INLINE_NOP_FIVE_TIMES}},
 
     //{(void*)(0x0040e410), {0xBB, 0x01, 0x00, 0x00, 0x00}}, // mov ebx, 1; // not sure if this is needed
     //{(void*)(0x0040e471), {0xB8, 0x01, 0x00, 0x00, 0x00}}, // mov eax, 1
