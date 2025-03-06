@@ -52,6 +52,19 @@ ill fix that when i get to it i guess
 
 */
 
+typedef struct RNGState {
+    
+    DWORD rng0;
+    DWORD rng1;
+    DWORD rng2;
+    
+    BYTE rng3[CC_RNG_STATE3_SIZE];
+
+    void read();
+    void write();
+
+} RNGState;
+
 typedef struct GGPOInput {
 
     uint16_t dir = 0;
@@ -94,6 +107,8 @@ namespace GGPO {
     __attribute__((noinline, stdcall)) void writeAllGGPOInputs();
 
     void initGGPO();
+
+    bool shouldAdvanceFrame();
 
     extern MemDumpList rollbackAddrs;
     void updateRollbackAddresses();

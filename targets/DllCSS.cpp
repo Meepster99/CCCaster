@@ -7,6 +7,7 @@
 #include <array>
 #include "palettes/palettes.hpp"
 #include "DllOverlayUi.hpp"
+#include "DllGGPO.hpp"
 
 #ifndef F12PRESS 
 #define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
@@ -766,11 +767,31 @@ void updateControls() {
 
 	for(int i=0; i<4; i++) {
 
-		if(copyInputs) {
-			ourCSSData[i].input.set(0);
+		if(GGPO::isGGPOOnline) {
+
+			// todo, this NEEDS to be changed when i go from 2-4 players
+
+			ourCSSData[0].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[0].input.btn = GGPO::inputs[0].btn;
+
+			ourCSSData[2].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[2].input.btn = GGPO::inputs[0].btn;
+
+			ourCSSData[1].input.dir = GGPO::inputs[1].dir;
+			ourCSSData[1].input.btn = GGPO::inputs[1].btn;
+			
+			ourCSSData[3].input.dir = GGPO::inputs[1].dir;
+			ourCSSData[3].input.btn = GGPO::inputs[1].btn;
+
 		} else {
-			ourCSSData[i].input.set(i);
+			if(copyInputs) {
+				ourCSSData[i].input.set(0);
+			} else {
+				ourCSSData[i].input.set(i);
+			}
 		}
+
+		
 		
 		BYTE pressDir = ourCSSData[i].pressDir();
 		pressDir |= ourCSSData[i].holdDir();
@@ -896,7 +917,13 @@ void updateCSSStuff() {
 
 	shouldReverseDraws = false;
 
-	updateControls();
+	if(GGPO::isGGPOOnline) {
+		if(GGPO::shouldAdvanceFrame()) {
+			updateControls();
+		}
+	} else {
+		updateControls();
+	}
 
 	updateMeltyState();
 

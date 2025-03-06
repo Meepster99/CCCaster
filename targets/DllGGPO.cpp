@@ -286,7 +286,6 @@ static const std::vector<MemDump> extra2v2Addrs =
     { (void*)&AsmHacks::naked_charTurnAroundState[0], sizeof(AsmHacks::naked_charTurnAroundState) },
     { (void*)&AsmHacks::FN1States[0], sizeof(AsmHacks::FN1States) }
 
-    
 };
 
 // -----
@@ -310,6 +309,26 @@ things that could be issues are:
 
 extern "C" {
     DWORD _naked_shouldAdvanceFrame = 0;
+}
+
+bool GGPO::shouldAdvanceFrame() {
+    return _naked_shouldAdvanceFrame == 1;
+}
+
+void RNGState::read() {
+    rng0 = *CC_RNG_STATE0_ADDR;
+    rng1 = *CC_RNG_STATE1_ADDR;
+    rng2 = *CC_RNG_STATE2_ADDR;
+
+    memcpy(rng3, CC_RNG_STATE3_ADDR, sizeof(rng3));
+}
+
+void RNGState::write() {
+    *CC_RNG_STATE0_ADDR = rng0;
+    *CC_RNG_STATE1_ADDR = rng1;
+    *CC_RNG_STATE2_ADDR = rng2;
+
+    memcpy(CC_RNG_STATE3_ADDR, rng3, sizeof(rng3));
 }
 
 void advanceFrame() { // emulates VectorWar_AdvanceFrame
@@ -448,9 +467,16 @@ static const AsmHacks::AsmList patchGGPO = {
 // -----
 
 void GGPO::writeAllGGPOInputs() {
-    for(int i=0; i<GGPOPLAYERNUM; i++) {
+    /*for(int i=0; i<GGPOPLAYERNUM; i++) {
         inputs[i].write(i);
-    }
+    }*/
+
+    inputs[0].write(0);
+    inputs[0].write(2);
+
+    inputs[1].write(1);
+    inputs[1].write(3);
+
 }
 
 void GGPO::initGGPO() {
@@ -570,7 +596,9 @@ void GGPO::initGGPO() {
         //players[i].state = Connecting;
 
         // SETTING NONZERO DELAY WAS CAUSING THE CRASHES??? WHYYY
-        ggpo_set_frame_delay(ggpo, handles[i], 0);
+        if(players[i].type == GGPO_PLAYERTYPE_LOCAL) {
+            ggpo_set_frame_delay(ggpo, handles[i], 7);
+        }
     }
 
     ggpo_idle(ggpo, 5);
@@ -592,6 +620,10 @@ bool GGPO::mb_begin_game_callback(const char *) {
 */
 bool GGPO::mb_on_event_callback(GGPOEvent *info) {
     logR("wowee mb_on_event_callback");
+
+    RNGState rngState = {
+        0x30f59eee, 0x1d6cf4a4, 0x32e6d8bb, {0}
+    };
     
     int progress;
     switch (info->code) {
@@ -610,6 +642,7 @@ bool GGPO::mb_on_event_callback(GGPOEvent *info) {
             break;
         case GGPO_EVENTCODE_RUNNING:
             logY("GGPO_EVENTCODE_RUNNING");
+            rngState.write();
             //ngs.SetConnectState(Running);
             //renderer->SetStatusText("");
             break;
@@ -629,7 +662,7 @@ bool GGPO::mb_on_event_callback(GGPOEvent *info) {
             break;
         case GGPO_EVENTCODE_TIMESYNC:
             logY("GGPO_EVENTCODE_TIMESYNC");
-            //Sleep(1000 * info->u.timesync.frames_ahead / 60);
+            Sleep(1000 * info->u.timesync.frames_ahead / 60);
             break;
         default:
             logR("unknown event callback wtf");
@@ -674,6 +707,8 @@ bool GGPO::mb_advance_frame_callback(int) { // emulates vw_advance_frame_callbac
 bool GGPO::mb_load_game_state_callback(unsigned char *buffer, int len) {
     logB("wowee mb_load_game_state_callback");
 
+    // tbh, when in between states, or in css, just disable this
+
     ((SaveState*)buffer)->load();
 
     logB("leaving mb_load_game_state_callback");
@@ -688,7 +723,7 @@ bool GGPO::mb_load_game_state_callback(unsigned char *buffer, int len) {
 * buffer and len parameters.
 */
 bool GGPO::mb_save_game_state_callback(unsigned char **buffer, int *len, int *checksum, int) {
-    logB("wowee mb_save_game_state_callback");
+    //logB("wowee mb_save_game_state_callback");
 
     *len = sizeof(SaveState);
     SaveState* newSave = new SaveState();
@@ -697,7 +732,7 @@ bool GGPO::mb_save_game_state_callback(unsigned char **buffer, int *len, int *ch
 
     *checksum = newSave->hash();
 
-    logB("leaving mb_save_game_state_callback");
+    //logB("leaving mb_save_game_state_callback");
     
     return true;
 }

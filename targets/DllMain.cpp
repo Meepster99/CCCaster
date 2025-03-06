@@ -857,11 +857,13 @@ struct DllMain
                 LOG_TO ( syncLog, "Desync!" );
                 syncLog.deinitialize();
 
+                log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
                 delayedStop ( ERROR_INTERNAL );
                 return;
             }
             else
             {
+                log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
                 delayedStop ( ERROR_INTERNAL );
                 return;
             }
@@ -1009,12 +1011,14 @@ struct DllMain
         // Catch invalid transitions
         if ( ! netMan.isValidNext ( state ) )
         {
-            LOG_TO ( syncLog, "Desync!" );
-            LOG_TO ( syncLog, "Invalid transition: %s -> %s", netMan.getState(), state );
-            syncLog.deinitialize();
+            
+            //LOG_TO ( syncLog, "Desync!" );
+            //LOG_TO ( syncLog, "Invalid transition: %s -> %s", netMan.getState(), state );
+            //syncLog.deinitialize();
 
-            delayedStop ( ERROR_INTERNAL );
-            return;
+            //log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
+            //delayedStop ( ERROR_INTERNAL );
+            //return;
         }
 
         // Close the overlay if not mapping
@@ -1496,6 +1500,7 @@ struct DllMain
                         if ( lazyDisconnect )
                             return;
 
+                        log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
                         delayedStop ( msg->getAs<ErrorMessage>().error );
                         return;
 
@@ -1541,6 +1546,8 @@ struct DllMain
                         return;
 
                     case MsgType::ErrorMessage:
+
+                        log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
                         delayedStop ( msg->getAs<ErrorMessage>().error );
                         return;
 
@@ -2167,6 +2174,7 @@ void stopDllMain ( const string& error )
 {
     if ( mainApp )
     {
+        log("delayedStop ( ERROR_INTERNAL ); line %d", __LINE__);
         mainApp->delayedStop ( error );
     }
     else
