@@ -467,15 +467,22 @@ static const AsmHacks::AsmList patchGGPO = {
 // -----
 
 void GGPO::writeAllGGPOInputs() {
-    /*for(int i=0; i<GGPOPLAYERNUM; i++) {
+
+    #if GGPOPLAYERNUM == 4
+
+    for(int i=0; i<GGPOPLAYERNUM; i++) {
         inputs[i].write(i);
-    }*/
+    }
+
+    #else
 
     inputs[0].write(0);
     inputs[0].write(2);
 
     inputs[1].write(1);
     inputs[1].write(3);
+
+    #endif
 
 }
 
