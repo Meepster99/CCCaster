@@ -766,7 +766,7 @@ void updateControls() {
 	// maybe one less patch tho
 
 	for(int i=0; i<4; i++) {
-
+		
 		if(GGPO::isGGPOOnline) {
 
 			// todo, this NEEDS to be changed when i go from 2-4 players
