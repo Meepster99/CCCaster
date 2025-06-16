@@ -85,7 +85,15 @@ __attribute__((noinline, cdecl)) void runFrame();
 __attribute__((naked, noinline, cdecl)) void _naked_runFrame();
 __attribute__((naked, noinline, cdecl)) void _naked_advanceFramePreCheck();
 
+// commment this out if,, not doing a sync test
+#define DOSYNCTEST (true)
+
+#ifdef DOSYNCTEST
 #define GGPOPLAYERNUM (4)
+#else
+#define GGPOPLAYERNUM (4)
+#endif
+
 #define GGPOSPECTATENUM (0) 
 
 namespace GGPO {

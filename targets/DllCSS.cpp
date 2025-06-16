@@ -770,8 +770,22 @@ void updateControls() {
 		if(GGPO::isGGPOOnline) {
 
 			// todo, this NEEDS to be changed when i go from 2-4 players
+			
+			#ifdef DOSYNCTEST
 
-			#if GGPOPLAYERNUM == 4
+			ourCSSData[0].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[0].input.btn = GGPO::inputs[0].btn;
+
+			ourCSSData[2].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[2].input.btn = GGPO::inputs[0].btn;
+
+			ourCSSData[1].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[1].input.btn = GGPO::inputs[0].btn;
+			
+			ourCSSData[3].input.dir = GGPO::inputs[0].dir;
+			ourCSSData[3].input.btn = GGPO::inputs[0].btn;
+			
+			#elif GGPOPLAYERNUM == 4
 
 			ourCSSData[i].input.dir = GGPO::inputs[i].dir;
 			ourCSSData[i].input.btn = GGPO::inputs[i].btn;

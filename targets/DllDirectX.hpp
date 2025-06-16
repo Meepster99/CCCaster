@@ -20,7 +20,7 @@
 // so this is here for,,,, yea
 // it works
 
-volatile const char* _ugh[] = {
+static volatile const char* _spoofedVersionList[] = {
 	"3.1.000",
 	"3.1.001",
 	"3.1.002",

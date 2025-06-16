@@ -284,7 +284,11 @@ static const std::vector<MemDump> extra2v2Addrs =
     // no clue if this will work
 
     { (void*)&AsmHacks::naked_charTurnAroundState[0], sizeof(AsmHacks::naked_charTurnAroundState) },
-    { (void*)&AsmHacks::FN1States[0], sizeof(AsmHacks::FN1States) }
+    { (void*)&AsmHacks::FN1States[0], sizeof(AsmHacks::FN1States) },
+
+    CC_GAME_MODE_ADDR, // not sure
+    CC_GAME_STATE_ADDR, // even less sure
+    ( ( uint32_t * ) 0x00562a6f ) // something relating to scenes??
 
 };
 
@@ -553,9 +557,12 @@ void GGPO::initGGPO() {
 
     // is the input param sizeof(inputs) or sizeof(inputs[0])????
     
-    result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
 
-    //result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+    #ifdef DOSYNCTEST
+    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+    #else
+    result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
+    #endif 
 
     ggpo_set_disconnect_timeout(ggpo, 3000);
     ggpo_set_disconnect_notify_start(ggpo, 1000);
@@ -685,7 +692,7 @@ bool GGPO::mb_on_event_callback(GGPOEvent *info) {
 * during a rollback.
 */
 bool GGPO::mb_advance_frame_callback(int) { // emulates vw_advance_frame_callback
-    logB("wowee mb_advance_frame_callback");
+    //logB("wowee mb_advance_frame_callback");
 
     /*
     * advance_frame - Called during a rollback.  You should advance your game
@@ -701,7 +708,7 @@ bool GGPO::mb_advance_frame_callback(int) { // emulates vw_advance_frame_callbac
     ggpo_synchronize_input(GGPO::ggpo, GGPO::inputs, sizeof(GGPO::inputs), &disconnectFlags);
     advanceFrame();
 
-    logB("leaving mb_advance_frame_callback");
+    //logB("leaving mb_advance_frame_callback");
 
     return true;
 }
@@ -712,10 +719,30 @@ bool GGPO::mb_advance_frame_callback(int) { // emulates vw_advance_frame_callbac
 * Makes our current state match the state passed in by GGPO.
 */
 bool GGPO::mb_load_game_state_callback(unsigned char *buffer, int len) {
-    logB("wowee mb_load_game_state_callback");
+    //logB("wowee mb_load_game_state_callback");
 
     // tbh, when in between states, or in css, just disable this
 
+    /*
+    0x14 (in cs)s -> 0x08 (after stagesel) -> 0x01 (ingame) -> 0x05 (both rounds are over) -> 0x08 (another game, i hit once again) -> 0x01 (ingame)
+    */
+
+    
+    DWORD gameMode = *CC_GAME_MODE_ADDR;
+    DWORD gameState = *CC_GAME_STATE_ADDR;
+
+    logG("%02X %02X", (BYTE)gameMode, (BYTE)gameState);
+  
+    if(gameMode == 0x08 || gameMode == 0x05) {
+        return true;
+    }
+
+    if(gameState != 0 && gameState != 0xFF) {
+        return true;
+    }
+    
+
+    
     ((SaveState*)buffer)->load();
 
     logB("leaving mb_load_game_state_callback");
