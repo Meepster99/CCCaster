@@ -15,6 +15,49 @@
 
 #include "DllGGPO.hpp"
 
+// ok so,,,, caster version checking for the dll just checks for strings. 
+// i cant change that part of the code if im only distributing dlls. 
+// so this is here for,,,, yea
+// it works
+
+volatile const char* _ugh[] = {
+	"3.1.000",
+	"3.1.001",
+	"3.1.002",
+	"3.1.003",
+	"3.1.004",
+	"3.1.004",
+	"3.1.005",
+	"3.1.006",
+	"3.1.007",
+	"3.1.008",
+	"3.1.009",
+
+	"3.2.000",
+	"3.2.001",
+	"3.2.002",
+	"3.2.003",
+	"3.2.004",
+	"3.2.004",
+	"3.2.005",
+	"3.2.006",
+	"3.2.007",
+	"3.2.008",
+	"3.2.009",
+
+	"3.3.000",
+	"3.3.001",
+	"3.3.002",
+	"3.3.003",
+	"3.3.004",
+	"3.3.004",
+	"3.3.005",
+	"3.3.006",
+	"3.3.007",
+	"3.3.008",
+	"3.3.009"
+};
+
 // i am being so so real with you
 // if you are getting a bunch of errors with this file for _D3DVECTOR
 // go and just add that constructor to the fuckin file

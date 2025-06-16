@@ -64,6 +64,9 @@ static bool initDirsAndSanityCheck ( bool checkGameExe = true )
     {
         // make sure hook dll is the same version by by checking if the version
         // string can be found in the dll file
+        // ok the below code is a bit stupid, but bc i cannot(moreso will not) release a caster update specifically for this
+        // im going to have to include extra strings inside the dll so they are picked up by this, so that each caster update
+        // doesnt brick this system
         ifstream dll( ProcessManager::appDir + HOOK_DLL, ios::binary );
         const string &code = LocalVersion.code;
         // if |code| cannot be found in the hook dll
