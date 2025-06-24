@@ -166,8 +166,9 @@ for file in files:
 
 			colors = [ 0x01000000 | ((palette[i] << 0) | (palette[i + 1] << 8) | (palette[i + 2] << 16)) for i in range(0, len(palette), 3)]
 			
-			if char == 12 and pal == 40:
-				colors = invertHSL(colors)
+			# this was inverting my yellow palette to make it pink. but it didnt in the past?? wtf was going on when i first wrote this
+			#if char == 12 and pal == 40:
+			#	colors = invertHSL(colors)
 
 			if pal in data[char]:
 				print(f"char: {char} already had palette {pal}!?!") 
