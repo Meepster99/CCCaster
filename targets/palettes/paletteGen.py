@@ -182,6 +182,7 @@ for file in files:
 
 		
 
+print("doing it")
 
 output = []
 
@@ -212,4 +213,6 @@ output.append("};")
 with open("palettes.cpp", "w+") as f:
 	for line in output:
 		f.write(line + "\n")
+		
+print("clear")
  

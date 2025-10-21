@@ -94,3 +94,5 @@ Palette Credits:
     morrocoy
 
     yakuza5remastered
+
+	ghostnails

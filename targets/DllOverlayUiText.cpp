@@ -626,7 +626,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
                     textCol = 0xFF42e5f4;
                 }
 
-                if(j == 1 && i == 0) {
+                if(j == 0 && i == 0) {
                    
                     frameCounter++;
                     float f = std::abs((int)(frameCounter & 0b111111) - 32);

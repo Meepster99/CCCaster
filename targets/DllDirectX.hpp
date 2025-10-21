@@ -20,7 +20,7 @@
 // so this is here for,,,, yea
 // it works
 
-static volatile const char* _spoofedVersionList[] = {
+static volatile const char* _spoofedVersionList[] __attribute__((used)) = {
 	"3.1.000",
 	"3.1.001",
 	"3.1.002",
@@ -32,6 +32,18 @@ static volatile const char* _spoofedVersionList[] = {
 	"3.1.007",
 	"3.1.008",
 	"3.1.009",
+	
+	"3.1.010",
+	"3.1.011",
+	"3.1.012",
+	"3.1.013",
+	"3.1.014",
+	"3.1.014",
+	"3.1.015",
+	"3.1.016",
+	"3.1.017",
+	"3.1.018",
+	"3.1.019",
 
 	"3.2.000",
 	"3.2.001",

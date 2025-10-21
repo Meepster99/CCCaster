@@ -825,7 +825,7 @@ void DllControllerManager::handleMappingOverlay()
     array<string, 5> text; // 3 cols
 
     // Display all controllers
-    text[0] = "Controllers\nPLEASE BIND FN1 TO TOGGLE LOCK ON\n";
+    text[0] = "PLEASE BIND FN1 TO TOGGLE LOCK ON\nI cannot emphasize how\nimportant it is!\nLock on lets you toggle\nwhich character you are\nlooking at!!!\n<3\nAvailable controllers:\n";
 
     for ( const Controller *controller : _allControllers )
         //if ( controller != _playerControllers[0] && controller != _playerControllers[1] )

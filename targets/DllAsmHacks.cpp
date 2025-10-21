@@ -1320,6 +1320,9 @@ void _naked_updateGameStateHook() {
         // as is tradition, this func doesnt take params, so i can push my own ret value onto the stack
         // eax SHOULD be safe to clobber, not 100% sure tho
 
+
+		// looking back on this, wtf was i doing here. 
+		
         mov eax, OFFSET __naked_updateGameStateCallback;
         push eax; // add our ret
     

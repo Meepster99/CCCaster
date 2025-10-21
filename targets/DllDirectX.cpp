@@ -2427,7 +2427,7 @@ void updateGameState() {
 		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
 		fn1 &= 0b1;
 
-		if(!AsmHacks::FN1States[i] && fn1) {
+		if(!AsmHacks::FN1States[i] && fn1) { // rising edge of fn1 press
 			//log("P%d: %d", i, fn1);
 			AsmHacks::naked_charTurnAroundState[i] = !AsmHacks::naked_charTurnAroundState[i];
 		}		
