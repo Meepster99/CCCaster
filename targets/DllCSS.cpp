@@ -953,17 +953,18 @@ void updateCSSStuff() {
 	drawCSS();
 
 	shouldReverseDraws = true;
-	TextDraw(10, 10 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
-	TextDraw(10, 10 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
-	TextDraw(10, 10 + (2 * 8), 8, 0xFFFFFFFF, ":3");
+	//TextDraw(10, 10 + (0 * 8), 8, 0xFFFFFFFF, "please follow me on twitter so i have motivation for this");
+	//TextDraw(10, 10 + (1 * 8), 8, 0xFFFFFFFF, "@Meepster99");
+	//TextDraw(10, 10 + (2 * 8), 8, 0xFFFFFFFF, ":3");
 
 	TextDraw(10, 450 + (2 * 8), 8, 0xFFFFFFFF, "Press C and D to switch to custom palettes"); 
 	
 	shouldReverseDraws = false;
 	if(updateOccured) {
-		TextDraw(10, 450 + (0 * 8), 8, 0xFF42e5f4, "A new update was downloaded. Restart melty please.");
+		TextDraw(10, 442 + (0 * 8), 8, 0xFF42e5f4, "A new update was downloaded. Restart melty please.");
 	}
-	TextDraw(10, 450 + (1 * 8), 8, 0xFFFFFFFF, "send bug reports in https://discord.gg/vzvyjz775r");
-	TextDraw(10, 450 + (2 * 8), 8, 0xFFFFFFFF, "Version: %s", LocalVersion.revision.c_str());
+	TextDraw(10, 442 + (1 * 8), 8, 0xFFFFFFFF, "send bug reports in https://discord.gg/vzvyjz775r");
+	TextDraw(10, 442 + (2 * 8), 8, 0xFFFFFFFF, "Version: %s Built: " __DATE__ " " __TIME__, LocalVersion.revision.c_str());
+	TextDraw(10, 442 + (3 * 8), 8, 0xFFFFFFFF, "With love, INANA <3");
 
 }
