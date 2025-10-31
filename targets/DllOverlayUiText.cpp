@@ -591,7 +591,15 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
             }
         } */
 
+
+		frameCounter++;
+		float f = std::abs((int)(frameCounter & 0b111111) - 32);
+		f = ((-1.0f / 32.0f) * f) + 1.0f;
+
+		DWORD fn1textcol = avgColors(0xFFbd1a0b, 0xFF42e5f4, f);
        
+		TextDraw(Point(0, 480-16), 16, fn1textcol, "PLEASE BIND FN1 TO SWAP WHICH CHARACTER IS LOCKED ON");
+
         // look. i know this sucks. im super tired. ill fix it tomorow
 
         const Point textPosData[5] = {
@@ -601,8 +609,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
             Point(0,     0), 
             Point(0,     0)  
         };
-        const float fontSize = 12.0f;
-
+    
         RectDraw(0, 0, 640, 480, 0xD0000000); 
 
         for(int i=0; i<text.size(); i++) { 
@@ -622,18 +629,22 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
             for(int j=0; j<strings.size(); j++) {
 
                 DWORD textCol = 0xFFFFFFFF;
+				float fontSize = 12.0f;
+
                 if(j == 0) {
                     textCol = 0xFF42e5f4;
                 }
 
-                if(j == 0 && i == 0) {
+                /*if(j == 0 && i == 0) {
                    
                     frameCounter++;
                     float f = std::abs((int)(frameCounter & 0b111111) - 32);
                     f = ((-1.0f / 32.0f) * f) + 1.0f;
 
                     textCol = avgColors(0xFFbd1a0b, 0xFF42e5f4, f);
-                }
+
+					fontSize *= 1.5f; // make the fn1 warning larger.
+                }*/
 
                 if(i > 0 && shouldDrawSelector[i - 1] && j == selectorIndex[i - 1]) {
                     RectDraw(textPoint.x, textPoint.y + (2 * fontSize), 164, fontSize, 0xE0FF0000);
