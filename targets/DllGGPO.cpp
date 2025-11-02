@@ -288,7 +288,11 @@ static const std::vector<MemDump> extra2v2Addrs =
 
     CC_GAME_MODE_ADDR, // not sure
     CC_GAME_STATE_ADDR, // even less sure
-    ( ( uint32_t * ) 0x00562a6f ) // something relating to scenes??
+    ( ( uint32_t * ) 0x00562a6f ), // something relating to scenes??
+
+	// this is stupid. 
+	// but like why not just grab. all the ram.
+	//{ 0x0554000, 0x07b1d63 }
 
 };
 
@@ -520,6 +524,9 @@ void GGPO::initGGPO() {
     cb.free_buffer =     mb_free_buffer;
     cb.on_event =        mb_on_event_callback;
 
+	cb.compare_buffers = mb_compare_buffers;
+
+
     // read the stupid config file to get connection info
     ourPlayerNum = -1;
     std::ifstream inFile("2v2Settings.txt");
@@ -559,7 +566,7 @@ void GGPO::initGGPO() {
     
 
     #ifdef DOSYNCTEST
-    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
+    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 3);
     #else
     result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
     #endif 
@@ -731,21 +738,49 @@ bool GGPO::mb_load_game_state_callback(unsigned char *buffer, int len) {
     DWORD gameMode = *CC_GAME_MODE_ADDR;
     DWORD gameState = *CC_GAME_STATE_ADDR;
 
-    logG("%02X %02X", (BYTE)gameMode, (BYTE)gameState);
+    
   
-    if(gameMode == 0x08 || gameMode == 0x05) {
+	/*
+	// this disables rolling back when in a ... state i dont want to roll back in but
+    if(gameMode == CC_GAME_MODE_LOADING || gameMode == CC_GAME_MODE_RETRY || gameMode == CC_GAME_MODE_CHARA_SELECT) {
         return true;
     }
 
-    if(gameState != 0 && gameState != 0xFF) {
+    if(gameState != 0 && gameState != 0xFF) { // what even are these constants
         return true;
-    }
+    }*/
+
+	// this neuters everything other than in game. figure out a way to fucking be normal in other ways
+	// i wish i could just get screen transition rollbacks to work. but i cant. there has to be a way via ggpo to do things synchronously. and then i hijack that for, everything
+	if(gameMode != 1 || gameState != 255) { 
+		logG("avoiding loading: mode: %d state: %d", (BYTE)gameMode, (BYTE)gameState);
+		return true;
+	}
+
+	
     
 
-    
-    ((SaveState*)buffer)->load();
+	
 
-    logB("leaving mb_load_game_state_callback");
+
+	((SaveState*)buffer)->load();
+
+	// i should really grab by debug structs from training mode
+	/*
+	// doing this prevented the crash, but made nothing (even the bg load) and everything register as sion
+	DWORD commandDataSave[4];
+
+	for(int i=0; i<4; i++) {
+		commandDataSave[i] = 0x555130 + (0xAFC * i) + 0x33C;
+	}
+    
+    //((SaveState*)buffer)->load();
+
+    //logB("leaving mb_load_game_state_callback");
+
+	for(int i=0; i<4; i++) {
+		*(DWORD*)(0x555130 + (0xAFC * i) + 0x33C) = commandDataSave[i];
+	}*/
 
     return true;
 }
@@ -789,6 +824,68 @@ bool GGPO::mb_log_game_state(char *filename, unsigned char *buffer, int) {
 void GGPO::mb_free_buffer(void *buffer) {
     SaveState* newSave = (SaveState*)buffer;
     delete newSave;
+}
+
+void GGPO::mb_compare_buffers(unsigned char* last, unsigned char* cur) {
+
+	log("comparebuffers actually called");
+
+	SaveState* prev = (SaveState*)last;
+	SaveState* now = (SaveState*)cur;
+
+	char* prevData = prev->data;
+	char* nowData = now->data;
+
+	if(prevData == NULL || nowData == NULL) {
+		log("one/both of the buffers were null, just leave");
+		return;
+	}
+
+	for ( const MemDump& mem : GGPO::rollbackAddrs.addrs ) {
+		log("Start loop");
+		
+		DWORD baseAddr = (DWORD)mem.getAddr();
+		DWORD size = mem.size;
+		DWORD addr = baseAddr;
+
+		log("addr: %08X size: %d", addr, size);
+
+		bool firstAddrRangePrint = true;
+
+		log("addresses are: %08X %08X", (DWORD)prevData, (DWORD)nowData);
+		for(int i=0; i<size; i++) {
+
+			
+			if(*prevData != *nowData) {
+				if(firstAddrRangePrint) {
+					firstAddrRangePrint = false;
+					log("Attempting print");
+					log("memory: %08X -> %08X size: %08X", baseAddr, baseAddr+size, size);
+				}
+
+				log("OMFG");
+				log("attempting to read from %08X %08X", (DWORD)prevData, (DWORD)nowData);
+				log("\tAddr: %08X %02X != %02X", addr, (BYTE)*prevData, (BYTE)*nowData);
+
+			}
+
+			addr++;
+			prevData++;
+			nowData++;
+
+		}
+
+		log("End loop");
+	}
+
+
+	log("exiting gracefully!");
+
+	Sleep(1000);
+
+
+
+	//exit(1);
 }
 
 void GGPO::updateRollbackAddresses() {
@@ -852,8 +949,11 @@ void SaveState::save() {
 
     char* tempData = data;
 
+	// how are these pointers getting alloced. how does this work at all?
+	// im allocing them. and i forgor. nice job maddy
+
     for ( const MemDump& mem : GGPO::rollbackAddrs.addrs )
-        mem.saveDump ( tempData );
+        mem.saveDump ( tempData ); // the func incs this pointer so it is actually working, despite the fact i dont believe it and dont trust it and hate it
 
     // more info is DEF needed here! please check caster's DllRollbackManager.cpp
 
@@ -872,8 +972,11 @@ void SaveState::load() {
     const char* tempData = data;
 
     for ( const MemDump& mem : GGPO::rollbackAddrs.addrs )
-        mem.loadDump ( tempData );
+        mem.loadDump ( tempData ); // the func incs this pointer so it is actually working, despite the fact i dont believe it and dont trust it and hate it
     
+
+	// upon further looking at this code, i honestly have no clue if its actually doing anything or not.
+	// who allocates the data ptr???
 }
 
 static inline uint32_t murmur_32_scramble(uint32_t k) {

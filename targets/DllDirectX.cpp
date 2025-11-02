@@ -25,6 +25,47 @@
 
 /*
 
+idea:
+currently, 2v2 crashes on rollback between mode transitions
+what if it just didnt
+boom 2v2 done
+
+ok so.
+
+nopping out the push and call at 004238a5
+causes 0046D51A to cause a crash. eax is 0
+
+some interesting things are: 
+eax is gotten from esi+33C, esi is  00556728, the base of P3. is something being loaded for p1/p2 properly but not for p3
+33c is the pointer to command data. so.. loading things isnt working in other words 
+
+which makes sense
+
+ok so:
+nopping the hud crash at 004238a5
+and watching what writes to P1/P3's command data
+
+p3 has an extra write at 0046C59B . which seems to actually be good? and put data in it? 
+why doesnt ..
+
+they both have a write at 00418710 
+but why does.,. what
+why does p3 work and not p1? this is the opposite of what would be expected
+but then p3 still causes the crash
+
+i.. is rollback causing the crash.
+
+also, pls remember that in order to make ggpo... its a seperate step right
+
+
+i surrender to the bs of doing things syncron
+issue
+rollback works ingame except for some points during the before-combat-movearound thingy
+
+*/
+
+/*
+
 todo, a lot of this code is either legacy, deprecated, only needed for training mode, or just plain stupid
 really need to go clean this up
 switch to only one vert format
