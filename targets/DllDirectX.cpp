@@ -62,6 +62,25 @@ i surrender to the bs of doing things syncron
 issue
 rollback works ingame except for some points during the before-combat-movearound thingy
 
+seperate tcp connection during css
+confirm bs 
+and sync at round start (WHY ARE THERE SOME DESYNCS AT ROUNDSTART)
+
+to fix round end issues (one end round ending, and another.. not)
+delay round end frames by # of rollback frames to...
+
+caster commit b167bc1 talks about this
+git show b167bc1
+
+if people want to switch chars, have the restart the whole session. just make round end go once again
+hell just detect match end, dont even go to the once again screen, just 
+if all players health is 0, just restart the health, and reset positions
+
+i have the spare server on aws
+i could do something with lobby codes 
+
+i could have ppl maybe select their chars in that server to make this even easier
+
 */
 
 /*
@@ -71,6 +90,8 @@ really need to go clean this up
 switch to only one vert format
 
 also, evictresources needs to be hooked too!!
+
+
 
 */
 

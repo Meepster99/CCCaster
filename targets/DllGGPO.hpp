@@ -128,7 +128,7 @@ namespace GGPO {
     bool __cdecl mb_save_game_state_callback(unsigned char **buffer, int *len, int *checksum, int);
     bool __cdecl mb_log_game_state(char *filename, unsigned char *buffer, int);
     void __cdecl mb_free_buffer(void *buffer);
-	void __cdecl mb_compare_buffers(unsigned char* last, unsigned char* cur);
+	void __cdecl mb_compare_buffers(void* last, void* cur);
 
     //void VectorWar_Init(HWND hwnd, unsigned short localport, int num_players, GGPOPlayer *players, int num_spectators);
     //void VectorWar_InitSpectator(HWND hwnd, unsigned short localport, int num_players, char *host_ip, unsigned short host_port);

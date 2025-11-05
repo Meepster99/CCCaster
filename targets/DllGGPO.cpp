@@ -566,7 +566,7 @@ void GGPO::initGGPO() {
     
 
     #ifdef DOSYNCTEST
-    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 3);
+    result = ggpo_start_synctest(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), 1);
     #else
     result = ggpo_start_session(&ggpo, &cb, "MELTY4V4", GGPOPLAYERNUM, sizeof(inputs[0]), tempLocalPort); // todo, need to actually grab the port correctly!!
     #endif 
@@ -752,16 +752,13 @@ bool GGPO::mb_load_game_state_callback(unsigned char *buffer, int len) {
 
 	// this neuters everything other than in game. figure out a way to fucking be normal in other ways
 	// i wish i could just get screen transition rollbacks to work. but i cant. there has to be a way via ggpo to do things synchronously. and then i hijack that for, everything
+	
+	/*
 	if(gameMode != 1 || gameState != 255) { 
 		logG("avoiding loading: mode: %d state: %d", (BYTE)gameMode, (BYTE)gameState);
 		return true;
 	}
-
-	
-    
-
-	
-
+	*/
 
 	((SaveState*)buffer)->load();
 
@@ -826,7 +823,14 @@ void GGPO::mb_free_buffer(void *buffer) {
     delete newSave;
 }
 
-void GGPO::mb_compare_buffers(unsigned char* last, unsigned char* cur) {
+void GGPO::mb_compare_buffers(void* last, void* cur) {
+
+	// this func doesnt work. and idk why
+	// i do not know why
+	// the code in synctest.cpp has the issue
+	// i dont think im passing in the right buffer
+
+	return;
 
 	log("comparebuffers actually called");
 
@@ -853,6 +857,15 @@ void GGPO::mb_compare_buffers(unsigned char* last, unsigned char* cur) {
 		bool firstAddrRangePrint = true;
 
 		log("addresses are: %08X %08X", (DWORD)prevData, (DWORD)nowData);
+		
+		log("trying to read from prev %08X", (DWORD)prevData);
+		log("%02X", *prevData);
+
+		log("trying to read from now %08X", (DWORD)nowData);
+		log("%02X", *nowData);
+
+		log("done");
+
 		for(int i=0; i<size; i++) {
 
 			
