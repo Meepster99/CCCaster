@@ -998,7 +998,11 @@ extern "C" {
 
     __attribute__((naked, noinline)) void _naked_updateGameStateHook();
     __attribute__((naked, noinline)) void _naked_updateGameStateCallback();
+
+	
 }
+
+__attribute((naked, noinline)) void _naked_fuckingAround();
 
 
 
@@ -1226,6 +1230,13 @@ static const AsmList initPatch2v2 =
 
     // this patch is here so that the part of 2v2 which updates facing is a part of the rest of the control update func, so that GGPO cooperates
     PATCHJUMP(0x0048e0a0, _naked_updateGameStateHook),
+
+
+	// the following bs is me fucking around
+	//{ ( void * ) (0x004bd9c0 + 3), { 0x5 }},
+
+	PATCHJUMP(0x004bdae4, _naked_fuckingAround),
+
 
 };
 

@@ -7,7 +7,7 @@
 #include "DllDirectX.hpp"
 
 #include "palettes/palettes.hpp"
-
+ 
 #include <windows.h>
 #include <d3dx9.h>
 #include <fstream>
@@ -18,8 +18,8 @@
 #include <eh.h>
 
 using namespace std;
-
-#include <stdio.h>
+  
+#include <stdio.h> 
 #include <stdlib.h>
 #include <signal.h>
 #include <tchar.h>
@@ -1348,6 +1348,49 @@ void _naked_updateGameStateCallback() {
     POP_ALL;
 
     ASMRET;
+}
+
+#include <d3d9.h> // this shouldnt be here.
+extern "C" __attribute__((noinline, cdecl)) void fuckingAround(D3DPRESENT_PARAMETERS* presentParam) {
+
+	return;
+
+	//presentParam->MultiSampleType = D3DMULTISAMPLE_TYPE::D3DMULTISAMPLE_4_SAMPLES;
+
+	// this is,, weird
+	// very weird
+	// this effects the size of the backbuffer, but doesnt change the window. 
+	// i could use this to have a higher resolution window in the same size... window frame yk
+	presentParam->BackBufferWidth *= 1;
+	presentParam->BackBufferHeight *= 2;
+
+	log("omfg %d %d", presentParam->BackBufferWidth, presentParam->BackBufferHeight);
+
+	log("MultiSampleType %d", presentParam->MultiSampleType);
+	log("MultiSampleQuality %d", presentParam->MultiSampleQuality);
+
+}
+
+void _naked_fuckingAround() {
+
+	// patched at 004bdae4
+
+	emitCall(0x004bd940);
+
+	// esi is a pointer to D3DPRESENT_PARAMETER
+
+	PUSH_ALL;
+
+	__asmStart R"( 
+		push esi;
+		call _fuckingAround; // i love that basically nowhere tells you about this underscore
+		add esp, 0x4;
+	)" __asmEnd
+
+	POP_ALL;
+
+	emitJump(0x004bdae9);
+
 }
 
 // -----

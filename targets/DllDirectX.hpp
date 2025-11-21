@@ -20,6 +20,8 @@
 // so this is here for,,,, yea
 // it works
 
+//static_assert(sizeof(D3DPRESENT_PARAMETERS) == 0, "omfdg");
+
 static volatile const char* _spoofedVersionList[] __attribute__((used)) = {
 	"3.1.000",
 	"3.1.001",
