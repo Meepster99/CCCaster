@@ -598,7 +598,7 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
 		DWORD fn1textcol = avgColors(0xFFbd1a0b, 0xFF42e5f4, f);
        
-		TextDraw(Point(0, 480-16), 16, fn1textcol, "PLEASE BIND FN1 TO SWAP WHICH CHARACTER IS LOCKED ON");
+		TextDraw(Point(24, 480-24), 24, fn1textcol, "PLEASE BIND FN1 TO TOGGLE LOCK ON.");
 
         // look. i know this sucks. im super tired. ill fix it tomorow
 
@@ -626,6 +626,11 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
             Rect maxRect;
 
+            bool isKeyboard = false;
+            if(strings.size() > 2) {
+                isKeyboard = strncmp(strings[2].c_str(), "Keyboard", 8) == 0;
+            } 
+
             for(int j=0; j<strings.size(); j++) {
 
                 DWORD textCol = 0xFFFFFFFF;
@@ -633,6 +638,10 @@ void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport 
 
                 if(j == 0) {
                     textCol = 0xFF42e5f4;
+                }
+
+                if((isKeyboard && j == 13) || (!isKeyboard && j == 9)) {
+                    textCol = fn1textcol;
                 }
 
                 /*if(j == 0 && i == 0) {

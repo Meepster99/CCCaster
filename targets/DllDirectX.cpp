@@ -2222,6 +2222,9 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 
 	const char* str = format;
 
+	float origResX2 = res.x2;
+	float maxResX2 = res.x2;
+
 	while (*str) {
 
 		BYTE c = *str;
@@ -2239,6 +2242,8 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 			x = origX;
 			origY += charHeightOffset;
 			res.y2 += (480.0f * charHeightOffset);
+			maxResX2 = MAX(maxResX2, res.x2);
+			res.x2 = origResX2;
 			str++;
 			continue;
 		case ' ':
@@ -2315,7 +2320,10 @@ Rect TextDraw(float x, float y, float size, DWORD ARGB, const char* format) {
 		x += charWidthOffset;
 		res.x2 += (480.0f * charWidthOffset);
 		str++;
+		maxResX2 = MAX(maxResX2, res.x2);
 	}
+
+	res.x2 = maxResX2;
 
 	//device->SetTexture(0, NULL);
 
