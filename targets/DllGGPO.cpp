@@ -501,6 +501,9 @@ void GGPO::initGGPO() {
     }
     isGGPOOnline = true;
 
+    log("temp commented out ggpo lol");
+    return;
+
     updateRollbackAddresses();
 
 

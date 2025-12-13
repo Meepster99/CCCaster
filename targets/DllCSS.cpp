@@ -902,6 +902,42 @@ void updateMeltyState() {
 	}	
 }
 
+void drawFN1Shitpost() {
+
+	static Point p = Point(-500, -500);
+
+	static Point v = Point(2, 2);
+
+	static unsigned frameCounter = 0;
+	frameCounter++; 
+	float f = std::abs((int)(frameCounter & 0b111111) - 32);
+	f = ((-1.0f / 32.0f) * f) + 1.0f;
+
+	DWORD textCol = avgColors(0xFFbd1a0b, 0xFF42e5f4, f);
+
+	shouldReverseDraws = false;
+	Rect bounds = TextDraw(p, 24, textCol, "PLEASE BIND FN1:\nTOGGLE LOCK ON!!\0 I BEG.");
+	
+	p += v;
+	
+	if(p.x < 0) {
+		v.x = abs(v.x);
+	}
+
+	if(p.x > (640 - bounds.w())) {
+		v.x = -abs(v.x);
+	}
+
+	if(p.y < 0) {
+		v.y = abs(v.y);
+	}
+
+	if(p.y > (480 - bounds.h())) {
+		v.y = -abs(v.y);
+	}	
+
+}
+
 void drawCSS() {
 
 	if(*(BYTE*)(0x00773158 + 0x3C) == 0x01) { // in stagesel, dont draw
@@ -929,7 +965,9 @@ void drawCSS() {
 
 		drawMoonAfterSelect(i, p);
 	}
-	
+
+	drawFN1Shitpost();
+
 }
 
 void updateCSSStuff() {

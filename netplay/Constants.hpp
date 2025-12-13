@@ -322,7 +322,7 @@ const std::vector<std::pair<std::string, uint32_t>> gameInputBits =
     { "D",           CC_BUTTON_D << 8 },
     { "E",           CC_BUTTON_E << 8 },
     { "Start",       CC_BUTTON_START << 8 },
-    { "FN1(Swap Lock)",         CC_BUTTON_FN1 << 8 },
+    { "FN1(Toggle Lock)",         CC_BUTTON_FN1 << 8 },
     { "FN2",         CC_BUTTON_FN2 << 8 },
     { "A+B",         CC_BUTTON_AB << 8 },
 };
