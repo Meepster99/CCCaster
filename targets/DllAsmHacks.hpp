@@ -1002,9 +1002,9 @@ extern "C" {
 	
 }
 
-__attribute((naked, noinline)) void _naked_fuckingAround();
+__attribute__((naked, noinline)) void _naked_fuckingAround();
 
-
+__attribute__((naked, noinline)) void _naked_mainDrawCall();
 
 static const AsmList initPatch2v2 =
 { 
@@ -1237,6 +1237,18 @@ static const AsmList initPatch2v2 =
 
 	PATCHJUMP(0x004bdae4, _naked_fuckingAround),
 
+	// some weird shit relating to resolution. 
+	
+	/*
+	{ ( void * ) (0x0040df50 + 1), { INLINE_DWORD( 2048 ) } }, // horiz of something
+
+	{ ( void * ) (0x0040df4b + 1), { INLINE_DWORD( 2048 ) } }, // vert of something, all these others are also needed, i think
+	{ ( void * ) (0x0040df6c + 1), { INLINE_DWORD( 2048 ) } },
+	{ ( void * ) (0x0040df87 + 1), { INLINE_DWORD( 2048 ) } },
+	{ ( void * ) (0x0040dfa3 + 1), { INLINE_DWORD( 2048 ) } },
+
+	PATCHJUMP(0x0043304b, _naked_mainDrawCall),
+	*/
 
 };
 

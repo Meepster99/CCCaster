@@ -3360,8 +3360,7 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	if(ONEPRESS) {
 		GGPO::initGGPO();
 	}
-	#endif
-		
+	#endif		
 
 	doUpdate();
 	
@@ -3382,6 +3381,10 @@ void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt) {
 	restoreRenderState();
 
 	// -- END ACTUAL RENDERING --
+
 	
+	//device->GetClipStatus(&what);
+
+
 }
 

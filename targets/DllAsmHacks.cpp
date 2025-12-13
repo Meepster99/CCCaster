@@ -1372,7 +1372,7 @@ extern "C" __attribute__((noinline, cdecl)) void fuckingAround(D3DPRESENT_PARAME
 }
 
 void _naked_fuckingAround() {
-
+ 
 	// patched at 004bdae4
 
 	emitCall(0x004bd940);
@@ -1390,6 +1390,73 @@ void _naked_fuckingAround() {
 	POP_ALL;
 
 	emitJump(0x004bdae9);
+
+}
+
+void _naked_mainDrawCall() {
+
+	// patched at 0043304b
+
+	__asmStart R"(
+	
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+		nop;
+	
+	
+	)" __asmEnd
+
+
+	emitCall(0x00415580); // drawtexture call
+
+	emitJump(0x00433050); // jump to ret
 
 }
 
@@ -1742,10 +1809,11 @@ void modifyLinkedList() {
         return;
     }
 
-    //log("start");
-
-    DWORD actual;
+	//log("start");
+	
+    DWORD ihatethesyntaxhighlighting;
     DWORD test;
+	DWORD actual;
 
     DWORD addr = *(DWORD*)0x005550A8;
     LinkedListRenderList* linkedListRenderList = renderList->linkedListRenderList;
