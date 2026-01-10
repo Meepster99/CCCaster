@@ -548,6 +548,8 @@ void _naked_fileLoad() {
 
 void charTurnAround() {
 
+    // really wish i commented any of this code. what was i on?
+
     BYTE al;
 
     BYTE a = *(BYTE*)(charTurnAround_ECX + 0x000001EC);
@@ -565,7 +567,7 @@ void charTurnAround() {
         return;
     }
 
-    log("%d %d", a, b);
+    //log("%d %d", a, b);
 
     /*
     naked_charTurnAroundStateRes = 0;

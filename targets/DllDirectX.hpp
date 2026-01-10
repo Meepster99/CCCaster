@@ -1138,3 +1138,23 @@ struct Smooth {
 }; 
 
 void __stdcall _doDrawCalls(IDirect3DDevice9 *deviceExt);
+
+class Replay2v2 {
+public:
+
+	Replay2v2(); 
+	
+	void init(); // init a new replay (chars, moon, color, time)
+
+	void add(); // add the current controller data to this replay
+
+	void save(); // write to file
+
+	void update(); // main thing to call
+
+	DWORD prevGameMode = 0; // from CC_GAME_MODE_ADDR
+
+};
+
+extern Replay2v2 replay2v2;
+

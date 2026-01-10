@@ -2466,6 +2466,35 @@ void TextDrawSimple(float x, float y, float size, DWORD ARGB, const char* format
 
 // -----
 
+Replay2v2 replay2v2;
+
+Replay2v2::Replay2v2() {
+
+
+}
+
+void Replay2v2::init() {
+
+}
+
+void Replay2v2::add() {
+
+
+}
+
+void Replay2v2::save() {
+
+	
+}
+
+void Replay2v2::update() {
+
+
+
+
+
+}
+
 void updateGameState() {
 	
     for(int i=0; i<4; i++) {
@@ -2493,6 +2522,14 @@ void updateGameState() {
 	// moving it next to naked_charTurnAroundState
 	//static DWORD FN1States[4] = {0, 0, 0, 0}; 
 	DWORD baseControlsAddr = *(DWORD*)0x76E6AC;
+
+	// im trying to get replays at least "sorta" done before japan.
+	// well im in japan, and the ppl are here, and so i need to get this done now
+	// and im sleepy, so get ready for ass code
+
+	replay2v2.update();
+
+
 	for(int i=0; i<4; i++) {
 		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
 		fn1 &= 0b1;
