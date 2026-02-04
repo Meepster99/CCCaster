@@ -96,3 +96,5 @@ Palette Credits:
     yakuza5remastered
 
 	ghostnails
+	
+	ougonkuro
