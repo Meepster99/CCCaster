@@ -2479,6 +2479,21 @@ void Replay2v2::init() {
 
 void Replay2v2::add() {
 
+	// base [0x76E6AC]
+ 	// p1 dir base +0 (00770F48)
+	// p2 dir 00770F5C
+	// p3 dir 00770F70
+	// p4 dir 00770F84
+
+	/*
+	fn1
+	p1 00770F55
+	p2 00770F69
+	p3 00770F7D
+	p4 00770F91
+	
+	*/
+	
 
 }
 

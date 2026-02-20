@@ -1355,7 +1355,7 @@ void _naked_updateGameStateCallback() {
 #include <d3d9.h> // this shouldnt be here.
 extern "C" __attribute__((noinline, cdecl)) void fuckingAround(D3DPRESENT_PARAMETERS* presentParam) {
 
-	return;
+	//return;
 
 	//presentParam->MultiSampleType = D3DMULTISAMPLE_TYPE::D3DMULTISAMPLE_4_SAMPLES;
 
@@ -1363,9 +1363,17 @@ extern "C" __attribute__((noinline, cdecl)) void fuckingAround(D3DPRESENT_PARAME
 	// very weird
 	// this effects the size of the backbuffer, but doesnt change the window. 
 	// i could use this to have a higher resolution window in the same size... window frame yk
-	presentParam->BackBufferWidth *= 1;
-	presentParam->BackBufferHeight *= 2;
+	//presentParam->BackBufferWidth *= 1;
+	//presentParam->BackBufferHeight *= 2;
 
+    log("sizeof params %d", sizeof(D3DPRESENT_PARAMETERS));
+
+    //presentParam->PresentationInterval = D3DPRESENT_INTERVAL_ONE;
+    //presentParam->FullScreen_RefreshRateInHz = 60;
+
+    log("refreshrate %d", presentParam->FullScreen_RefreshRateInHz);
+    log("present interval %08X", presentParam->PresentationInterval);
+    
 	log("omfg %d %d", presentParam->BackBufferWidth, presentParam->BackBufferHeight);
 
 	log("MultiSampleType %d", presentParam->MultiSampleType);
@@ -1944,6 +1952,13 @@ void modifyLinkedList() {
                     
                 }
             }
+            // reset the extradata after this, to prevent the weird flickering? i hope
+            // idk why i hadnt done this previously
+            // which render implimentation should i put into mainline caster?,, im not sure
+            // not reseting the diffuse stuff also may cause some issues, if those things are reused ( i think they are? )
+            // regardless, i cant get the flickering to occur in training mode. seems a full game is needed
+            // i should just use the ETM version
+            memset(data, 0, sizeof(ExtraData));
 
         }
 
