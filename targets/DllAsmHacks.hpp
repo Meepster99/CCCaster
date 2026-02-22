@@ -1006,6 +1006,8 @@ __attribute__((naked, noinline)) void _naked_fuckingAround();
 
 __attribute__((naked, noinline)) void _naked_mainDrawCall();
 
+__attribute__((naked, noinline)) void _naked_fixHitBlockDetection();
+
 static const AsmList initPatch2v2 =
 { 
 
@@ -1250,6 +1252,15 @@ static const AsmList initPatch2v2 =
 	PATCHJUMP(0x0043304b, _naked_mainDrawCall),
 	*/
 
+    /* 
+    this is here to,,, attempt
+    to fix the issues where if you hit both opposing players, one who is blocking, and one who isnt, you cant jump cancel. 
+    this might fix things
+    and probs introduces a bunch of other bs
+    */
+
+    PATCHJUMP(0x00466570, _naked_fixHitBlockDetection),
+    
 };
 
 static const AsmList patch2v2 = 

@@ -1470,6 +1470,36 @@ void _naked_mainDrawCall() {
 
 }
 
+//extern "C" DWORD _naked_fixHitBlockDetection_jumpAddr = 0x0046654e; // shoutout gonp for doing their jumps like this. at least in inline asm, its much better
+
+void _naked_fixHitBlockDetection() {
+
+    // patched at 00466570
+    // if this doesnt compile into the same code ill kill myself 
+
+    __asmStart R"( 
+
+        TEST byte ptr[edx + 0x18], 0x4;
+        jnz SHOULDJUMP;
+        cmp al, 0x13; // if its 3, that means we both hit and were blocked at the same time. allow the cancel since a hit occured 
+        jz SHOULDJUMP;
+        test al, 0x1;
+        jz SHOULDJUMP;
+
+        DONTJUMP:
+
+    )" __asmEnd
+
+    emitJump(0x0046657a);   
+
+    __asmStart R"(
+        SHOULDJUMP:
+    )" __asmEnd
+    emitJump(0x0046654e);
+
+
+}
+
 // -----
 
 extern "C" {
@@ -1951,7 +1981,7 @@ void modifyLinkedList() {
                     }
                     
                 }
-            }
+            }   
             // reset the extradata after this, to prevent the weird flickering? i hope
             // idk why i hadnt done this previously
             // which render implimentation should i put into mainline caster?,, im not sure
