@@ -1480,20 +1480,18 @@ void _naked_fixHitBlockDetection() {
     __asmStart R"( 
 
         TEST byte ptr[edx + 0x18], 0x4;
-        jnz SHOULDJUMP;
+        jnz TREATASHIT;
         cmp al, 0x13; // if its 3, that means we both hit and were blocked at the same time. allow the cancel since a hit occured 
-        jz SHOULDJUMP;
+        jz TREATASHIT;
         test al, 0x1;
-        jz SHOULDJUMP;
-
-        DONTJUMP:
+        jz TREATASHIT;
 
     )" __asmEnd
 
     emitJump(0x0046657a);   
 
     __asmStart R"(
-        SHOULDJUMP:
+        TREATASHIT:
     )" __asmEnd
     emitJump(0x0046654e);
 
