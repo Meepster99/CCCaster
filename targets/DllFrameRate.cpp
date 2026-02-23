@@ -7,6 +7,7 @@
 #include <timeapi.h>
 
 #include <d3dx9.h>
+#include <math.h>
 
 //using namespace std;
 using namespace DllFrameRate;
@@ -97,7 +98,12 @@ void oldCasterFrameLimiter() {
 }
 
 void newCasterFrameLimiter() {
-	
+
+    static int rollingFrameAverageSum = 0;
+    static uint32_t rollingFrameAverage[30] = {0};\
+    const int rollingFrameAverageLen = (sizeof(rollingFrameAverage)/sizeof(rollingFrameAverage[0]));
+    static int rollingFrameAverageIndex = 0;
+
 	static LARGE_INTEGER baseFreq;
 	static LARGE_INTEGER freq; 
 	static LARGE_INTEGER prevFrameTime;
@@ -122,9 +128,14 @@ void newCasterFrameLimiter() {
 		}
 	}
 
-	uint32_t temp = (baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
+	uint32_t temp = (100*baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
 	
-	*CC_FPS_COUNTER_ADDR = temp;
+    rollingFrameAverageSum -= rollingFrameAverage[rollingFrameAverageIndex];
+    rollingFrameAverageSum += temp;
+    rollingFrameAverage[rollingFrameAverageIndex] = temp;
+    rollingFrameAverageIndex = (rollingFrameAverageIndex + 1) % rollingFrameAverageLen;
+
+	*CC_FPS_COUNTER_ADDR = ceil(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
 
 	prevFrameTime.QuadPart = currTime.QuadPart;
 }
