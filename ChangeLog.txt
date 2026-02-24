@@ -1,3 +1,6 @@
+v3.1.008
+- Display fps value as a rolling average, no more flickering
+
 v3.1.007
 - Changed the frame limiter to prevent fastmelty, run game at 60 (by Inana)
 - Added toggle for stage animations

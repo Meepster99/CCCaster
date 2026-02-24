@@ -76,7 +76,7 @@
 #define CC_DUMMY_STATUS_DUMMY       ( 5 )
 #define CC_DUMMY_STATUS_RECORD      ( -1 )
 
-#define CC_PTR_TO_WRITE_INPUT_ADDR  ( ( char * )     0x76E6AC ) // Pointer to the location to write game input
+#define CC_PTR_TO_WRITE_INPUT_ADDR  ( ( DWORD )     0x76E6AC ) // Pointer to the location to write game input
 #define CC_P1_OFFSET_DIRECTION      ( 0x18 )                    // Offset to write P1 direction input
 #define CC_P1_OFFSET_BUTTONS        ( 0x24 )                    // Offset to write P1 buttons input
 #define CC_P2_OFFSET_DIRECTION      ( 0x2C )                    // Offset to write P2 direction input
@@ -226,7 +226,7 @@
 #define MM_HOOK_CALL2_ADDR          ( ( char * )     0x40D411 )
 
 // Allows for multiple instances of melty
-#define MULTIPLE_MELTY              ( ( char * )     0x40D25A )
+#define MULTIPLE_MELTY              ( ( DWORD )     0x40D25A )
 
 // Addresses for sprite textures
 #define BUTTON_SPRITE_TEX           ( 0x74d5e8 )
