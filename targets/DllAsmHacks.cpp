@@ -427,6 +427,7 @@ extern "C" {
     DWORD naked_charTurnAroundParam2 = 0;
     DWORD naked_charTurnAroundState[4] = { 0, 0, 1, 1 };
     DWORD FN1States[4] = {0, 0, 0, 0};
+    DWORD hasTakenPushback[4] = {0, 0, 0, 0};
     DWORD charTurnAround_ECX;
     DWORD charTurnAround_EBP;
     void charTurnAround();
@@ -1495,6 +1496,168 @@ void _naked_fixHitBlockDetection() {
     )" __asmEnd
     emitJump(0x0046654e);
 
+
+}
+
+
+extern "C" __attribute__((stdcall, noinline)) DWORD fixDoublePushbackCorner(DWORD ESI) {
+    int index = (ESI - 0x00555134) / 0xAFC;
+    DWORD res = hasTakenPushback[index];
+    hasTakenPushback[index] = 1;
+    return !res;
+}
+
+void _naked_fixDoublePushbackCorner() {
+
+    // patched at 0x00462713
+    
+    
+    PUSH_ALL;
+
+    __asmStart R"(
+        
+        push esi;    
+        call _fixDoublePushbackCorner;
+
+        cmp eax, 0;
+        jz DONTCALL;
+
+    )" __asmEnd
+
+    
+    __asmStart R"(
+        DOCALL:
+    )" __asmEnd
+    POP_ALL;
+    emitCall(0x00462730);
+    emitJump(0x00462718);
+
+
+    __asmStart R"(
+        DONTCALL:
+    )" __asmEnd
+    POP_ALL;
+
+    emitJump(0x00462718);
+    
+   
+}
+
+extern "C" __attribute__((stdcall, noinline)) void fixHorizontalDoublePushback(DWORD ESI, DWORD d1, DWORD d2, DWORD isX) {
+
+    // seems that velqueue is a int, accelqueue is a short?
+    // d2 is a smaller size, but due to woke (me relying on stdcall) im just passing it in as a dword and ill use the lower part of it
+
+    // i could do this in asm, but i could also explode
+
+    // this stuff only applies like,,, god idk
+    // the vars still apply correctly even when hitting 2 ppl, for the most part
+    // but this might make combos on 2 ppl more consistent, so we take it ig
+
+    int* velPtr = (int*)(ESI + 0x128);
+    short* accelPtr = (short*)(ESI + 0x130);
+
+    if(!isX) { // we are doing the yaccel part of the code, update the pointers
+        velPtr = (int*)(ESI + 0x12C);
+        accelPtr = (short*)(ESI + 0x132);
+    }
+
+    int vel = *velPtr;
+    short accel = *accelPtr;
+
+    int desiredVel = *(int*)&d1; 
+    short desiredAccel = *(short*)&d2;
+    
+    /*
+    heres the thing.
+    lets say i have a current queued xvel of -5. 
+    a number walks into this bar and says 8
+    its larger, but should i set it to -8? naw. 
+    i think ill just set the largest regardless of sign
+    */
+
+    if(abs(desiredVel) > abs(vel)) {
+        vel = desiredVel;
+    }
+
+    if(abs(desiredAccel) > abs(accel)) {
+        accel = desiredAccel;
+    }
+
+    if(isX && desiredAccel == 0) { 
+        // i feel like 0 writes should just go through. the logic at 004727a6 makes me feel this
+        accel = 0; 
+    }
+
+    //xVel = desiredxVel;
+    //exAccel = desiredxAccel;
+
+    *velPtr = vel;
+    *accelPtr = accel;
+}
+
+void _naked_fixDoublePushback1() {
+
+    // patched at 0x004727bb
+
+    PUSH_ALL_PARANOIA; 
+
+    // issue. i need ebp here. why the fuck did i have my push instructions... overwrite this, like ik i was trying to setup a stack frame but
+    // but am i a fucking idiot? 
+    __asmStart R"(
+        push 0x00000001;
+        push ebp; 
+        push ecx;
+        push esi;
+        call _fixHorizontalDoublePushback;
+    )" __asmEnd
+
+    POP_ALL_PARANOIA;
+
+    emitJump(0x004727c8);
+}
+
+void _naked_fixDoublePushback2() {
+
+    // patched at 0x004727a0
+
+    PUSH_ALL_PARANOIA;
+
+    __asmStart R"(
+        push 0x00000001;
+        push ebx;
+        push ebp;
+        push esi;
+        call _fixHorizontalDoublePushback;
+    )" __asmEnd
+
+    POP_ALL_PARANOIA;
+
+    emitJump(0x004727ad);
+
+}
+
+void _naked_fixDoublePushback3() {
+
+    // patched at 0x004727da
+
+    PUSH_ALL_PARANOIA;
+
+    __asmStart R"(
+        push 0x00000000;
+        push eax;
+        push edx;
+        push esi;
+        call _fixHorizontalDoublePushback;
+    )" __asmEnd
+
+    POP_ALL_PARANOIA;
+
+    // the compare at 004727c8 is used for the jump at 004727e7, but will def be overwritten by my bs, redo it here
+    __asmStart R"(
+        cmp dword ptr [esp + 0x28], 0x5;
+    )" __asmEnd
+    emitJump(0x004727e7);
 
 }
 

@@ -266,7 +266,8 @@ typedef RenderList::LinkedListAllAssets::LinkedListAssetsList                   
 #define DOWNPRESS  (GetAsyncKeyState(VK_DOWN)  & 0x0001)
 #define LEFTPRESS  (GetAsyncKeyState(VK_LEFT)  & 0x0001)
 #define RIGHTPRESS (GetAsyncKeyState(VK_RIGHT) & 0x0001)
-#define F12PRESS   (GetAsyncKeyState(VK_F12)   & 0x0001)
+#define F12PRESS   (GetAsyncKeyState(VK_DELETE)   & 0x0001)
+#define INSERTPRESS (GetAsyncKeyState(VK_INSERT) & 0x0001)
 
 #define ONEPRESS  (GetAsyncKeyState('1')   & 0x0001)
 #define TWOPRESS   (GetAsyncKeyState('2')     & 0x0001)
@@ -296,6 +297,30 @@ typedef RenderList::LinkedListAllAssets::LinkedListAssetsList                   
 #define POP_ALL \
     __asm__ __volatile__( \
        "pop %ebp;" \
+       "pop %eax;" \
+       "pop %ebx;" \
+       "pop %ecx;" \
+       "pop %edx;" \
+       "pop %esi;" \
+       "pop %edi;" \
+       "pop %ebp;" \
+       "pop %esp;" \
+    )
+
+#define PUSH_ALL_PARANOIA \
+    __asm__ __volatile__( \
+        "push %esp;"  \
+        "push %ebp;"  \
+        "push %edi;"  \
+        "push %esi;"  \
+        "push %edx;"  \
+        "push %ecx;"  \
+        "push %ebx;"  \
+        "push %eax;"  \
+    )
+
+#define POP_ALL_PARANOIA \
+    __asm__ __volatile__( \
        "pop %eax;" \
        "pop %ebx;" \
        "pop %ecx;" \
@@ -902,6 +927,7 @@ __attribute__((naked, noinline)) void _naked_battleResetCallback();
 extern "C" {
     extern DWORD naked_charTurnAroundState[4];
     extern DWORD FN1States[4];
+    extern DWORD hasTakenPushback[4];
 }
 
 __attribute__((naked, noinline)) void _naked_charTurnAround();
@@ -1007,6 +1033,11 @@ __attribute__((naked, noinline)) void _naked_fuckingAround();
 __attribute__((naked, noinline)) void _naked_mainDrawCall();
 
 __attribute__((naked, noinline)) void _naked_fixHitBlockDetection();
+
+__attribute__((naked, noinline)) void _naked_fixDoublePushback1();
+__attribute__((naked, noinline)) void _naked_fixDoublePushback2();
+__attribute__((naked, noinline)) void _naked_fixDoublePushback3();
+__attribute__((naked, noinline)) void _naked_fixDoublePushbackCorner();
 
 static const AsmList initPatch2v2 =
 { 
@@ -1261,6 +1292,39 @@ static const AsmList initPatch2v2 =
 
     PATCHJUMP(0x00466570, _naked_fixHitBlockDetection),
     
+    PATCHJUMP(0x004727bb, _naked_fixDoublePushback1),
+    PATCHJUMP(0x004727a0, _naked_fixDoublePushback2),
+    PATCHJUMP(0x004727da, _naked_fixDoublePushback3),
+
+    PATCHJUMP(0x00462713, _naked_fixDoublePushbackCorner),
+
+    /*
+    
+    TODO:
+
+    store 8 pairwise bools for attacker and defender
+    whenever i jump cancel something, track which chars were hit by the jump canceled move
+    reset the flag when a given defender recovers
+    only allow jump cancels once per defender per combo
+
+    if A is uses a jump cancel on both C & D, and C recovs, A should be able to jump cancel C but not D
+
+    reverse penalty should be kept in the attacker, but proration and hitcount could be pairwise
+    proration would be stored as A's proration on C&D
+
+    double pushback
+    highkey have pushback be set to the max of whatever is pushing
+
+    notes:
+
+    for double pushback, 00472740 is called when a hit occurs, is called twice
+    but, this occurs on both hit and block
+    hits have pushback too tho, so... this doesnt matter
+    the goal should be to apply a max func to the pushback instead of summing it all together
+    a slight issue is ... sign differences? but i can compare the abs values of them and pray
+
+    */
+
 };
 
 static const AsmList patch2v2 = 

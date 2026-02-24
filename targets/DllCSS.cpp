@@ -10,7 +10,11 @@
 #include "DllGGPO.hpp"
 
 #ifndef F12PRESS 
-#define F12PRESS   (GetAsyncKeyState(VK_F12) & 0x0001)
+#define F12PRESS   (GetAsyncKeyState(VK_DELETE) & 0x0001)
+#endif
+
+#ifndef INSERTPRESS
+#define INSERTPRESS (GetAsyncKeyState(VK_INSERT) & 0x0001)
 #endif
 
 #define SAFEMOD(a, b) (((b) + ((a) % (b))) % (b))
@@ -758,6 +762,28 @@ void updateControls() {
 	if(F12PRESS) {
 		copyInputs = !copyInputs;
 		//log("copyInputs: %d", copyInputs);
+	}
+
+	if(INSERTPRESS) {
+		for(int i=0; i<4; i++) {
+
+			ourCSSData[i].idIndex = 1;
+			players[i]->palette = i; 
+
+
+			dispPlayers[i]->gridPos = charGridList[ourCSSData[i].idIndex];
+			players[i]->charID = charIDList[ourCSSData[i].idIndex];
+			dispPlayers[i]->charID = players[i]->charID;
+			dispPlayers[i]->palette = players[i]->palette;
+
+			players[i]->moon = ourCSSData[i].moonIndex;
+			dispPlayers[i]->moon = ourCSSData[i].moonIndex;
+
+			ourCSSData[i].paletteIndex = players[i]->palette;
+
+			ourCSSData[i].selectIndex = menuOptionCount - 1;
+
+		}
 	}
 
 	// handle controls

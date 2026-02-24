@@ -2544,6 +2544,10 @@ void updateGameState() {
 
 	replay2v2.update();
 
+	for(int i=0; i<4; i++) {
+		AsmHacks::hasTakenPushback[i] = 0; // i hate this. why is this code in the directx func!!!! what am i doing?
+	}
+
 
 	for(int i=0; i<4; i++) {
 		BYTE fn1 = *(BYTE*)(baseControlsAddr + 0x25 + (i * 0x14));
