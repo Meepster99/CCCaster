@@ -35,7 +35,7 @@ void enable()
 	// this will call limitfps after present (and the stuff which hooks onto present) exits
 	// it might be better? but it makes my frame counter look worse, for obvious reasons
 	for ( const AsmHacks::Asm& hack : AsmHacks::hookPresentCaller ) {
-		//WRITE_ASM_HACK ( hack );
+		WRITE_ASM_HACK ( hack );
 	}
 
     isEnabled = true;
@@ -155,5 +155,5 @@ void limitFPS() {
 void PresentFrameEnd ( IDirect3DDevice9 *device )
 {
 	// comment this out if you uncommented the hookPresentCaller hack
-	DllFrameRate::limitFPS();
+	//DllFrameRate::limitFPS();
 }
