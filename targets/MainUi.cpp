@@ -7,6 +7,7 @@
 #include "CharacterSelect.hpp"
 #include "StringUtils.hpp"
 #include "NetplayStates.hpp"
+#include "MeltySettingsManager.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -1356,11 +1357,17 @@ void MainUi::settings()
                 break;
             case 12:
                 _ui->pushInFront ( new ConsoleUi::Menu ( "Experimental Options",
-                                                         { "Disable Caster Frame Limiter", "Disable Stage Animations" }, "Cancel" ),
+                                                         { 
+                                                            "Disable Caster Frame Limiter", 
+                                                            "Disable Stage Animations",
+                                                            "Adjust BGM Volume",
+                                                            "Adjust SFX Volume",
+                                                        }, "Cancel" ),
                                    { 0, 0 }, true ); // Don't expand but DO clear top
                 while ( true ) {
                     _ui->popUntilUserInput();
                     int setting = _ui->top()->resultInt;
+
                     if ( setting == 0 ) {
                         _ui->pushInFront ( new ConsoleUi::Menu ( "Disable Caster Frame Limiter?",
                                                                  { "Yes", "No" }, "Cancel" ),
@@ -1389,6 +1396,62 @@ void MainUi::settings()
                                 _config.setInteger ( "stageAnimations", ( _ui->top()->resultInt + 1 ) % 2 );
                                 saveConfig();
                             }
+
+                        _ui->pop();
+                    } else if ( setting == 2 ) {
+                        _ui->pushInFront ( new ConsoleUi::Prompt ( ConsoleUi::Prompt::Integer, "Enter BGM Volume (0-20)" ),
+                        { 0, 0 }, true ); // Don't expand but DO clear top
+
+                        _ui->top<ConsoleUi::Prompt>()->allowNegative = false;
+                        _ui->top<ConsoleUi::Prompt>()->maxDigits = 2;
+                        _ui->top<ConsoleUi::Prompt>()->setInitial ( _config.getInteger ( "bgmVolume" ) );
+
+                        for ( ;; )
+                        {
+                            _ui->popUntilUserInput();
+
+                            if ( _ui->top()->resultInt < 0 )
+                                break;
+
+                            if ( _ui->top()->resultInt > 20 )
+                            {
+                                _ui->pushBelow ( new ConsoleUi::TextBox ( "Volume can't be greater than 20!" ) );
+                                continue;
+                            }
+
+                            _config.setInteger ( "bgmVolume", _ui->top()->resultInt );
+                            writeBGMVolume(_ui->top()->resultInt);
+                            saveConfig();
+                            break;
+                        }
+
+                        _ui->pop();
+                    } else if ( setting == 3 ) {
+                       _ui->pushInFront ( new ConsoleUi::Prompt ( ConsoleUi::Prompt::Integer, "Enter SFX Volume (0-20)" ),
+                        { 0, 0 }, true ); // Don't expand but DO clear top
+
+                        _ui->top<ConsoleUi::Prompt>()->allowNegative = false;
+                        _ui->top<ConsoleUi::Prompt>()->maxDigits = 2;
+                        _ui->top<ConsoleUi::Prompt>()->setInitial ( _config.getInteger ( "sfxVolume" ) );
+
+                        for ( ;; )
+                        {
+                            _ui->popUntilUserInput();
+
+                            if ( _ui->top()->resultInt < 0 )
+                                break;
+
+                            if ( _ui->top()->resultInt > 20 )
+                            {
+                                _ui->pushBelow ( new ConsoleUi::TextBox ( "Volume can't be greater than 20!" ) );
+                                continue;
+                            }
+
+                            _config.setInteger ( "sfxVolume", _ui->top()->resultInt );
+                            writeSFXVolume(_ui->top()->resultInt);
+                            saveConfig();
+                            break;
+                        }
 
                         _ui->pop();
                     } else {
@@ -1540,6 +1603,9 @@ void MainUi::initialize()
     _config.setInteger ( "lastMainMenuPosition", -1 );
     _config.setInteger ( "lastServerMenuPosition", -1 );
     _config.setInteger ( "lastOfflineMenuPosition", -1 );
+
+    _config.setInteger("bgmVolume", 10);
+    _config.setInteger("sfxVolume", 10);
 
     // Load and save main config (this creates the config file on the first time)
     loadConfig();

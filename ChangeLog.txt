@@ -1,3 +1,7 @@
+v3.1.009
+- Controller bind text size now scales with screen resolution
+- Change bgm and sfx volume in caster
+
 v3.1.008
 - Display fps value as a rolling average, no more flickering
 - Change the location of the frame limiter hook

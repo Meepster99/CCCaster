@@ -1349,7 +1349,7 @@ struct MainApp
         }
         if ( ui.getConfig().getInteger ( "stageAnimations" ) > 0 )
         {
-            options.set ( Options::FrameLimiter, 1 );
+            options.set ( Options::StageAnimations, 1 );
         }
         if ( ! ProcessManager::getIsWindowed() )
         {

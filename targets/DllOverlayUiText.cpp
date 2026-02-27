@@ -4,6 +4,7 @@
 #include "DllTrialManager.hpp"
 #include "ProcessManager.hpp"
 #include "Enum.hpp"
+#include "Constants.hpp"
 
 #include <windows.h>
 #include <d3dx9.h>
@@ -18,7 +19,7 @@ using namespace DllOverlayUi;
 
 #define OVERLAY_FONT                    "Tahoma"
 
-#define SCALE_FACTOR ((float)(*(DWORD*)(0x0054d04c)) / 640.0)
+#define SCALE_FACTOR ((float)(*INITIAL_SCREEN_HEIGHT) / 640.0)
 
 #define OVERLAY_FONT_HEIGHT             ((int)( 14.0 * SCALE_FACTOR))
 

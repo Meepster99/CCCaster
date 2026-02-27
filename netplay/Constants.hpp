@@ -242,6 +242,10 @@
 #define CC_SHOW_ATTACK_DISPLAY      ( ( int * )      0x5595B8 )
 #define CC_SHOW_INPUT_DISPLAY       ( ( int * )      0x5585F8 )
 
+#define INITIAL_SCREEN_WIDTH  ( ( int * ) 0x0054d048)
+#define INITIAL_SCREEN_HEIGHT ( ( int * ) 0x0054d04c)
+
+
 union IndexedFrame
 {
     struct { uint32_t frame, index; } parts;
