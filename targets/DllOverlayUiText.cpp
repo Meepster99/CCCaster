@@ -18,9 +18,11 @@ using namespace DllOverlayUi;
 
 #define OVERLAY_FONT                    "Tahoma"
 
-#define OVERLAY_FONT_HEIGHT             ( 14 )
+#define SCALE_FACTOR ((float)(*(DWORD*)(0x0054d04c)) / 640.0)
 
-#define OVERLAY_FONT_WIDTH              ( 5 )
+#define OVERLAY_FONT_HEIGHT             ((int)( 14.0 * SCALE_FACTOR))
+
+#define OVERLAY_FONT_WIDTH              ((int)( 5.0 * SCALE_FACTOR))
 
 #define OVERLAY_FONT_WEIGHT             ( 600 )
 
