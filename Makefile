@@ -96,7 +96,7 @@ CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 CC_FLAGS += -mmmx -msse -msse2 -msse3 -mssse3
 
 # Linker flags
-LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32
+LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 -Wl,--export-all-symbols
 
 # Build options
 # DEFINES += -DDISABLE_LOGGING

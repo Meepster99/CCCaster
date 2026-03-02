@@ -157,3 +157,7 @@ void PresentFrameEnd ( IDirect3DDevice9 *device )
 	// comment this out if you uncommented the hookPresentCaller hack
 	//DllFrameRate::limitFPS();
 }
+
+void setDesiredFPS(double desiredFps_) {
+    desiredFps = desiredFps_;
+}

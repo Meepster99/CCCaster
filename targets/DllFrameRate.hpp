@@ -15,3 +15,5 @@ void enable();
 void limitFPS();
 
 }
+
+extern "C" __attribute__((visibility("default"))) void setDesiredFPS(double desiredFps_);
