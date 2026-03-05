@@ -9,6 +9,8 @@
 #include <d3dx9.h>
 #include <math.h>
 
+#include "DllAsmHacks.hpp"
+
 //using namespace std;
 using namespace DllFrameRate;
 
@@ -60,6 +62,12 @@ void oldCasterFrameLimiter() {
      * passed since the last check and make sure we are close to or under the desired FPS.
      */
     
+
+    /*
+    below, the 1000 / desiredFps, the 1000 casts said number to an int
+    causing the value to be 16, instead of 16.666, which is what led to the game running at ~62.5 instead of 60
+    */ 
+   
      if ( counter % 30 == 0 )
     {
         while ( now - last30f < ( 30 * 1000 ) / desiredFps )
@@ -100,7 +108,7 @@ void oldCasterFrameLimiter() {
 void newCasterFrameLimiter() {
 
     static int rollingFrameAverageSum = 0;
-    static uint32_t rollingFrameAverage[30] = {0};\
+    static uint32_t rollingFrameAverage[60] = {0};\
     const int rollingFrameAverageLen = (sizeof(rollingFrameAverage)/sizeof(rollingFrameAverage[0]));
     static int rollingFrameAverageIndex = 0;
 
@@ -108,11 +116,26 @@ void newCasterFrameLimiter() {
 	static LARGE_INTEGER freq; 
 	static LARGE_INTEGER prevFrameTime;
 
+    static DWORD lastColor = 0x000000FF; // avoid excessive calls to patch
+
+    static int lagFrameTimer = 0;
+
+
+    static uint32_t omfg;
 	static bool isFirstRun = true;
 	if(isFirstRun) {
 		isFirstRun = false;
 
 		QueryPerformanceFrequency(&baseFreq); // i need to handle errors here, and maybe fallback to a different system. is this guarenteed to have enough resolution?
+
+        // fill the buffer with 60 to start
+        uint32_t fillVar = desiredFps * 100;
+        for(int i=0; i<rollingFrameAverageLen; i++) {
+            rollingFrameAverage[i] = fillVar;
+        }
+        rollingFrameAverageSum = rollingFrameAverageLen * fillVar;
+
+        omfg = fillVar;
 
 		prevFrameTime.QuadPart = 0;
 	}
@@ -121,22 +144,51 @@ void newCasterFrameLimiter() {
 
 	LARGE_INTEGER currTime;
 
-	while(true) {
+    bool wasLagFrame = true;
+	
+    while(true) {
 		QueryPerformanceCounter(&currTime);
 		if(currTime.QuadPart - prevFrameTime.QuadPart > freq.QuadPart) {
 			break;
 		}
+        wasLagFrame = false; // being here means we have some time to wait.
 	}
 
+    if(wasLagFrame) { 
+        lagFrameTimer = 30;
+    } else {
+        if(lagFrameTimer > 0) {
+            lagFrameTimer--;
+        }
+    }
+
 	uint32_t temp = (100*baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
-	
+	log("%d %d", temp, omfg);
     rollingFrameAverageSum -= rollingFrameAverage[rollingFrameAverageIndex];
     rollingFrameAverageSum += temp;
     rollingFrameAverage[rollingFrameAverageIndex] = temp;
     rollingFrameAverageIndex = (rollingFrameAverageIndex + 1) % rollingFrameAverageLen;
 
-	*CC_FPS_COUNTER_ADDR = ceil(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
+    if(wasLagFrame || rollingFrameAverageIndex == 0) { // old frame limiter only updated this value every second
+        //*CC_FPS_COUNTER_ADDR = ceil(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
+        //*CC_FPS_COUNTER_ADDR = round(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
+        *CC_FPS_COUNTER_ADDR = round(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
 
+        if(wasLagFrame || lagFrameTimer) {
+            DWORD tempCol = 0xFFFF00DD;
+            if(lastColor != tempCol) {
+                patchDWORD(CC_FPS_COUNTER_COLOR, tempCol);
+                lastColor = tempCol;
+            }
+        } else {
+            DWORD tempCol = 0x0000FFFF;
+            if(lastColor != tempCol) {
+                patchDWORD(CC_FPS_COUNTER_COLOR, tempCol);
+                lastColor = tempCol;
+            }
+        }   
+    }
+   
 	prevFrameTime.QuadPart = currTime.QuadPart;
 }
 
