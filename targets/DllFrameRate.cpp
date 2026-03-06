@@ -107,6 +107,25 @@ void oldCasterFrameLimiter() {
 
 void newCasterFrameLimiter() {
 
+    /*
+    
+    overall, this frame limiter is much better, but still is causing some issues
+    is it needed to swing back and do a frame fast if a lag frame occurs?
+    i had assumed that it would be better this way, maybe not.
+
+    people are having issues, but ive also fixed a ton of other issues. its 50/50
+
+    maybe aiming for a consistent 60 over ... yk what im doing now is better
+
+    but hypothetically, if someone had a massive lagframe, it would cause the game to over/under/idkflow the value needed for the bounceback
+    which would cause fastmelty? that ... makes sense tbh
+    but doesnt explain how those issues last for more than 60 frames
+
+    but tbh the other counter doesnt even do bounceback like how im saying here. it does wait every frame, and then does weird shit on every 5 and 30 and 60, but it still is just waiting
+    why the fuck is this causing issues?
+
+    */
+
     static int rollingFrameAverageSum = 0;
     static uint32_t rollingFrameAverage[60] = {0};\
     const int rollingFrameAverageLen = (sizeof(rollingFrameAverage)/sizeof(rollingFrameAverage[0]));
@@ -163,7 +182,7 @@ void newCasterFrameLimiter() {
     }
 
 	uint32_t temp = (100*baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
-	log("%d %d", temp, omfg);
+	//log("%d %d", temp, omfg);
     rollingFrameAverageSum -= rollingFrameAverage[rollingFrameAverageIndex];
     rollingFrameAverageSum += temp;
     rollingFrameAverage[rollingFrameAverageIndex] = temp;

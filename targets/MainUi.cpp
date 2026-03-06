@@ -979,6 +979,7 @@ void MainUi::settings()
         "Matchmaking Region",
         "Trial Input Guide Settings",
         "Experimental Settings",
+        "Time Played",
         "About",
     };
 
@@ -1461,6 +1462,15 @@ void MainUi::settings()
                 }
                 break;
             case 13:
+
+                     _ui->pushInFront ( new ConsoleUi::TextBox ( format ( "Play Time: %.1f hours"
+                    
+                    "\n\nPress any key to go back", (float)_config.getInteger("timePlayed") / (60.0 * 60.0)
+                    ) ),
+                     { 0, 0 }, true);
+                        system ( "@pause > nul" );
+                break;
+            case 14:
                 _ui->pushInFront ( new ConsoleUi::TextBox ( format ( "CCCaster %s%s\n\nRevision %s\n\nBuilt on %s\n\n"
                                    "Created by Madscientist\n\nPress any key to go back",
                                    LocalVersion.code,
@@ -1475,7 +1485,6 @@ void MainUi::settings()
                 { 0, 0 }, true ); // Don't expand but DO clear top
                 system ( "@pause > nul" );
                 break;
-
             default:
                 break;
         }
@@ -1606,6 +1615,8 @@ void MainUi::initialize()
 
     _config.setInteger("bgmVolume", 10);
     _config.setInteger("sfxVolume", 10);
+
+    _config.setInteger("timePlayed", 0);
 
     // Load and save main config (this creates the config file on the first time)
     loadConfig();
@@ -2036,6 +2047,23 @@ bool MainUi::confirm ( const string& question )
     _ui->pop();
 
     return ret;
+}
+
+void MainUi::trackTimePlayed(bool isStart) {
+    
+    static uint32_t startTime = 0;
+
+    if(isStart) {
+        startTime = (uint32_t)time(NULL);
+        return;
+    }
+
+    uint32_t sessionLength = time(NULL) - startTime;
+
+    _config.setInteger("timePlayed", _config.getInteger("timePlayed") + sessionLength);
+
+    saveConfig();
+
 }
 
 void *MainUi::getConsoleWindow()

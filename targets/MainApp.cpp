@@ -1145,6 +1145,8 @@ struct MainApp
         procMan.ipcSend ( netplayConfig );
 
         ui.display ( format ( "Started %s mode", getGameModeString() ) );
+
+        ui.trackTimePlayed(true);
     }
 
     void ipcDisconnected() override
@@ -1152,6 +1154,8 @@ struct MainApp
         if ( lastError.empty() )
             lastError = "Game closed!";
         stop();
+
+        ui.trackTimePlayed(false);
     }
 
     void ipcRead ( const MsgPtr& msg ) override
