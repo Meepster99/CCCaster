@@ -49,11 +49,7 @@ bool Version::isCustom() const
 
 bool Version::isSimilar ( const Version& other, uint8_t level ) const
 {
-    log("checking similiar leve: %d", level);
-    log("custom: %d %d", isCustom(), other.isCustom());
-    log("buildtimes: \"%s\" \"%s\" %d", buildTime.c_str(), other.buildTime.c_str(), buildTime == other.buildTime);
-    log("revisiions: \"%s\" \"%s\" %d", revision.c_str(), other.revision.c_str(), revision != other.revision);
-
+    
     switch ( level )
     {
         default:

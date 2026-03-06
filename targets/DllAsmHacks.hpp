@@ -268,7 +268,14 @@ __attribute__((naked, noinline)) void _naked_presentFuncCaller();
 static const AsmList hookPresentCaller = { // rets taken from func 0x004bdbc0
 	PATCHJUMP(0x004bdd4a, _naked_presentFuncCaller),
 	PATCHJUMP(0x004bdd6c, _naked_presentFuncCaller),
-	PATCHJUMP(0x004bdd9d, _naked_presentFuncCaller)
+	PATCHJUMP(0x004bdd9d, _naked_presentFuncCaller),
+
+    // this shit is stupid, murder meltys internal frame counter
+    // lets the game get the frame out earlier ig
+    // but tbh with my delay being after the frame idk how often this is called
+    // i could potentially ... add a delay BEFORE the frame if the frame
+    // to keep the frame out longer and wait for packets, if the packet recv is done in another thread? it must be right?
+    PATCHJUMP(0x004bdc66, 0x004bdd03),
 };
 
 // Disable normal joystick and keyboard controls

@@ -124,6 +124,8 @@ void newCasterFrameLimiter() {
     but tbh the other counter doesnt even do bounceback like how im saying here. it does wait every frame, and then does weird shit on every 5 and 30 and 60, but it still is just waiting
     why the fuck is this causing issues?
 
+    if im really going to throw shit at the wall, its possible that metlys frame limiter not being disabled also causes issues?
+
     */
 
     static int rollingFrameAverageSum = 0;
