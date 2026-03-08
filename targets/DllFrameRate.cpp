@@ -136,6 +136,7 @@ void newCasterFrameLimiter() {
 	static LARGE_INTEGER baseFreq;
 	static LARGE_INTEGER freq; 
 	static LARGE_INTEGER prevFrameTime;
+	static LARGE_INTEGER millisecondDuration;
 
     static DWORD lastColor = 0x000000FF; // avoid excessive calls to patch
 
@@ -149,6 +150,8 @@ void newCasterFrameLimiter() {
 
 		QueryPerformanceFrequency(&baseFreq); // i need to handle errors here, and maybe fallback to a different system. is this guarenteed to have enough resolution?
 
+		millisecondDuration.QuadPart = baseFreq.QuadPart / 1000;
+
         // fill the buffer with 60 to start
         uint32_t fillVar = desiredFps * 100;
         for(int i=0; i<rollingFrameAverageLen; i++) {
@@ -159,6 +162,8 @@ void newCasterFrameLimiter() {
         omfg = fillVar;
 
 		prevFrameTime.QuadPart = 0;
+
+		
 	}
 
 	freq.QuadPart = baseFreq.QuadPart / desiredFps; // hopefully this doesnt mess things up? this desiredfps var isnt touched anywhere really
@@ -166,6 +171,39 @@ void newCasterFrameLimiter() {
 	LARGE_INTEGER currTime;
 
     bool wasLagFrame = true;
+
+	
+	LARGE_INTEGER a;
+	LARGE_INTEGER b;
+	/*
+	QueryPerformanceCounter(&a);
+	timeBeginPeriod(1);
+	Sleep(1);
+	timeEndPeriod(1);
+	QueryPerformanceCounter(&b);
+
+	log("ugh %lld %lld", millisecondDuration.QuadPart, b.QuadPart - a.QuadPart);
+	*/
+
+	/*
+	what if.. i just isolate the 
+	i could maybe seperate the render state
+	
+	*/
+
+
+	
+	QueryPerformanceCounter(&currTime);
+	//log("%lld %lld %lld", currTime.QuadPart - prevFrameTime.QuadPart, millisecondDuration.QuadPart, freq.QuadPart);
+
+	// does this help ? 
+	// no fucking clue. i think it does?
+	// check process explorer for a cycle count. try setting affinity to use only one core. 
+	if((freq.QuadPart - (currTime.QuadPart - prevFrameTime.QuadPart)) > 2 * millisecondDuration.QuadPart) {
+		timeBeginPeriod(1);
+		Sleep(1);
+		timeEndPeriod(1);
+	}
 	
     while(true) {
 		QueryPerformanceCounter(&currTime);
@@ -173,6 +211,8 @@ void newCasterFrameLimiter() {
 			break;
 		}
         wasLagFrame = false; // being here means we have some time to wait.
+
+		// ANY quantity of sleep in this loop massively frees up cpu, massively decreasing people complaining, but having it be done accurately is close to impossible.
 	}
 
     if(wasLagFrame) { 
@@ -219,6 +259,7 @@ void limitFPS() {
         return;
 
 	//oldCasterFrameLimiter();
+	
 	newCasterFrameLimiter();
 
 }
