@@ -126,6 +126,12 @@ void newCasterFrameLimiter() {
 
     if im really going to throw shit at the wall, its possible that metlys frame limiter not being disabled also causes issues?
 
+	what if.. i just isolate the 
+	i could maybe seperate the render state/gamestate
+
+	in process explorer, nothings melty had rtkvhd64.sys as the entry instead of mbaa entry
+	could that be something?
+
     */
 
     static int rollingFrameAverageSum = 0;
@@ -162,8 +168,6 @@ void newCasterFrameLimiter() {
         omfg = fillVar;
 
 		prevFrameTime.QuadPart = 0;
-
-		
 	}
 
 	freq.QuadPart = baseFreq.QuadPart / desiredFps; // hopefully this doesnt mess things up? this desiredfps var isnt touched anywhere really
@@ -175,22 +179,6 @@ void newCasterFrameLimiter() {
 	
 	LARGE_INTEGER a;
 	LARGE_INTEGER b;
-	/*
-	QueryPerformanceCounter(&a);
-	timeBeginPeriod(1);
-	Sleep(1);
-	timeEndPeriod(1);
-	QueryPerformanceCounter(&b);
-
-	log("ugh %lld %lld", millisecondDuration.QuadPart, b.QuadPart - a.QuadPart);
-	*/
-
-	/*
-	what if.. i just isolate the 
-	i could maybe seperate the render state
-	
-	*/
-
 
 	
 	QueryPerformanceCounter(&currTime);
@@ -199,9 +187,23 @@ void newCasterFrameLimiter() {
 	// does this help ? 
 	// no fucking clue. i think it does?
 	// check process explorer for a cycle count. try setting affinity to use only one core. 
-	if((freq.QuadPart - (currTime.QuadPart - prevFrameTime.QuadPart)) > 2 * millisecondDuration.QuadPart) {
+	// this change seems to provide a good reduction in cpu usage (check process explorer thread properties)
+	LARGE_INTEGER frameTimeLeft;
+	frameTimeLeft.QuadPart = (freq.QuadPart - (currTime.QuadPart - prevFrameTime.QuadPart));
+	if(frameTimeLeft.QuadPart > 2 * millisecondDuration.QuadPart) {
+
+		DWORD millis = frameTimeLeft.QuadPart / millisecondDuration.QuadPart;
+
+		DWORD sleepTime = millis * 0.5;
+
+		if(millis > 10) {
+			sleepTime = millis * 0.75;
+		}
+
+		//log("%2d %2d", omfg, sleepTime);
 		timeBeginPeriod(1);
-		Sleep(1);
+		//Sleep(1);
+		Sleep(sleepTime);
 		timeEndPeriod(1);
 	}
 	
