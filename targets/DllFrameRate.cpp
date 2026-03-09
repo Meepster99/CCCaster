@@ -148,6 +148,7 @@ void newCasterFrameLimiter() {
 
     static int lagFrameTimer = 0;
 
+	static MMRESULT timeBeginPeriodRes = TIMERR_NOERROR;
 
     static uint32_t omfg;
 	static bool isFirstRun = true;
@@ -168,6 +169,9 @@ void newCasterFrameLimiter() {
         omfg = fillVar;
 
 		prevFrameTime.QuadPart = 0;
+
+		timeBeginPeriodRes = timeBeginPeriod(1);
+		timeEndPeriod(1);
 	}
 
 	freq.QuadPart = baseFreq.QuadPart / desiredFps; // hopefully this doesnt mess things up? this desiredfps var isnt touched anywhere really
@@ -175,34 +179,34 @@ void newCasterFrameLimiter() {
 	LARGE_INTEGER currTime;
 
     bool wasLagFrame = true;
-
 	
-	LARGE_INTEGER a;
-	LARGE_INTEGER b;
-
 	
-	QueryPerformanceCounter(&currTime);
 	//log("%lld %lld %lld", currTime.QuadPart - prevFrameTime.QuadPart, millisecondDuration.QuadPart, freq.QuadPart);
 
 	// does this help ? 
 	// no fucking clue. i think it does?
 	// check process explorer for a cycle count. try setting affinity to use only one core. 
 	// this change seems to provide a good reduction in cpu usage (check process explorer thread properties)
+	QueryPerformanceCounter(&currTime);
 	LARGE_INTEGER frameTimeLeft;
 	frameTimeLeft.QuadPart = (freq.QuadPart - (currTime.QuadPart - prevFrameTime.QuadPart));
-	if(frameTimeLeft.QuadPart > 2 * millisecondDuration.QuadPart) {
+	if((timeBeginPeriodRes == TIMERR_NOERROR) && (frameTimeLeft.QuadPart > 2 * millisecondDuration.QuadPart)) { // i tried putting this shit in the wait loop, dont, bad idea
 
 		DWORD millis = frameTimeLeft.QuadPart / millisecondDuration.QuadPart;
 
+		/*
 		DWORD sleepTime = millis * 0.5;
 
 		if(millis > 10) {
-			sleepTime = millis * 0.75;
+			sleepTime = millis * 0.75; // feel more comfy sleeping for longer if we have more leeway
+		}*/
+
+		DWORD sleepTime = millis - 1;
+		if(lagFrameTimer > 0) { // we are lagging. possibly sleep less?
+			sleepTime = millis * 0.67;
 		}
 
-		//log("%2d %2d", omfg, sleepTime);
 		timeBeginPeriod(1);
-		//Sleep(1);
 		Sleep(sleepTime);
 		timeEndPeriod(1);
 	}

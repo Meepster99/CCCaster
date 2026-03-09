@@ -1468,7 +1468,9 @@ void MainUi::settings()
                     "\n\nPress any key to go back", (float)_config.getInteger("timePlayed") / (60.0 * 60.0)
                     ) ),
                      { 0, 0 }, true);
+
                         system ( "@pause > nul" );
+				
                 break;
             case 14:
                 _ui->pushInFront ( new ConsoleUi::TextBox ( format ( "CCCaster %s%s\n\nRevision %s\n\nBuilt on %s\n\n"

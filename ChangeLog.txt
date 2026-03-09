@@ -3,6 +3,7 @@ v3.1.009
 - Change bgm and sfx volume in caster
 - More changes to the FPS display, turns grey on a lag frame
 - Track and view your playtime
+- Reduce frame limiter CPU usage
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering
