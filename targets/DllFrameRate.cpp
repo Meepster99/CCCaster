@@ -147,6 +147,9 @@ void newCasterFrameLimiter() {
     static DWORD lastColor = 0x000000FF; // avoid excessive calls to patch
 
     static int lagFrameTimer = 0;
+    static int totalFrames = 0;
+    static int totalLagFrames = 0;
+    static bool paranoia = false; // if this is true, switch to a more cpu heavy method
 
 	static MMRESULT timeBeginPeriodRes = TIMERR_NOERROR;
 
@@ -173,6 +176,15 @@ void newCasterFrameLimiter() {
 		timeBeginPeriodRes = timeBeginPeriod(1);
 		timeEndPeriod(1);
 	}
+
+    if(!paranoia) {
+
+        float ratio = (float)totalLagFrames / (float)totalFrames;
+        log("%f", ratio);
+        if((totalFrames > (15 * 60)) && ratio > (1.0/60.0)) {
+            paranoia = true;
+        }
+    }
 
 	freq.QuadPart = baseFreq.QuadPart / desiredFps; // hopefully this doesnt mess things up? this desiredfps var isnt touched anywhere really
 
@@ -201,10 +213,20 @@ void newCasterFrameLimiter() {
 			sleepTime = millis * 0.75; // feel more comfy sleeping for longer if we have more leeway
 		}*/
 
+        // windows reduces sleep resolution when not focused, i should also that that into account here
+
 		DWORD sleepTime = millis - 1;
-		if(lagFrameTimer > 0) { // we are lagging. possibly sleep less?
+        if(sleepTime > 2) {
+            sleepTime--;
+        }
+        
+		if(lagFrameTimer > 0) { // we are lagging. possibly sleep less? i need a perm solution for if the lagging is consistent
 			sleepTime = millis * 0.67;
 		}
+
+        if(paranoia) { // paranoia mode triggered, sleep for even less as to avoid sleep possibly going too high?
+            sleepTime = millis * 0.4;
+        }
 
 		timeBeginPeriod(1);
 		Sleep(sleepTime);
@@ -222,12 +244,16 @@ void newCasterFrameLimiter() {
 	}
 
     if(wasLagFrame) { 
+        if(totalFrames > (15 * 60)) {
+            totalLagFrames++;
+        }
         lagFrameTimer = 30;
     } else {
         if(lagFrameTimer > 0) {
             lagFrameTimer--;
         }
     }
+    totalFrames++;
 
 	uint32_t temp = (100*baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
 	//log("%d %d", temp, omfg);
