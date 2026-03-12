@@ -4,6 +4,7 @@ v3.1.009
 - More changes to the FPS display, turns grey on a lag frame
 - Track and view your playtime
 - Reduce frame limiter CPU usage
+- Improved frame limiter on linux (By Alx)
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering
