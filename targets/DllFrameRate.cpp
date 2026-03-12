@@ -180,7 +180,7 @@ void newCasterFrameLimiter() {
     if(!paranoia) {
 
         float ratio = (float)totalLagFrames / (float)totalFrames;
-        log("%f", ratio);
+        //log("%f", ratio);
         if((totalFrames > (15 * 60)) && ratio > (1.0/60.0)) {
             paranoia = true;
         }
@@ -204,6 +204,7 @@ void newCasterFrameLimiter() {
 	frameTimeLeft.QuadPart = (freq.QuadPart - (currTime.QuadPart - prevFrameTime.QuadPart));
 	if((timeBeginPeriodRes == TIMERR_NOERROR) && (frameTimeLeft.QuadPart > 2 * millisecondDuration.QuadPart)) { // i tried putting this shit in the wait loop, dont, bad idea
 
+        // sleep delay to free up cpu time
 		DWORD millis = frameTimeLeft.QuadPart / millisecondDuration.QuadPart;
 
 		/*
@@ -233,7 +234,7 @@ void newCasterFrameLimiter() {
 		timeEndPeriod(1);
 	}
 	
-    while(true) {
+    while(true) { // busywait delay for accuracy
 		QueryPerformanceCounter(&currTime);
 		if(currTime.QuadPart - prevFrameTime.QuadPart > freq.QuadPart) {
 			break;
