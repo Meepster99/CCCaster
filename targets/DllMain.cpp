@@ -1024,7 +1024,8 @@ struct DllMain
 #endif // RELEASE
 
             // Enable controllers now
-            if ( ! ProcessManager::isWine() )
+            // TODO: I don't think this check is needed here anymore
+            // if ( ! ProcessManager::isWine() )
                 ControllerManager::get().startHighFreqPolling();
 
             // Initialize the overlay now
@@ -1575,7 +1576,7 @@ struct DllMain
                 } else {
                     netMan.autoReplaySave = false;
                 }
-                if ( ProcessManager::isWine() || options[Options::FrameLimiter] ) {
+                if ( options[Options::FrameLimiter] ) {
 
                 } else {
                     DllFrameRate::enable();
@@ -1865,7 +1866,7 @@ struct DllMain
                     DllControllerManager::displayIPs = true;
                     DllControllerManager::port = std::to_string(serverCtrlSocket->address.port);
                     DllControllerManager::localIP = getInternalIpAddresses();
-                    
+
 
                     // Update the broadcast port and send over IPC
                     netMan.config.broadcastPort = serverCtrlSocket->address.port;
