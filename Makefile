@@ -1,5 +1,6 @@
 VERSION = 3.1
-SUFFIX = .008-BLEEDING
+SUBSUFFIX = -BLEEDING
+SUFFIX = .008$(SUBSUFFIX)
 NAME = cccaster
 TAG =
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)

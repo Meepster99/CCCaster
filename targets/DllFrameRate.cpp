@@ -5,6 +5,7 @@
 #include "DllAsmHacks.hpp"
 
 #include <timeapi.h>
+#include <synchapi.h>
 
 #include <d3dx9.h>
 #include <math.h>
@@ -229,9 +230,21 @@ void newCasterFrameLimiter() {
             sleepTime = millis * 0.4;
         }
 
-		timeBeginPeriod(1);
+		/*
+        timeBeginPeriod(1);
 		Sleep(sleepTime);
 		timeEndPeriod(1);
+        */
+
+        HANDLE timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+	
+        LARGE_INTEGER time;
+        time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
+        SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
+        
+        timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
+        WaitForSingleObject(timer, INFINITE);
+        timeEndPeriod(1);
 	}
 	
     while(true) { // busywait delay for accuracy
