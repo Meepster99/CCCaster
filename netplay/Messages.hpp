@@ -505,3 +505,16 @@ struct BothInputs : public SerializableSequence, public BaseInputs
 
     PROTOCOL_MESSAGE_BOILERPLATE ( BothInputs, indexedFrame.value, inputs )
 };
+
+struct ChatMessage : public SerializableMessage {
+
+
+    /*
+    make it something bound in caster
+    */
+    std::string msg;
+
+    // i believe i need to list all params in the below thing 
+    PROTOCOL_MESSAGE_BOILERPLATE ( ChatMessage, msg ) 
+
+};

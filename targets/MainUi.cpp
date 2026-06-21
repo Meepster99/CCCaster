@@ -2062,6 +2062,10 @@ void MainUi::trackTimePlayed(bool isStart) {
 
     uint32_t sessionLength = time(NULL) - startTime;
 
+    if(sessionLength > 60 * 60 * 24) { // if you have the game open for more than a day straight, something probably went wrong with the code 
+        sessionLength = 0;
+    }
+
     _config.setInteger("timePlayed", _config.getInteger("timePlayed") + sessionLength);
 
     saveConfig();

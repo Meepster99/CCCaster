@@ -18,6 +18,7 @@
 #include "DllRollbackManager.hpp"
 #include "DllTrialManager.hpp"
 #include "ExternalIpAddress.hpp"
+#include "DllChatManager.hpp"
 
 #include <windows.h>
 
@@ -102,6 +103,7 @@ struct DllMain
         , public SpectatorManager
         , public DllControllerManager
         , public ExternalIpAddress::Owner
+        , public DllChatManager
 {
     // NetplayManager instance
     NetplayManager netMan;
@@ -269,7 +271,7 @@ struct DllMain
                         break;
                 }
 
-                if ( DllOverlayUi::isEnabled() )                                            // Overlay UI controls
+                if ( DllOverlayUi::isEnabled() || DllChatManager::isTyping() )                                            // Overlay UI controls
                 {
                     localInputs[0] = localInputs[1] = 0;
                 }
@@ -916,6 +918,10 @@ struct DllMain
             return;
         }
 #endif // NOT DISABLE_LOGGING
+
+
+        // i think this would be an ok place to put the chat sending code. i dont think rollbacks occur here.
+
     }
 
     void frameStepRerun()
@@ -1427,6 +1433,10 @@ struct DllMain
             case MsgType::RngState:
                 LOG( "Got RNG from remote" );
                 netMan.setRngState ( msg->getAs<RngState>() );
+                return;
+
+            case MsgType::ChatMessage:
+                DllChatManager::addMessage(msg->getAs<ChatMessage>());
                 return;
 
 #ifndef RELEASE

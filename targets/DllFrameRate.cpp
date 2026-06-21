@@ -270,17 +270,13 @@ void newCasterFrameLimiter() {
     totalFrames++;
 
 	uint32_t temp = (100*baseFreq.QuadPart) / (currTime.QuadPart - prevFrameTime.QuadPart - 1); // minus one is there to display 60, not 59.999999
-	//log("%d %d", temp, omfg);
     rollingFrameAverageSum -= rollingFrameAverage[rollingFrameAverageIndex];
     rollingFrameAverageSum += temp;
     rollingFrameAverage[rollingFrameAverageIndex] = temp;
     rollingFrameAverageIndex = (rollingFrameAverageIndex + 1) % rollingFrameAverageLen;
 
     if(wasLagFrame || rollingFrameAverageIndex == 0) { // old frame limiter only updated this value every second
-        //*CC_FPS_COUNTER_ADDR = ceil(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
-        //*CC_FPS_COUNTER_ADDR = round(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
         *CC_FPS_COUNTER_ADDR = round(((float)rollingFrameAverageSum * 0.01)/ rollingFrameAverageLen);
-
         if(wasLagFrame || lagFrameTimer) {
             DWORD tempCol = 0xFFFF00DD;
             if(lastColor != tempCol) {
