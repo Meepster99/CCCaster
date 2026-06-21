@@ -1363,6 +1363,7 @@ void MainUi::settings()
                                                             "Disable Stage Animations",
                                                             "Adjust BGM Volume",
                                                             "Adjust SFX Volume",
+															"Disable Win Count HUD",
                                                         }, "Cancel" ),
                                    { 0, 0 }, true ); // Don't expand but DO clear top
                 while ( true ) {
@@ -1453,6 +1454,21 @@ void MainUi::settings()
                             saveConfig();
                             break;
                         }
+
+                        _ui->pop();
+					} else if ( setting == 4 ) {
+                        _ui->pushInFront ( new ConsoleUi::Menu ( "Disable Win Count HUD?",
+                                                                 { "Yes", "No" }, "Cancel" ),
+                                           { 0, 0 }, true ); // Don't expand but DO clear top
+
+                        _ui->top<ConsoleUi::Menu>()->setPosition ( ( _config.getInteger ( "winCountHUD" ) + 1 ) % 2 );
+                        _ui->popUntilUserInput();
+
+                        if ( _ui->top()->resultInt >= 0 && _ui->top()->resultInt <= 1 )
+                            {
+                                _config.setInteger ( "winCountHUD", ( _ui->top()->resultInt + 1 ) % 2 );
+                                saveConfig();
+                            }
 
                         _ui->pop();
                     } else {
@@ -1604,6 +1620,7 @@ void MainUi::initialize()
     _config.setInteger ( "autoReplaySave", 1 );
     _config.setInteger ( "frameLimiter", 0 );
     _config.setInteger ( "stageAnimations", 1 );
+	_config.setInteger ( "winCountHUD", 0); 
     _config.setString ( "matchmakingRegion", "NA West" );
     _config.setDouble ( "heldStartDuration", 1.5 );
     _config.setInteger ( "updateChannel", static_cast<int>(MainUpdater::Channel::Stable ) );

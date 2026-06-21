@@ -1599,6 +1599,14 @@ struct DllMain
                     *CC_STAGE_ANIMATION_OFF_ADDR = 0;
                 }
 
+				if ( options[Options::WinCountHUD] )
+                {
+                    *CC_DISABLE_WINCOUNT_HUD = 1;
+                } else {
+                    *CC_DISABLE_WINCOUNT_HUD = 0;
+                }
+
+
                 // This will log in the previous appDir folder it not the same
                 LOG ( "appDir='%s'", ProcessManager::appDir );
 

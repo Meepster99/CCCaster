@@ -1306,6 +1306,10 @@ struct MainApp
         {
             options.set ( Options::StageAnimations, 1 );
         }
+		if ( ui.getConfig().getInteger ( "winCountHUD" ) > 0 )
+        {
+            options.set ( Options::WinCountHUD, 1 );
+        }
         if ( ! ProcessManager::getIsWindowed() )
         {
             ProcessManager::setIsWindowed ( true );

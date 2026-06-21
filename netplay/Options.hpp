@@ -26,6 +26,7 @@ ENUM ( Options,
        AutoReplaySave,
        // Debug options
        FrameLimiter,
+	   WinCountHUD,
        StageAnimations,
        Tests,
        Stdout,

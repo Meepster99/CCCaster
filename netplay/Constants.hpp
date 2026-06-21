@@ -55,6 +55,7 @@
 #define CC_STAGE_ANIMATION_OFF_ADDR ( ( uint32_t * ) 0x554124 ) // 1 if stage animations are off
 #define CC_INTRO_STATE_ADDR         ( ( uint8_t * )  0x55D20B ) // 2 (character intros), 1 (pre-game), 0 (in-game)
 #define CC_HIT_SPARKS_ADDR          ( ( uint32_t * ) 0x67BD78 ) // Number of hit sparks?
+#define CC_DISABLE_WINCOUNT_HUD		( ( uint32_t * ) 0x564154 ) // disables the "challenger" and "wincount" things on top of the hud. was annoying some ppl
 
 #define CC_STAGE_SELECTOR_ADDR      ( ( uint32_t * ) 0x74FD98 ) // Currently selected stage, can be assigned to directly
 #define CC_FPS_COUNTER_ADDR         ( ( uint32_t * ) 0x774A70 ) // Value of the displayed FPS counter
