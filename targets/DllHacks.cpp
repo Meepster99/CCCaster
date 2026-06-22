@@ -208,7 +208,7 @@ void initializePostLoad()
 
     bool loadFramestep = ( GetAsyncKeyState ( VK_F8 ) & 0x8000 ) == 0x8000;
     // We can't hook DirectX calls on Wine (yet?).
-    if ( ProcessManager::isWine() || loadFramestep )
+    if ( loadFramestep )
     {
         return;
     }
