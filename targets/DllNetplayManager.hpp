@@ -141,6 +141,8 @@ public:
 
     friend class DllRollbackManager;
 
+	friend class DllChatManager;
+
 private:
 
     // Netplay state

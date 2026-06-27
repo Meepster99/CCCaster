@@ -2,47 +2,50 @@
 #include "DllOverlayUi.hpp"
 #include "NetLogger.hpp"
 #include "KeyboardState.hpp"
+#include "DllNetplayManager.hpp"
 
-
-void KeyboardManagerHooker::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
+void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
 	// how the hell does this thing even access controllermanager?
 	Lock lock ( ControllerManager::get().mutex );
 	
 
 	// i should probs have a mutex for accessing the typingmessage struing
-	log("event got %02X", vkCode);
+	//log("event got %02X", vkCode);
 
 	if((vkCode >= '0' && vkCode <= 'Z') || vkCode == VK_SPACE) {
-		DllChatManager::typingMessage += (char)vkCode;
+		typingMessage += (char)vkCode;
 	} else if(vkCode == VK_BACK) {
-		if(DllChatManager::typingMessage.size() >= 1) {
-			DllChatManager::typingMessage.pop_back();
+		if(typingMessage.size() >= 1) {
+			typingMessage.pop_back();
 		}
 	} else if(vkCode == VK_ENBABLE_CHAT) {
-		DllChatManager::shouldStop = true;
+		shouldStop = true;
 	}
-	
+}
 
+void DllChatManager::frameStep(SocketPtr& dataSocket) {
+
+	while(!recvMsg.empty()) { // display recieved messages.
+		ChatMessage m = recvMsg.front();
+		recvMsg.pop_front();
+		DllOverlayUi::showChatMessage(m);
+	}
+
+	while(!sendMsg.empty()) { 
+		ChatMessage m = sendMsg.front();
+		sendMsg.pop_front();
+		// log("sending message: %s", m.msg.c_str());
+		m.player = netManPtr->_localPlayer;
+		if(dataSocket && dataSocket->isConnected()) {
+			dataSocket->send(m);
+		} 
+		DllOverlayUi::showChatMessage(m);
+	}
 
 }
 
-
-namespace DllChatManager {
-
-uint64_t typeStartTime = 0;
-bool isTyping = false;
-
-std::string typingMessage = "";
-uint64_t lastCheckTime = 0;
-
-std::deque<std::string> messages;
-
-KeyboardManagerHooker keyboardManager;
-
-bool shouldStop = false; // this is ass code. god. please maddy actually fix this 
-
-void startTyping() {
+void DllChatManager::startTyping() {
 
 	if(isTyping) {
 		return;
@@ -57,18 +60,23 @@ void startTyping() {
 	//KeyboardManager::get().keyboardWindow = DllHacks::windowHandle;
 	KeyboardManager::get().matchedKeys.clear();
 	KeyboardManager::get().ignoredKeys.clear();
-	KeyboardManager::get().hook ( &keyboardManager, true );
+	KeyboardManager::get().hook ( this, true );
 }
 
-void addMessage(const ChatMessage& m) {
+void DllChatManager::displayMessage(const ChatMessage& m) {
     log("got a message: %s", m.msg.c_str());
     DllOverlayUi::showChatMessage(m);
 }
 
-void typeMessage() {
+void DllChatManager::recvMessage(const ChatMessage& m) {
+	recvMsg.push_back(m);
+}
 
+void DllChatManager::sendMessage(const ChatMessage& m) {
+	sendMsg.push_back(m);
+}
 
-
+void DllChatManager::typeMessage() {
 
 	// caster already has some keyboard manager thing. i should use that. 
 	// issue. multiple keypresses in the space of a frame should all record, would suck if they didnt
@@ -87,7 +95,7 @@ void typeMessage() {
 			isTyping = false;
 			ChatMessage newMsg;
 			newMsg.msg = typingMessage;
-			addMessage(newMsg);
+			sendMessage(newMsg);
 			//log("got told to stop and send the message");
 			KeyboardManager::get().unhook();
 		} else {
@@ -95,12 +103,6 @@ void typeMessage() {
 		}
 	}
 
-	
-
 
 }
 
-
-
-
-};

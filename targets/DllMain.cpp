@@ -96,6 +96,8 @@ bool stopping = false;
 
 NetplayManager* netManPtr = 0;
 
+DllChatManager* chatManPtr = 0;
+
 struct DllMain
         : public Main
         , public RefChangeMonitor<Variable, uint32_t>::Owner
@@ -112,6 +114,9 @@ struct DllMain
 
     // DllTrialManager instance
     DllTrialManager trialMan;
+
+	// DllChatManager instance
+	DllChatManager chatMan;
 
     // If remote has loaded up to character select
     bool remoteCharaSelectLoaded = false;
@@ -920,6 +925,9 @@ struct DllMain
 
 
         // i think this would be an ok place to put the chat sending code. i dont think rollbacks occur here.
+		// thank you past maddy, very cool
+
+		chatMan.frameStep(dataSocket);
 
     }
 
@@ -1435,7 +1443,7 @@ struct DllMain
                 return;
 
             case MsgType::ChatMessage:
-                DllChatManager::addMessage(msg->getAs<ChatMessage>());
+                chatMan.recvMessage(msg->getAs<ChatMessage>());
                 return;
 
 #ifndef RELEASE
@@ -2041,6 +2049,7 @@ struct DllMain
         ChangeMonitor::get().addRef ( this, Variable ( Variable::RoundStart ), AsmHacks::roundStartCounter );
         ChangeMonitor::get().addRef ( this, Variable ( Variable::GameState ), *CC_GAME_STATE_ADDR );
         netManPtr = &netMan;
+		chatManPtr = &chatMan;
 
 #ifndef RELEASE
         ChangeMonitor::get().addRef ( this, Variable ( Variable::MenuConfirmState ), AsmHacks::menuConfirmState );

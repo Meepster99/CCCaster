@@ -515,6 +515,9 @@ struct ChatMessage : public SerializableMessage {
     std::string msg;
 
 	int player;
+	
+	// im unsure if this logic being here is ideal.
+	std::string str() const override { return "P" + std::to_string(player) + ": " + msg; }
 
     // i believe i need to list all params in the below thing 
     PROTOCOL_MESSAGE_BOILERPLATE ( ChatMessage, msg , player ) 

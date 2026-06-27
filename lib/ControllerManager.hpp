@@ -102,7 +102,7 @@ public:
 
     friend class DllControllerManager;
 	
-	friend class KeyboardManagerHooker;
+	friend class DllChatManager;
 
 private:
 
