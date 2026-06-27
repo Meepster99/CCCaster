@@ -237,6 +237,22 @@ void setMapping()
     mode = Mode::Mapping;
 }
 
+void showChatMessage(const ChatMessage& m) {
+
+	// thisis here as a temporary measure. i shouldnt interfere with the controller binding stuff.
+	
+    initialTimeout = messageTimeout = ( DEFAULT_MESSAGE_TIMEOUT / 17 );
+
+
+	std::string message = "P" + std::to_string(m.player) + ": " + m.msg;
+
+    // Show the message in the middle
+    text = { message, "", "" };
+    shouldDrawSelector = { false, false };
+
+    enable();
+}
+
 void showMessage ( const string& newText, int timeout )
 {
     // Get timeout in frames

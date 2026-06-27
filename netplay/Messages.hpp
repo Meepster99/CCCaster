@@ -514,7 +514,9 @@ struct ChatMessage : public SerializableMessage {
     */
     std::string msg;
 
+	int player;
+
     // i believe i need to list all params in the below thing 
-    PROTOCOL_MESSAGE_BOILERPLATE ( ChatMessage, msg ) 
+    PROTOCOL_MESSAGE_BOILERPLATE ( ChatMessage, msg , player ) 
 
 };

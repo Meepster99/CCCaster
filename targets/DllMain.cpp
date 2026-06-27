@@ -103,7 +103,6 @@ struct DllMain
         , public SpectatorManager
         , public DllControllerManager
         , public ExternalIpAddress::Owner
-        , public DllChatManager
 {
     // NetplayManager instance
     NetplayManager netMan;
@@ -271,7 +270,7 @@ struct DllMain
                         break;
                 }
 
-                if ( DllOverlayUi::isEnabled() || DllChatManager::isTyping() )                                            // Overlay UI controls
+                if ( DllOverlayUi::isEnabled())// || DllChatManager::isTyping )                                            // Overlay UI controls
                 {
                     localInputs[0] = localInputs[1] = 0;
                 }
