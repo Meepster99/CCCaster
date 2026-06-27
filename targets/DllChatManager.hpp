@@ -6,7 +6,7 @@
 
 #include "ControllerManager.hpp"
 
-#define VK_ENBABLE_CHAT ( VK_F6 ) // could have this be something different? rebindable maybe? idrek, and idrec. this is a lie. i care deeply.
+#define VK_ENBABLE_CHAT ( VK_RETURN ) // could have this be something different? rebindable maybe? idrek, and idrec. this is a lie. i care deeply.
 
 class DllChatManager 
 	: public KeyboardManager::Owner

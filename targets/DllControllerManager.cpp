@@ -77,11 +77,16 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
     {
         framestepEnabled = true;
     }
-	if ( !chatManPtr->isTyping && KeyboardState::isPressed ( VK_ENBABLE_CHAT ) )
+	
+	if ( !chatManPtr->isTyping && KeyboardState::isPressed ( VK_ENBABLE_CHAT ) && (!DllOverlayUi::isEnabled()) )
     {
 		// its funny, ive become so indecisive over the last year. i know what to do, but thinking removes my ability to do it
         chatManPtr->startTyping();
     }
+
+	if(chatManPtr->isTyping) {
+		chatManPtr->typeMessage();
+	}
 
     for ( Controller *controller : _allControllers )
     {
@@ -210,10 +215,6 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
             DllOverlayUi::disable();
         }
     }
-
-	if(chatManPtr->isTyping) {
-		chatManPtr->typeMessage();
-	}
 
     // Only update player controls when the overlay is NOT enabled
     if ( !DllOverlayUi::isEnabled() )

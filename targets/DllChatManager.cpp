@@ -4,6 +4,15 @@
 #include "KeyboardState.hpp"
 #include "DllNetplayManager.hpp"
 
+/*
+
+issues:
+need to see while typing
+setting keys just fucks it.
+switch to my own text renderer so i dont have to deal with this bs
+
+*/
+
 void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
 	// how the hell does this thing even access controllermanager?
@@ -78,6 +87,8 @@ void DllChatManager::sendMessage(const ChatMessage& m) {
 
 void DllChatManager::typeMessage() {
 
+	log("typing");
+
 	// caster already has some keyboard manager thing. i should use that. 
 	// issue. multiple keypresses in the space of a frame should all record, would suck if they didnt
 	// keyboardstate.cpp seems to be what i want
@@ -105,4 +116,3 @@ void DllChatManager::typeMessage() {
 
 
 }
-
