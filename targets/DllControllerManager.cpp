@@ -78,7 +78,9 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
         framestepEnabled = true;
     }
 	
-	if ( !chatManPtr->isTyping && KeyboardState::isPressed ( VK_ENBABLE_CHAT ) && (!DllOverlayUi::isEnabled()) )
+	//log("%d", DllOverlayUi::mode);
+
+	if ( !chatManPtr->isTyping && KeyboardState::isPressed ( VK_ENBABLE_CHAT ) && (!DllOverlayUi::isEnabled() && !DllOverlayUi::isToggling()) )
     {
 		// its funny, ive become so indecisive over the last year. i know what to do, but thinking removes my ability to do it
         chatManPtr->startTyping();
@@ -212,6 +214,7 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
             AsmHacks::enableEscapeToExit = true;
 
             // Disable overlay
+			//DllOverlayUi::setNoneMode();
             DllOverlayUi::disable();
         }
     }

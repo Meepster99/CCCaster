@@ -17,6 +17,7 @@ public:
 	void recvMessage(const ChatMessage& m);
 	
 	void frameStep(SocketPtr& dataSocket);
+	void displayChat();
 
 	void startTyping();
 	void typeMessage();
@@ -30,10 +31,12 @@ public:
 
 private:
 
-	void displayMessage(const ChatMessage& m);
+	const static int framesToDisplayMsg = 60 * 7;
 
 	std::deque<ChatMessage> recvMsg;
 	std::deque<ChatMessage> sendMsg;
+
+	std::deque<ChatMessage> displayQueue;
 
 };
 

@@ -74,6 +74,7 @@ void PresentFrameBegin ( IDirect3DDevice9 *device )
         return;
 
     renderOverlayText ( device, viewport );
+	chatManPtr->displayChat();
 #ifdef LOGGING
     doEndScene = true;
     if (device->BeginScene() >= 0)

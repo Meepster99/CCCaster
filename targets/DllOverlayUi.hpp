@@ -56,7 +56,9 @@ void updateSelector ( uint8_t index, int position = 0, const std::string& line =
 
 void showMessage ( const std::string& text, int timeout = DEFAULT_MESSAGE_TIMEOUT );
 
-void showChatMessage(const ChatMessage& m);
+void showChatMessage(int index, const ChatMessage& m);
+
+void showTypingDialogue(const std::string& m);
 
 void updateMessage();
 

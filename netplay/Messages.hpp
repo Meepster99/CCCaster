@@ -513,8 +513,8 @@ struct ChatMessage : public SerializableMessage {
     make it something bound in caster
     */
     std::string msg;
-
 	int player;
+	int framesToDisplay;
 	
 	// im unsure if this logic being here is ideal.
 	std::string str() const override { return "P" + std::to_string(player) + ": " + msg; }
