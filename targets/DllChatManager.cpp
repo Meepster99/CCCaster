@@ -18,10 +18,28 @@ switch to my own text renderer so i dont have to deal with this bs
 
 void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
+	if(!isDown) {
+		return;
+	}
+
 	// how the hell does this thing even access controllermanager?
 	Lock lock ( ControllerManager::get().mutex );
+
+	bool shiftState = KeyboardState::isDown(VK_LSHIFT) || KeyboardState::isDown(VK_RSHIFT);
 	
-	if((vkCode >= '0' && vkCode <= 'Z') || vkCode == VK_SPACE) {
+	// ToAscii gave me trust issues. i just cant force myself to care.
+
+	if(vkCode >= '0' && vkCode <= '9') {
+		if(shiftState && vkCode == '1') {
+			typingMessage += '!';
+		} else {
+			typingMessage += (char)vkCode;
+		}
+	} else if(vkCode >= 'A' && vkCode <= 'Z') {
+		typingMessage += (char)vkCode + (shiftState ? 0 : 0x20);
+	} else if(vkCode >= VK_OEM_1 && vkCode <= VK_OEM_2) {
+		typingMessage += (char)(vkCode - (shiftState ? 0x80 : 0x90));
+	} else if(vkCode == VK_SPACE) {
 		typingMessage += (char)vkCode;
 	} else if(vkCode == VK_BACK) {
 		if(typingMessage.size() >= 1) {

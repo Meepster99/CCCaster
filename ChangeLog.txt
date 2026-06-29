@@ -6,6 +6,7 @@ v3.1.009
 - Reduce frame limiter CPU usage
 - Improved frame limiter on linux (By Alx)
 - Add option to disable the win count hud
+- In game chat.
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering

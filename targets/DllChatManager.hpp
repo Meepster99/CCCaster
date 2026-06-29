@@ -3,6 +3,7 @@
 #include "Messages.hpp"
 #include <string>
 #include <deque>
+#include <atomic>
 
 #include "ControllerManager.hpp"
 
@@ -24,9 +25,9 @@ public:
 	void keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) override;
 
 	uint64_t typeStartTime = 0;
-	bool isTyping = false;
-	bool shouldStop = false; // this is ass code. god. please maddy actually fix this 
-	std::string typingMessage = "";
+	std::atomic<bool> isTyping = false;
+	std::atomic<bool> shouldStop = false; // this is ass code. god. please maddy actually fix this 
+	std::string typingMessage;
 	uint64_t lastCheckTime = 0;
 
 private:
