@@ -11,10 +11,9 @@ issues:
 need to see while typing
 setting keys just fucks it.
 switch to my own text renderer so i dont have to deal with this bs
+move version numbers into the dll so i can check shit. bc i know for a fact i wont get everyone to update, and ppl should be able to use the chat without being scared of crash
 
 */
-
-
 
 void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
@@ -115,6 +114,13 @@ void DllChatManager::recvMessage(const ChatMessage& m) {
 }
 
 void DllChatManager::sendMessage(const ChatMessage& m) {
+	if(LocalVersion.code != remoteVersion.code) {
+		ChatMessage m;
+		m.player = 0;
+		m.msg = "Straight up, ur opponent hasnt updated, so i cant message them. deepest apologies.";
+		recvMsg.push_back(m);
+		return;
+	}
 	if(m.msg.size() >= 1) {
 		sendMsg.push_back(m);
 	}

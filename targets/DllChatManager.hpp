@@ -42,3 +42,5 @@ private:
 };
 
 extern DllChatManager* chatManPtr;
+
+extern Version remoteVersion;

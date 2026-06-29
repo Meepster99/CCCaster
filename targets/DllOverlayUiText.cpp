@@ -341,7 +341,12 @@ void showChatMessage(int index, const ChatMessage& m) {
 
 	RECT r {0, startHeight, (long)_viewport.Width, startHeight + OVERLAY_FONT_HEIGHT};
 
-	std::string msg = "P" + std::to_string(m.player) + ": " + m.msg;
+	std::string msg;
+	if(m.player == 0) {
+		msg = m.msg;
+	} else {
+		msg = "P" + std::to_string(m.player) + ": " + m.msg;
+	}
     DrawText ( font, msg, r, DT_WORDBREAK | DT_LEFT, OVERLAY_TEXT_COLOR );
 }
 

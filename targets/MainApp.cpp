@@ -130,6 +130,8 @@ struct MainApp
 
     bool connected = true;
 
+	Version remoteVersion = LocalVersion;
+
     /* Connect protocol
 
         1 - Connect / accept ctrlSocket
@@ -317,31 +319,31 @@ struct MainApp
 
     void gotVersionConfig ( Socket *socket, const VersionConfig& versionConfig )
     {
-        const Version RemoteVersion = versionConfig.version;
+        remoteVersion = versionConfig.version;
 
         LOG ( "LocalVersion='%s'; revision='%s'; buildTime='%s'",
               LocalVersion, LocalVersion.revision, LocalVersion.buildTime );
 
         LOG ( "RemoteVersion='%s'; revision='%s'; buildTime='%s'",
-              RemoteVersion, RemoteVersion.revision, RemoteVersion.buildTime );
+              remoteVersion, remoteVersion.revision, remoteVersion.buildTime );
 
         LOG ( "VersionConfig: mode=%s; flags={ %s }", versionConfig.mode, versionConfig.mode.flagString() );
 
-        if ( ! LocalVersion.isSimilar ( RemoteVersion, 1 + options[Options::StrictVersion] ) )
+        if ( ! LocalVersion.isSimilar ( remoteVersion, 1 + options[Options::StrictVersion] ) )
         {
             string local = LocalVersion.code;
-            string remote = RemoteVersion.code;
+            string remote = remoteVersion.code;
 
             if ( options[Options::StrictVersion] >= 2 )
             {
                 local += " " + LocalVersion.revision;
-                remote += " " + RemoteVersion.revision;
+                remote += " " + remoteVersion.revision;
             }
 
             if ( options[Options::StrictVersion] >= 3 )
             {
                 local += " " + LocalVersion.buildTime;
-                remote += " " + RemoteVersion.buildTime;
+                remote += " " + remoteVersion.buildTime;
             }
 
             if ( clientMode.isHost() )
@@ -1137,6 +1139,8 @@ struct MainApp
             forwardMsgQueue();
             return;
         }
+		
+		procMan.ipcSend( remoteVersion );
 
         ASSERT ( netplayConfig.delay != 0xFF );
 

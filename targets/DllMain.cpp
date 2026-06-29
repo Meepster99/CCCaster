@@ -98,6 +98,8 @@ NetplayManager* netManPtr = 0;
 
 DllChatManager* chatManPtr = 0;
 
+Version remoteVersion;
+
 struct DllMain
         : public Main
         , public RefChangeMonitor<Variable, uint32_t>::Owner
@@ -1578,6 +1580,13 @@ struct DllMain
 
         switch ( msg->getMsgType() )
         {
+			case MsgType::Version:
+				remoteVersion = msg->getAs<Version>();
+				//log("got version info. ugh");
+				//log("local:  %s", LocalVersion.code.c_str());
+				//log("remote: %s", remoteVersion.code.c_str());
+
+				break;
             case MsgType::OptionsMessage:
                 options = msg->getAs<OptionsMessage>();
 
