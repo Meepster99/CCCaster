@@ -27,6 +27,7 @@ ENUM ( Options,
        // Debug options
        FrameLimiter,
 	   WinCountHUD,
+	   DisableChat,
        StageAnimations,
        Tests,
        Stdout,

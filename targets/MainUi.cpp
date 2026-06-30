@@ -1364,6 +1364,7 @@ void MainUi::settings()
                                                             "Adjust BGM Volume",
                                                             "Adjust SFX Volume",
 															"Disable Win Count HUD",
+															"Disable In Game Chat",
                                                         }, "Cancel" ),
                                    { 0, 0 }, true ); // Don't expand but DO clear top
                 while ( true ) {
@@ -1467,6 +1468,21 @@ void MainUi::settings()
                         if ( _ui->top()->resultInt >= 0 && _ui->top()->resultInt <= 1 )
                             {
                                 _config.setInteger ( "winCountHUD", ( _ui->top()->resultInt + 1 ) % 2 );
+                                saveConfig();
+                            }
+
+                        _ui->pop();
+					} else if ( setting == 5 ) {
+                        _ui->pushInFront ( new ConsoleUi::Menu ( "Disable In Game Chat?",
+                                                                 { "Yes", "No" }, "Cancel" ),
+                                           { 0, 0 }, true ); // Don't expand but DO clear top
+
+                        _ui->top<ConsoleUi::Menu>()->setPosition ( ( _config.getInteger ( "disableChat" ) + 1 ) % 2 );
+                        _ui->popUntilUserInput();
+
+                        if ( _ui->top()->resultInt >= 0 && _ui->top()->resultInt <= 1 )
+                            {
+                                _config.setInteger ( "disableChat", ( _ui->top()->resultInt + 1 ) % 2 );
                                 saveConfig();
                             }
 
@@ -1636,6 +1652,8 @@ void MainUi::initialize()
     _config.setInteger("sfxVolume", 10);
 
     _config.setInteger("timePlayed", 0);
+
+	_config.setInteger("disableChat", 0);
 
     // Load and save main config (this creates the config file on the first time)
     loadConfig();

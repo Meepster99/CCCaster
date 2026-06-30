@@ -30,6 +30,8 @@ public:
 	std::string typingMessage;
 	uint64_t lastCheckTime = 0;
 
+	bool disable = false;
+
 private:
 
 	const static int framesToDisplayMsg = 60 * 7;

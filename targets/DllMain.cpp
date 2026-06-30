@@ -1622,6 +1622,10 @@ struct DllMain
                     *CC_DISABLE_WINCOUNT_HUD = 0;
                 }
 
+				if ( options[Options::DisableChat] )
+                {
+                    chatMan.disable = true;
+                }
 
                 // This will log in the previous appDir folder it not the same
                 LOG ( "appDir='%s'", ProcessManager::appDir );

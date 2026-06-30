@@ -69,7 +69,7 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
     {
         toggleTrialMenu = true;
     }
-    if ( KeyboardState::isPressed ( VK_TOGGLE_OVERLAY ) )
+    if ( KeyboardState::isPressed ( VK_TOGGLE_OVERLAY ) && !chatManPtr->isTyping)
     {
         toggleOverlay = true;
     }

@@ -1314,6 +1314,10 @@ struct MainApp
         {
             options.set ( Options::WinCountHUD, 1 );
         }
+		if ( ui.getConfig().getInteger ( "disableChat" ) > 0 )
+        {
+            options.set ( Options::DisableChat, 1 );
+        }
         if ( ! ProcessManager::getIsWindowed() )
         {
             ProcessManager::setIsWindowed ( true );

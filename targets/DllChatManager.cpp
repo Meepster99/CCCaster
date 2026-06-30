@@ -17,8 +17,13 @@ move version numbers into the dll so i can check shit. bc i know for a fact i wo
 
 void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
+	log("%08X %08X %d %d", vkCode, scanCode, isExtended, isDown);
+
+	//log("ugh");
+	//log("%08X %08X %08X", code, wParam, lParam);
+
 	if(!isDown) {
-		return;
+		//return;
 	}
 
 	// how the hell does this thing even access controllermanager?
@@ -53,6 +58,8 @@ void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool is
 
 void DllChatManager::frameStep(SocketPtr& dataSocket) {
 
+	if(disable) { return; }
+
 	while(!recvMsg.empty()) { // display recieved messages.
 		ChatMessage m = recvMsg.front();
 		recvMsg.pop_front();
@@ -75,6 +82,8 @@ void DllChatManager::frameStep(SocketPtr& dataSocket) {
 
 void DllChatManager::displayChat() {
 
+	if(disable) { return; }
+
 	int drawIndex = 1 + isTyping; // index 0 is below the screen, 1 is left for the typing dialogue. move the messages down if not typing.
 
 	for(auto it = displayQueue.begin(); it != displayQueue.end(); ) {
@@ -94,6 +103,8 @@ void DllChatManager::displayChat() {
 }
 
 void DllChatManager::startTyping() {
+
+	if(disable) { return; }
 
 	if(isTyping) {
 		return;

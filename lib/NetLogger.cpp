@@ -3,7 +3,6 @@
 #include <ws2tcpip.h>
 #include <winsock2.h>
 
-
 void ___log(const char* msg)
 {
 	const char* ipAddress = "127.0.0.1";
