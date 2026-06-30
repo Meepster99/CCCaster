@@ -17,13 +17,13 @@ move version numbers into the dll so i can check shit. bc i know for a fact i wo
 
 void DllChatManager::keyboardEvent ( uint32_t vkCode, uint32_t scanCode, bool isExtended, bool isDown ) {
 
-	log("%08X %08X %d %d", vkCode, scanCode, isExtended, isDown);
+	//log("%08X %08X %d %d", vkCode, scanCode, isExtended, isDown);
 
 	//log("ugh");
 	//log("%08X %08X %08X", code, wParam, lParam);
 
-	if(!isDown) {
-		//return;
+	if(isDown) {
+		return;
 	}
 
 	// how the hell does this thing even access controllermanager?

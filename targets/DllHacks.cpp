@@ -77,7 +77,7 @@ MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wPar
     {
         case WM_SYSCOMMAND:
             // Eat these two events to prevent screensaver and sleep
-            switch ( wParam )
+            switch ( wParam )	
             {
                 case SC_SCREENSAVE:
                 case SC_MONITORPOWER:
@@ -89,10 +89,20 @@ MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wPar
             break;
 
         case WM_KEYDOWN:
+		{
             // Ignore repeated keys
             if ( ( lParam >> 30 ) & 1 )
                 break;
-
+			
+			if ( KeyboardManager::get().isHooked() && KeyboardManager::get().owner ) { // this might have bad sideffects
+				const uint32_t vkCode = wParam;
+            	const uint32_t scanCode = ( lParam >> 16 ) & 127;
+            	const bool isExtended = ( lParam >> 24 ) & 1;
+            	//const bool isDown = ( lParam >> 31 ) & 1;
+				const bool isDown = false;
+				KeyboardManager::get().owner->keyboardEvent ( vkCode, scanCode, isExtended, isDown );
+			}
+		}
         // Intentional fall-through
 
         case WM_SYSKEYDOWN:

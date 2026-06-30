@@ -163,7 +163,7 @@ void KeyboardManager::socketRead ( Socket *socket, const MsgPtr& msg, const IpAd
     const bool isDown = msg->getAs<KeyboardEvent>().isDown;
 
     LOG ( "vkCode=0x%02X; scanCode=%u; isExtended=%u; isDown=%u", vkCode, scanCode, isExtended, isDown );
-
+	
     if ( owner )
         owner->keyboardEvent ( vkCode, scanCode, isExtended, isDown );
 }
