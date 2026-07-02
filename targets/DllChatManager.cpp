@@ -109,6 +109,11 @@ void DllChatManager::startTyping() {
 	if(isTyping) {
 		return;
 	}
+	
+	if(KeyboardState::isDown(VK_LMENU) || KeyboardState::isDown(VK_RMENU) || KeyboardState::isDown(VK_MENU) ||
+	   KeyboardState::isDown(VK_LCONTROL) || KeyboardState::isDown(VK_RCONTROL) || KeyboardState::isDown(VK_CONTROL)) {
+		return;
+	}
 
 	typingMessage = "";
 	typeStartTime = lastCheckTime = TimerManager::get().getNow ( true );
@@ -125,14 +130,14 @@ void DllChatManager::recvMessage(const ChatMessage& m) {
 }
 
 void DllChatManager::sendMessage(const ChatMessage& m) {
-	if(LocalVersion.code != remoteVersion.code) {
-		ChatMessage m;
-		m.player = 0;
-		m.msg = "Straight up, ur opponent hasnt updated, so i cant message them. deepest apologies.";
-		recvMsg.push_back(m);
-		return;
-	}
 	if(m.msg.size() >= 1) {
+		if(LocalVersion.code != remoteVersion.code) {
+			ChatMessage m;
+			m.player = 0;
+			m.msg = "Straight up, ur opponent hasnt updated, so i cant message them. deepest apologies.";
+			recvMsg.push_back(m);
+			return;
+		}
 		sendMsg.push_back(m);
 	}
 }
@@ -148,7 +153,7 @@ void DllChatManager::typeMessage() {
 	lastCheckTime = TimerManager::get().getNow ( true );
 
 	if(shouldStop) {
-		if(lastCheckTime - typeStartTime > 300) {
+		if(lastCheckTime - typeStartTime > 100) {
 			isTyping = false;
 			ChatMessage newMsg;
 			newMsg.msg = typingMessage;

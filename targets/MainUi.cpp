@@ -1635,25 +1635,22 @@ void MainUi::initialize()
     _config.setInteger ( "autoCheckUpdates", 1 );
     _config.setInteger ( "autoReplaySave", 1 );
     _config.setInteger ( "frameLimiter", 0 );
-    _config.setInteger ( "stageAnimations", 1 );
-	_config.setInteger ( "winCountHUD", 0); 
+    _config.setInteger ( "stageAnimations", 0 );
     _config.setString ( "matchmakingRegion", "NA West" );
     _config.setDouble ( "heldStartDuration", 1.5 );
     _config.setInteger ( "updateChannel", static_cast<int>(MainUpdater::Channel::Stable ) );
     _config.setInteger ( "trialScreenFlashColor", 0xff0000ff );
+    _config.setInteger ("bgmVolume", 10);
+    _config.setInteger ("sfxVolume", 10);
+    _config.setInteger ("timePlayed", 0);
+	_config.setInteger ("disableChat", 0);
+	_config.setInteger ("winCountHUD", 0); 
 
     // Cached UI state (defaults)
     _config.setInteger ( "lastUsedPort", -1 );
     _config.setInteger ( "lastMainMenuPosition", -1 );
     _config.setInteger ( "lastServerMenuPosition", -1 );
     _config.setInteger ( "lastOfflineMenuPosition", -1 );
-
-    _config.setInteger("bgmVolume", 10);
-    _config.setInteger("sfxVolume", 10);
-
-    _config.setInteger("timePlayed", 0);
-
-	_config.setInteger("disableChat", 0);
 
     // Load and save main config (this creates the config file on the first time)
     loadConfig();
