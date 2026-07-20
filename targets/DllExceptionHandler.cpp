@@ -5,6 +5,7 @@
 #include <string>
 #include <filesystem>
 #include <psapi.h>
+#include "Version.hpp"
 
 void logModuleFromAddress(void* address, FILE* f)
 {
@@ -77,6 +78,9 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     fprintf(f, "IF YOU DONT LIKE ME I HOPE YOU DIE\n\n");
     
     fprintf(f, "%s\n", timeBuffer);
+    fprintf(f, "%s\n", LocalVersion.code.c_str());
+    fprintf(f, "%s\n", LocalVersion.revision.c_str());
+    fprintf(f, "%s\n", LocalVersion.buildTime.c_str());
     fprintf(f, "\n-----\n\n");
     
     fprintf(f, "MODULE: %s\n", moduleName);
@@ -134,10 +138,10 @@ namespace ExceptionHandler {
 
     void init() {
         
-        //SetUnhandledExceptionFilter(unhandledExceptionFilter);
+        SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
         int* i = NULL;
-        //*i = 0;
+        *i = 0;
     }
 
 }
