@@ -6,6 +6,10 @@
 #include <filesystem>
 #include <psapi.h>
 #include "Version.hpp"
+#include <intrin.h>
+#include <vector>
+#include <array>
+#include <d3dx9.h>
 
 void logModuleFromAddress(void* address, FILE* f)
 {
@@ -44,6 +48,72 @@ void logModuleFromAddress(void* address, FILE* f)
     fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
 }
 
+void logPCInfo(FILE* f) {
+
+    char pcName[256];
+    char userName[256];
+    DWORD bufferLen = 256;
+    GetComputerNameA(pcName, &bufferLen);
+    GetUserNameA(userName, &bufferLen);
+
+    fprintf(f, "PCNAME: %s\n", pcName);
+    fprintf(f, "USER: %s\n", userName);
+
+    // read this stupid article https://learn.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=msvc-170
+
+    std::vector<std::array<int, 4>> extdata;
+
+    char brand[0x40];
+    const char* defaultString =  "unknown brand";
+    memcpy(brand, defaultString, strlen(defaultString));
+
+    std::array<int, 4> cpuData = {0,0,0,0};
+    __cpuid(cpuData.data(), 0x80000000);
+    int maxExtID = cpuData[0];
+
+    for (int i = 0x80000000; i <= maxExtID; ++i) {
+        __cpuidex(cpuData.data(), i, 0);
+        extdata.push_back(cpuData);
+    }
+
+    // Interpret CPU brand string if reported
+    if (maxExtID >= 0x80000004) {
+        memcpy(brand, extdata[2].data(), sizeof(cpuData));
+        memcpy(brand + 16, extdata[3].data(), sizeof(cpuData));
+        memcpy(brand + 32, extdata[4].data(), sizeof(cpuData));
+    }
+
+    fprintf(f, "CPU: %s\n", brand);
+
+    // grabbing the gpu model is a bit difficult, i could go off the directx device, but i dont want to risk fucking it up
+    
+    DWORD dwDevice = *(DWORD*)0x0076e7d4;
+    IDirect3DDevice9* device = (IDirect3DDevice9*)dwDevice;
+
+    if(device == NULL) { // im taking a lot of risks here
+        fprintf(f, "unable to get gpu info :(\n");
+    }
+
+    IDirect3D9* notDevice = NULL;
+    device->GetDirect3D(&notDevice);
+    
+    if(notDevice == NULL) {
+        fprintf(f, "unable to get IDirect3D9??\n");
+    }
+
+	int adapterCount = notDevice->GetAdapterCount();
+
+    D3DADAPTER_IDENTIFIER9 id;
+    fprintf(f, "GPU: %d adapters\n", adapterCount);
+    for(int i=0; i<adapterCount; i++) { // i dont want to be here anymore 
+        notDevice->GetAdapterIdentifier(i, 0, &id);
+        fprintf(f, "\tA%d %s\n", i, id.Description);
+    }
+
+    fprintf(f, "\n-----\n\n");
+
+}
+
 LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
 
     if (!std::filesystem::is_directory("CRASH_DUMPS")) {
@@ -76,6 +146,9 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     FILE* f = fopen(filename.c_str(), "w"); 
 
     fprintf(f, "IF YOU DONT LIKE ME I HOPE YOU DIE\n\n");
+    fprintf(f, "\n-----\n\n");
+
+    logPCInfo(f);
     
     fprintf(f, "%s\n", timeBuffer);
     fprintf(f, "%s\n", LocalVersion.code.c_str());
@@ -141,7 +214,7 @@ namespace ExceptionHandler {
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
         int* i = NULL;
-        *i = 0;
+        //*i = 0;
     }
 
 }
