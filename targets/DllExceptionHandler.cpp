@@ -4,6 +4,44 @@
 #include <time.h>
 #include <string>
 #include <filesystem>
+#include <psapi.h>
+
+void logModuleFromAddress(void* address, FILE* f)
+{
+    HMODULE modules[1024];
+    DWORD needed;
+
+    if (!EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed)) {
+        return;
+    }
+
+    DWORD count = needed / sizeof(HMODULE);
+
+    for(int i = 0; i < count; i++) {
+        MODULEINFO info{};
+
+        if (!GetModuleInformation(GetCurrentProcess(), modules[i], &info, sizeof(info))) {
+            continue;
+        }
+
+        uintptr_t base = (uintptr_t)info.lpBaseOfDll;
+        uintptr_t end  = base + info.SizeOfImage;
+        uintptr_t addr = (uintptr_t)address;
+
+        if (addr >= base && addr < end) {
+            char path[256];
+
+            GetModuleFileNameA(modules[i], path, sizeof(path));
+
+            fprintf(f, "Crash path: %s\n", path);
+            fprintf(f, "Base address: %08X\n", info.lpBaseOfDll);
+            fprintf(f, "Offset: %08X\n", addr - base);
+            return;
+        }
+    }
+
+    fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
+}
 
 LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
 
@@ -31,6 +69,8 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     char moduleName[256];
     GetModuleFileNameA(module, moduleName, 256);
 
+    MODULEINFO moduleInfo;
+    GetModuleInformation(GetCurrentProcess(), module, &moduleInfo, sizeof(moduleInfo));
 
     FILE* f = fopen(filename.c_str(), "w"); 
 
@@ -39,8 +79,8 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     fprintf(f, "%s\n", timeBuffer);
     fprintf(f, "\n-----\n\n");
     
-    fprintf(f, "MOD:\t%s\n", moduleName);
-    fprintf(f, "EIP:\t%08X\n", ctx->Eip);
+    fprintf(f, "MODULE: %s\n", moduleName);
+    logModuleFromAddress((void*)EIP, f);
     fprintf(f, "\n-----\n\n");
 
     fprintf(f, "EAX:\t%08X\n", ctx->Eax);
@@ -66,7 +106,7 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     fprintf(f, "\n-----\n\n"); 
 
     for(int i=0; i<er->NumberParameters; i++) {
-        fprintf(f, "p%d %08X\n", i, er->ExceptionInformation[i]);
+        fprintf(f, "P%d %08X\n", i, er->ExceptionInformation[i]);
     }
     
     fprintf(f, "\n-----\n\n");
@@ -82,6 +122,7 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     fprintf(f, "\n-----\n\n");
 
     fclose(f);
+
     // make sure everything is flushed (is everything flushed?)
 
     // todo, submit this to some aws thing. ugh
@@ -93,9 +134,10 @@ namespace ExceptionHandler {
 
     void init() {
         
-        SetUnhandledExceptionFilter(unhandledExceptionFilter);
+        //SetUnhandledExceptionFilter(unhandledExceptionFilter);
+        
         int* i = NULL;
-        *i = 0;
+        //*i = 0;
     }
 
 }

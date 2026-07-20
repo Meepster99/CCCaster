@@ -46,6 +46,9 @@ bool DllControllerManager::isNotMapping() const
 
 void DllControllerManager::updateControls ( uint16_t *localInputs )
 {
+    //int* i = NULL;
+    //*i = 0;
+
     if ( stopping )
         return;
 
