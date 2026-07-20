@@ -7,6 +7,7 @@
 #include "MouseManager.hpp"
 #include "ControllerManager.hpp"
 #include "DllFrameRate.hpp"
+#include "DllExceptionHandler.hpp"
 
 #include "D3DHook.h"
 
@@ -61,7 +62,7 @@ void initializePreLoad()
     WRITE_ASM_HACK ( disableTrainingMusicReset );
     WRITE_ASM_HACK ( fixBossStageSuperFlashOverlay );
     WRITE_ASM_HACK ( disableScreenshot );
-
+    
     // TODO color hijack is temporary disabled due to some issues
     //
     // for ( const Asm& hack : hijackLoadingStateColors )
@@ -73,6 +74,8 @@ void initializePreLoad()
 // Note: this is called on the SAME thread as the main application thread
 MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
+    ExceptionHandler::init(); // this needs to be called here sice this is ran in main thread, dll thread aint it
+
     switch ( msg )
     {
         case WM_SYSCOMMAND:
