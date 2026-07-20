@@ -10,6 +10,75 @@
 #include <vector>
 #include <array>
 #include <d3dx9.h>
+#include <fstream>
+#include <winhttp.h>
+
+#pragma comment(lib, "winhttp.lib")
+
+void sendDump(const std::string& filename) {
+
+    // scrapers will try and take urls here, so forgive the bs 
+
+    std::string xorChars =  "fjhioqweop31i02eudiashjfposkjnfjlfjdakdj013498urfpijdkdl;afsdkfqh011f"; // literal keyboard mash
+    uint8_t xorURL[] = {0x0E, 0x1E, 0x1C, 0x19, 0x1C, 0x4B, 0x58, 0x4A, 0x1D, 0x1B, 0x41, 0x5E, 0x05, 0x5B, 0x50, 0x0C, 0x0D, 0x01, 0x0F, 0x15, 0x45, 0x19, 0x0B, 0x12, 0x15, 0x1E, 0x10, 0x1F, 0x1F, 0x1F, 0x11, 0x5D, 0x05, 0x13, 0x5A, 0x1D, 0x08, 0x0C, 0x05, 0x1B, 0x1E, 0x5D, 0x52, 0x59, 0x5B, 0x5C, 0x14, 0x5F, 0x13, 0x02, 0x05, 0x44, 0x11, 0x18, 0x49, 0x09, 0x5A, 0x12, 0x12, 0x5E, 0x56, 0x45, 0x09, 0x1F, 0x46, 0x51, 0x46, 0x42, 0x49};
+
+    std::wstring lambdaURL = L"";
+    for(int i=0; i<xorChars.size()-1; i++) {
+        if(i < 8) { continue; } 
+        lambdaURL += xorURL[i] ^ xorChars[i];
+    }        
+
+    std::ifstream inFile(filename, std::ios::binary | std::ios::ate);
+
+    std::streamsize size = inFile.tellg();
+    inFile.seekg(0, std::ios::beg);
+
+    char* buffer = (char*)malloc(size);
+    inFile.read(buffer, size);
+    inFile.close();
+
+    HINTERNET session = WinHttpOpen(L"Ugh/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+
+    if (!session) {
+        log("couldnt open http session??");
+        return;
+    }
+    
+    HINTERNET connect = WinHttpConnect(session, lambdaURL.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
+
+    if (!connect) { 
+        log("failed to httpconnect, error:%d", GetLastError());
+        log("url was %ls", lambdaURL.c_str());
+        WinHttpCloseHandle(session);
+        return;
+    }
+
+    HINTERNET request = WinHttpOpenRequest(connect, L"POST", L"/", nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
+
+    if (!request) {
+        log("failed WinHttpOpenRequest");
+        WinHttpCloseHandle(connect);
+        WinHttpCloseHandle(session);
+        return;
+    }
+
+    const wchar_t* headers = L"Content-Type: application/octet-stream\r\n";
+
+    BOOL result = WinHttpSendRequest(request, headers, -1L, (LPVOID)buffer, (DWORD)size, (DWORD)size, 0);
+
+    if(result) {
+        log("sent crashdump :)");
+        result = WinHttpReceiveResponse(request,nullptr);   
+    } else {
+        log("post req failed, got a bad result.");
+    }
+
+    WinHttpCloseHandle(request);
+    WinHttpCloseHandle(connect);
+    WinHttpCloseHandle(session);
+
+    free(buffer);
+}
 
 void logModuleFromAddress(void* address, FILE* f)
 {
@@ -146,11 +215,11 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     FILE* f = fopen(filename.c_str(), "w"); 
 
     fprintf(f, "IF YOU DONT LIKE ME I HOPE YOU DIE\n\n");
+    fprintf(f, "%s\n", timeBuffer);
     fprintf(f, "\n-----\n\n");
 
     logPCInfo(f);
     
-    fprintf(f, "%s\n", timeBuffer);
     fprintf(f, "%s\n", LocalVersion.code.c_str());
     fprintf(f, "%s\n", LocalVersion.revision.c_str());
     fprintf(f, "%s\n", LocalVersion.buildTime.c_str());
@@ -180,8 +249,6 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
     
     fprintf(f, "numparam: %d\n", er->NumberParameters);
 
-    fprintf(f, "\n-----\n\n"); 
-
     for(int i=0; i<er->NumberParameters; i++) {
         fprintf(f, "P%d %08X\n", i, er->ExceptionInformation[i]);
     }
@@ -192,7 +259,7 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
 
     DWORD* ESP = (DWORD*)ctx->Esp;
 
-    for(int i=0; i<=64; i++) {
+    for(int i=0; i<=256; i++) {
         fprintf(f, "%08X ESP[%04X] = %08X\n", (DWORD)(ESP + i), i*4, ESP[i]);
     }
 
@@ -200,9 +267,13 @@ LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
 
     fclose(f);
 
+    CopyFileA(filename.c_str(), "CRASH_DUMPS/DUMP_RECENT.txt", false);
+
     // make sure everything is flushed (is everything flushed?)
 
     // todo, submit this to some aws thing. ugh
+
+    sendDump(filename);
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -214,7 +285,7 @@ namespace ExceptionHandler {
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
         int* i = NULL;
-        //*i = 0;
+        *i = 0;
     }
 
 }
