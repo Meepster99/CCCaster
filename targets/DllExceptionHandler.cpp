@@ -128,9 +128,9 @@ namespace ExceptionHandler {
 
         if(foundCrash) {
             fprintf(f, "Crash info:\n");
-            fprintf(f, "Crash path: %s\n", crashPath);
-            fprintf(f, "Base address: %08X\n", crashBase);
-            fprintf(f, "Offset: %08X\n", crashOffset);
+            fprintf(f, "\tPath: %s\n", crashPath);
+            fprintf(f, "\tBase address: %08X\n", crashBase);
+            fprintf(f, "\tOffset: %08X\n", crashOffset);
         } else {
             fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
         }
@@ -249,6 +249,8 @@ namespace ExceptionHandler {
         fprintf(f, "BASEMODULE: %s\n", moduleName);
         logModuleFromAddress((void*)EIP, f);
         fprintf(f, "\n-----\n\n");
+
+        fprintf(f, "EIP:\t%08X\n", ctx->Eip);
 
         fprintf(f, "EAX:\t%08X\n", ctx->Eax);
         fprintf(f, "EBX:\t%08X\n", ctx->Ebx);

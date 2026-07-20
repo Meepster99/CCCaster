@@ -1,4 +1,4 @@
-v3.1.009
+v3.1.009 (BLEEDING)
 - Controller bind text size now scales with screen resolution
 - Change bgm and sfx volume in caster
 - More changes to the FPS display, turns grey on a lag frame
@@ -7,6 +7,7 @@ v3.1.009
 - Improved frame limiter on linux (By Alx)
 - Add option to disable the win count hud
 - In game chat.
+- Report crashes
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering
