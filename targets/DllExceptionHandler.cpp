@@ -92,6 +92,17 @@ namespace ExceptionHandler {
 
         DWORD count = needed / sizeof(HMODULE);
 
+        
+        char path[MAX_PATH] = {'\0'};
+
+        char crashPath[MAX_PATH] = {'\0'};
+        LPVOID crashBase = NULL;
+        uintptr_t crashOffset = NULL;
+
+        bool foundCrash = false;
+
+        fprintf(f, "Modules:\n");
+
         for(int i = 0; i < count; i++) {
             MODULEINFO info{};
 
@@ -103,19 +114,28 @@ namespace ExceptionHandler {
             uintptr_t end  = base + info.SizeOfImage;
             uintptr_t addr = (uintptr_t)address;
 
+            GetModuleFileNameA(modules[i], path, sizeof(path));
+
             if (addr >= base && addr < end) {
-                char path[256];
-
-                GetModuleFileNameA(modules[i], path, sizeof(path));
-
-                fprintf(f, "Crash path: %s\n", path);
-                fprintf(f, "Base address: %08X\n", info.lpBaseOfDll);
-                fprintf(f, "Offset: %08X\n", addr - base);
-                return;
+                memcpy(crashPath, path, strlen(path));
+                crashBase = info.lpBaseOfDll;
+                crashOffset = addr - base;
+                foundCrash = true;
             }
+
+            fprintf(f, "\t%s\n", path);
         }
 
-        fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
+        if(foundCrash) {
+            fprintf(f, "Crash info:\n");
+            fprintf(f, "Crash path: %s\n", crashPath);
+            fprintf(f, "Base address: %08X\n", crashBase);
+            fprintf(f, "Offset: %08X\n", crashOffset);
+        } else {
+            fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
+        }
+        
+        
     }
 
     void logPCInfo(FILE* f) {
@@ -226,7 +246,7 @@ namespace ExceptionHandler {
         fprintf(f, "%s\n", LocalVersion.buildTime.c_str());
         fprintf(f, "\n-----\n\n");
         
-        fprintf(f, "MODULE: %s\n", moduleName);
+        fprintf(f, "BASEMODULE: %s\n", moduleName);
         logModuleFromAddress((void*)EIP, f);
         fprintf(f, "\n-----\n\n");
 
