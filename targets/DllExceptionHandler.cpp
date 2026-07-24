@@ -13,9 +13,19 @@
 #include <fstream>
 #include <winhttp.h>
 
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 #pragma comment(lib, "winhttp.lib")
 
 namespace ExceptionHandler {
+
+	std::string numToHex(DWORD v) {
+		// i could avoid using this to compress shit further but... who cares
+		char buffer[32];
+		snprintf(buffer, 32, "0x%08X", v);
+		return std::string(buffer);
+	}
 
     void sendDump(const std::string& filename) {
 
@@ -82,7 +92,7 @@ namespace ExceptionHandler {
         free(buffer);
     }
 
-    void logModuleFromAddress(void* address, FILE* f) {
+    void logModuleFromAddress(void* address, json& j) {
         HMODULE modules[1024];
         DWORD needed;
 
@@ -91,7 +101,6 @@ namespace ExceptionHandler {
         }
 
         DWORD count = needed / sizeof(HMODULE);
-
         
         char path[MAX_PATH] = {'\0'};
 
@@ -101,7 +110,7 @@ namespace ExceptionHandler {
 
         bool foundCrash = false;
 
-        fprintf(f, "Modules:\n");
+		j["moduleInfo"]["modules"] = json::array();
 
         for(int i = 0; i < count; i++) {
             MODULEINFO info{};
@@ -123,22 +132,24 @@ namespace ExceptionHandler {
                 foundCrash = true;
             }
 
-            fprintf(f, "\t%s\n", path);
+			j["moduleInfo"]["modules"].push_back(path);
+
+            //fprintf(f, "\t%s\n", path);
         }
 
+		j["moduleInfo"]["foundCrash"] = foundCrash;
+
         if(foundCrash) {
-            fprintf(f, "Crash info:\n");
-            fprintf(f, "\tPath: %s\n", crashPath);
-            fprintf(f, "\tBase address: %08X\n", crashBase);
-            fprintf(f, "\tOffset: %08X\n", crashOffset);
-        } else {
-            fprintf(f, "UNABLE TO FIND CRASH MODULE INFO\n");
-        }
-        
+			j["moduleInfo"]["crashInfo"] = {
+				{"path", crashPath},
+				{"addr", numToHex((DWORD)crashBase)},
+				{"offset", numToHex(crashOffset)}
+			};
+		}
         
     }
 
-    void logPCInfo(FILE* f) {
+    void logPCInfo(json& j) {
 
         char pcName[256];
         char userName[256];
@@ -146,8 +157,8 @@ namespace ExceptionHandler {
         GetComputerNameA(pcName, &bufferLen);
         GetUserNameA(userName, &bufferLen);
 
-        fprintf(f, "PCNAME: %s\n", pcName);
-        fprintf(f, "USER: %s\n", userName);
+		j["pcName"] = pcName;
+		j["user"] = userName;
 
         // read this stupid article https://learn.microsoft.com/en-us/cpp/intrinsics/cpuid-cpuidex?view=msvc-170
 
@@ -173,52 +184,50 @@ namespace ExceptionHandler {
             memcpy(brand + 32, extdata[4].data(), sizeof(cpuData));
         }
 
-        fprintf(f, "CPU: %s\n", brand);
+		j["CPU"] = brand;
 
         // grabbing the gpu model is a bit difficult, i could go off the directx device, but i dont want to risk fucking it up
         
         DWORD dwDevice = *(DWORD*)0x0076e7d4;
         IDirect3DDevice9* device = (IDirect3DDevice9*)dwDevice;
 
+		j["GPU"] = {};
+
         if(device == NULL) { // im taking a lot of risks here
-            fprintf(f, "unable to get gpu info :(\n");
+            j["GPU"]["device"] = false; //fprintf(f, "unable to get gpu info :(\n");
+			return;
         }
+		j["GPU"]["device"] = true; //
+	
 
         IDirect3D9* notDevice = NULL;
         device->GetDirect3D(&notDevice);
         
         if(notDevice == NULL) {
-            fprintf(f, "unable to get IDirect3D9??\n");
+            //fprintf(f, "unable to get IDirect3D9??\n");
+			j["GPU"]["notDevice"] = false;
+			return;
         }
+		j["GPU"]["notDevice"] = true;
+
 
         int adapterCount = notDevice->GetAdapterCount();
 
         D3DADAPTER_IDENTIFIER9 id;
-        fprintf(f, "GPU: %d adapters\n", adapterCount);
+        //fprintf(f, "GPU: %d adapters\n", adapterCount);
+		j["GPU"]["adapters"] = json::array();
         for(int i=0; i<adapterCount; i++) { // i dont want to be here anymore 
             notDevice->GetAdapterIdentifier(i, 0, &id);
-            fprintf(f, "\tA%d %s\n", i, id.Description);
+            //fprintf(f, "\tA%d %s\n", i, id.Description);
+			j["GPU"]["adapters"].push_back(id.Description);
         }
 
-        fprintf(f, "\n-----\n\n");
 
     }
 
-    void exceptionFilter(PEXCEPTION_POINTERS ep) {
-            
-        if (!std::filesystem::is_directory("CRASH_DUMPS")) {
-            std::filesystem::create_directories("CRASH_DUMPS");
-        }
+	void createCrashDump(PEXCEPTION_POINTERS ep, json& j, const char* timeBuffer) {
 
-        time_t timeVal;
-        time(&timeVal);
-        struct tm* timeInfo = localtime(&timeVal);
-
-        char timeBuffer[32];
-        strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H-%M-%S", timeInfo);
-        std::string filename = "CRASH_DUMPS/DUMP_" + std::string(timeBuffer) + ".txt";
-    
-        const EXCEPTION_RECORD* er = ep->ExceptionRecord;
+		const EXCEPTION_RECORD* er = ep->ExceptionRecord;
         const CONTEXT* ctx = ep->ContextRecord;
 
         DWORD EIP = ctx->Eip;
@@ -233,64 +242,82 @@ namespace ExceptionHandler {
         MODULEINFO moduleInfo;
         GetModuleInformation(GetCurrentProcess(), module, &moduleInfo, sizeof(moduleInfo));
 
-        FILE* f = fopen(filename.c_str(), "w"); 
+		j["crashTime"] = timeBuffer;
 
-        fprintf(f, "IF YOU DONT LIKE ME I HOPE YOU DIE\n\n");
-        fprintf(f, "%s\n", timeBuffer);
-        fprintf(f, "\n-----\n\n");
+		logPCInfo(j);
 
-        logPCInfo(f);
-        
-        fprintf(f, "%s\n", LocalVersion.code.c_str());
-        fprintf(f, "%s\n", LocalVersion.revision.c_str());
-        fprintf(f, "%s\n", LocalVersion.buildTime.c_str());
-        fprintf(f, "\n-----\n\n");
-        
-        fprintf(f, "BASEMODULE: %s\n", moduleName);
-        logModuleFromAddress((void*)EIP, f);
-        fprintf(f, "\n-----\n\n");
+		j["version"] = {
+			{"code", LocalVersion.code.c_str()},
+			{"revision", LocalVersion.revision.c_str()},
+			{"buildTime", LocalVersion.buildTime.c_str()},
+		};
 
-        fprintf(f, "EIP:\t%08X\n", ctx->Eip);
+		j["registers"] = {
+			{"EAX", numToHex(ctx->Eax)},
+			{"EBX", numToHex(ctx->Ebx)},
+			{"ECX", numToHex(ctx->Ecx)},
+			{"EDX", numToHex(ctx->Edx)},
 
-        fprintf(f, "EAX:\t%08X\n", ctx->Eax);
-        fprintf(f, "EBX:\t%08X\n", ctx->Ebx);
-        fprintf(f, "ECX:\t%08X\n", ctx->Ecx);
-        fprintf(f, "EDX:\t%08X\n", ctx->Edx);
+			{"ESI", numToHex(ctx->Esi)},
+			{"EDI", numToHex(ctx->Edi)},
 
-        fprintf(f, "ESI:\t%08X\n", ctx->Esi);
-        fprintf(f, "EDI:\t%08X\n", ctx->Edi);
-        
-        fprintf(f, "EBP:\t%08X\n", ctx->Ebp);
-        fprintf(f, "ESP:\t%08X\n", ctx->Esp);
-        
-        fprintf(f, "\n-----\n\n");
+			{"EBP", numToHex(ctx->Ebp)},
+			{"ESP", numToHex(ctx->Esp)},
 
-        fprintf(f, "Exception info:\n");
-        fprintf(f, "code: %08X\n", er->ExceptionCode);
-        fprintf(f, "flag: %08X\n", er->ExceptionFlags);
-        fprintf(f, "addr: %08X\n", er->ExceptionAddress);
-        
-        fprintf(f, "numparam: %d\n", er->NumberParameters);
+			{"EIP", numToHex(ctx->Eip)},
+		};
 
-        for(int i=0; i<er->NumberParameters; i++) {
-            fprintf(f, "P%d %08X\n", i, er->ExceptionInformation[i]);
+		auto exceptionParams = json::array();
+		for(int i=0; i<er->NumberParameters; i++) {
+			exceptionParams.push_back(numToHex(er->ExceptionInformation[i]));
+		}
+
+		j["exception"] = {
+			{"code", numToHex(er->ExceptionCode)},
+			{"flag", numToHex(er->ExceptionFlags)},
+			{"addr", numToHex((DWORD)er->ExceptionAddress)},
+			{"params", exceptionParams},
+		};
+
+		j["stack"] = json::array();
+		
+		DWORD* ESP = (DWORD*)ctx->Esp;
+		for(int i=0; i<=256; i++) {
+			//fprintf(f, "%08X ESP[%04X] = %08X\n", (DWORD)(ESP + i), i*4, ESP[i]);
+			j["stack"].push_back(numToHex(ESP[i]));
+		}
+
+		j["moduleInfo"]["base"] = moduleName;
+
+		logModuleFromAddress((void*)EIP, j);
+	}
+
+    void exceptionFilter(PEXCEPTION_POINTERS ep) {
+            
+        if (!std::filesystem::is_directory("CRASH_DUMPS")) {
+            std::filesystem::create_directories("CRASH_DUMPS");
         }
-        
-        fprintf(f, "\n-----\n\n");
 
-        fprintf(f, "STACK:\n");
+        time_t timeVal;
+        time(&timeVal);
+        struct tm* timeInfo = localtime(&timeVal);
 
-        DWORD* ESP = (DWORD*)ctx->Esp;
+        char timeBuffer[32];
+        strftime(timeBuffer, sizeof(timeBuffer), "%Y-%m-%d %H-%M-%S", timeInfo);
+        std::string filename = "CRASH_DUMPS/DUMP_" + std::string(timeBuffer) + ".json";
+    
+		json j;
 
-        for(int i=0; i<=256; i++) {
-            fprintf(f, "%08X ESP[%04X] = %08X\n", (DWORD)(ESP + i), i*4, ESP[i]);
-        }
+        createCrashDump(ep, j, timeBuffer);
 
-        fprintf(f, "\n-----\n\n");
+		std::ofstream outFile(filename);
+		outFile << "IF YOU DONT LIKE ME I HOPE YOU DIE\n";
+		outFile << timeBuffer << "\n";
+		outFile << std::string(j["pcName"]) << "\n";
+		outFile << j.dump(4);
+		outFile.close();
 
-        fclose(f);
-
-        CopyFileA(filename.c_str(), "CRASH_DUMPS/DUMP_RECENT.txt", false);
+        CopyFileA(filename.c_str(), "CRASH_DUMPS/DUMP_RECENT.json", false);
 
         // make sure everything is flushed (is everything flushed?)
 
