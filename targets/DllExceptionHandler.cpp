@@ -12,11 +12,15 @@
 #include <d3dx9.h>
 #include <fstream>
 #include <winhttp.h>
+#include <dbghelp.h>
+#include <cxxabi.h>
+#include <cstdlib>
 
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 #pragma comment(lib, "winhttp.lib")
+#pragma comment(lib, "dbghelp.lib")
 
 namespace ExceptionHandler {
 
@@ -148,6 +152,130 @@ namespace ExceptionHandler {
 		}
         
     }
+
+	json logSymFromAddr(void* address) {
+
+		json res;
+
+		DWORD64 addr = (DWORD64)address;
+		HANDLE process = GetCurrentProcess();
+
+		// why does  https://learn.microsoft.com/en-us/windows/win32/debug/retrieving-symbol-information-by-address
+		// alloc this shit this way?
+		char addrBuffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+		PSYMBOL_INFO symbol = (PSYMBOL_INFO)addrBuffer;
+		symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		symbol->MaxNameLen = MAX_SYM_NAME;
+		DWORD64 addrDisplacement = 0;
+
+		if(!SymFromAddr(process, addr, &addrDisplacement, symbol)) {
+			res = {
+				{"hasInfo", false},
+				{"failFunc", "SymFromAddr"},
+				{"error", GetLastError()},
+			};
+			return res;
+		}
+
+		const char* baseName = symbol->Name;
+		char fixedBaseName[512];
+	
+		// __cxa_demangle expects a leading _, symfromaddr doesnt give it
+		// is this because im crashing in a mingw compiled area, and this will cause issues in non mingw areas?
+		// to be safe, im doing it with both options
+		snprintf(fixedBaseName, sizeof(fixedBaseName), "_%s", baseName);
+		
+		int baseStatus = 0;
+		char* baseDemangled = abi::__cxa_demangle(baseName, nullptr, nullptr, &baseStatus);
+
+		int fixedStatus = 0;
+		char* fixedDemangled = abi::__cxa_demangle(fixedBaseName, nullptr, nullptr, &fixedStatus);
+		
+		char tempBaseDemangled[512];
+		char tempFixedDemangled[512];
+
+		if(baseDemangled == NULL) {
+			snprintf(tempBaseDemangled, sizeof(tempBaseDemangled), "(NULL)");
+		} else {
+			snprintf(tempBaseDemangled, sizeof(tempBaseDemangled), "%s", baseDemangled);
+		}
+
+		if(fixedDemangled == NULL) {
+			snprintf(tempFixedDemangled, sizeof(tempFixedDemangled), "(NULL)");
+		} else {
+			snprintf(tempFixedDemangled, sizeof(tempFixedDemangled), "%s", fixedDemangled);
+		}
+
+		res = {
+			{"hasInfo", true},
+			
+			{"baseName", baseName},
+			{"fixedBaseName", fixedBaseName},
+
+			{"baseDemangleStatus", baseStatus},
+			{"fixedDemangleStatus", fixedStatus},
+
+			{"baseDemangle", tempBaseDemangled},
+			{"fixedDemangle", tempFixedDemangled},
+
+			{"displacement", numToHex(addrDisplacement)},
+		};
+
+		free(baseDemangled);
+		free(fixedDemangled);
+
+		return res;
+	}
+
+	json logSymGetLineFromAddr(void* address) {
+
+		json res;
+
+		DWORD64 addr = (DWORD64)address;
+		HANDLE process = GetCurrentProcess();
+
+		DWORD lineDisplacement = 0;
+		IMAGEHLP_LINE lineData{};
+		lineData.SizeOfStruct = sizeof(lineData);
+
+		if(!SymGetLineFromAddr(process, addr, &lineDisplacement, &lineData)) {
+			res = {
+				{"hasInfo", false},
+				{"failFunc", "SymGetLineFromAddr"},
+				{"error", GetLastError()},
+			};
+			return res;
+		}
+
+		res = {
+			{"hasInfo", true},
+			{"filename", lineData.FileName},
+			{"lineNumber", lineData.LineNumber},
+		};
+		
+		return res;
+	}
+
+	void logFunctionInfo(void* address, json& j) {
+
+		// this is hell. trying to get this to run between code running on 3 different compilers is hell.
+
+		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS);
+		int res = SymInitialize(GetCurrentProcess(), nullptr, TRUE);
+		
+		if(!res) {
+			log("SymInitialize failed!");
+			j["funcInfo"]["SymInitialize"]["resCode"] = res;
+			j["funcInfo"]["SymInitialize"]["error"] = GetLastError();
+		}
+
+		j["funcInfo"]["SymFromAddr"] = logSymFromAddr(address);
+
+		j["funcInfo"]["SymGetLineFromAddr"] = logSymGetLineFromAddr(address);
+	
+		//j["funcInfo"]["UnDecorateSymbolName"] = logUnDecorateSymbolName(address);
+
+	}
 
     void logPCInfo(json& j) {
 
@@ -290,6 +418,8 @@ namespace ExceptionHandler {
 		j["moduleInfo"]["base"] = moduleName;
 
 		logModuleFromAddress((void*)EIP, j);
+
+		logFunctionInfo((void*)EIP, j);
 	}
 
     void exceptionFilter(PEXCEPTION_POINTERS ep) {
@@ -335,7 +465,7 @@ namespace ExceptionHandler {
     }
 
     void init() {
-        
+    
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
         //int* i = NULL;
