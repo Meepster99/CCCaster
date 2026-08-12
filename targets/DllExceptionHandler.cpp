@@ -453,7 +453,7 @@ namespace ExceptionHandler {
 
         // todo, submit this to some aws thing. ugh
 
-        sendDump(filename);
+        //sendDump(filename);
 
     }
 
@@ -468,8 +468,8 @@ namespace ExceptionHandler {
     
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
-        //int* i = NULL;
-        //*i = 0;
+       	int* i = NULL;
+        *i = 0;
     }
 
 }

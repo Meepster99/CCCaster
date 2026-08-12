@@ -53,10 +53,16 @@ LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
 
-# Tool chain
+$(info HELLO)
+
+# Tool chain sudo apt install clang lld
+# sudo apt-get install libc++-dev
 PREFIX = i686-w64-mingw32-
 GCC = $(PREFIX)gcc
 CXX = $(PREFIX)g++
+#PREFIX =
+#GCC = $(PREFIX)clang 	--target=i686-w64-windows-gnu	-stdlib=libc++
+#CXX = $(PREFIX)clang++ 	--target=i686-w64-windows-gnu	-stdlib=libc++ 
 WINDRES = windres
 STRIP = strip
 TOUCH = touch
@@ -91,10 +97,57 @@ DEFINES += -DLOBBY_LIST='"$(LOBBY_LIST)"'
 INCLUDES = -I$(CURDIR) -I$(CURDIR)/netplay -I$(CURDIR)/lib -I$(CURDIR)/tests -I$(CURDIR)/3rdparty -I$(CURDIR)/sequences
 INCLUDES += -I$(CURDIR)/3rdparty/cereal/include -I$(CURDIR)/3rdparty/gtest/include -I$(CURDIR)/3rdparty/minhook/include
 INCLUDES += -I$(CURDIR)/3rdparty/d3dhook -I$(CURDIR)/3rdparty/framedisplay -I$(CURDIR)/3rdparty/imgui -I$(CURDIR)/3rdparty/imgui/backends
+
+INCLUDES += -I$(CURDIR)/3rdparty/distorm3/include/ -I$(CURDIR)/3rdparty/AntTweakBar/include/ -I$(CURDIR)/3rdparty/glfw
 CC_FLAGS = -m32 $(INCLUDES) $(DEFINES)
 #	https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
 # 	Intel Celeron 440 is listed as minimum CPU for melty on steam
-CC_FLAGS += -mmmx -msse -msse2 -msse3 -mssse3
+CC_FLAGS +=  -mmmx -msse -msse2 -msse3 -mssse3 
+#CC_FLAGS += -std=c++2a
+CC_FLAGS += -std=c++23
+#CC_FLAGS += -fconcepts # use if on gcc
+
+# clang pain
+# i need this flag if i want debug bs to work between the 3 god forsaken compilers that are being used in melty rn
+# which means i need to either install debian, or build mingw from source because i need gcc>=14 in order to have this flag, and 
+# im not installing debian 
+
+# sudo apt install build-essential bison flex texinfo wget gawk gcc-multilib g++-multilib mingw-w64 mingw-w64-tools
+# wget https://ftp.gnu.org/gnu/gcc/gcc-16.2.0/gcc-16.2.0.tar.xz
+# tar -xf gcc-16.2.0.tar.xz
+# cd gcc-16.2.0
+# ./contrib/download_prerequisites
+# mkdir ../gcc-16.2-build
+# cd ../gcc-16.2-build
+# NOTTHISONE ../gcc-16.2.0/configure --target=i686-w64-mingw32 --with-sysroot=/opt/mingw/i686-w64-mingw32 --prefix=/opt/mingw --enable-languages=c,c++ --enable-threads=win32 --disable-multilib --disable-nls --disable-werror
+# sudo mkdir -p /usr/local/i686-w64-mingw32/include
+# sudo mkdir -p /usr/local/i686-w64-mingw32/lib
+# sudo mkdir -p /usr/local/i686-w64-mingw32/bin
+# sudo cp -a /usr/i686-w64-mingw32/include/. /usr/local/i686-w64-mingw32/include/
+# sudo cp -a /usr/i686-w64-mingw32/lib/. /usr/local/i686-w64-mingw32/lib/
+# sudo mkdir -p /usr/i686-w64-mingw32/mingw
+# sudo ln -s /usr/i686-w64-mingw32/include /usr/i686-w64-mingw32/mingw/include
+# sudo ln -s /usr/i686-w64-mingw32/lib /usr/i686-w64-mingw32/mingw/lib
+# sudo mkdir -p /usr/i686-w64-mingw32/mingw
+# sudo ln -s /usr/i686-w64-mingw32/include /usr/i686-w64-mingw32/mingw/include
+# ../gcc-16.2.0/configure --target=i686-w64-mingw32 --prefix=/opt/mingw --with-native-system-header-dir=/i686-w64-mingw32/include --with-sysroot=/usr --enable-languages=c,c++ --enable-threads=win32 --disable-multilib --disable-nls --disable-werror
+# pray to your gods
+# make -j$(nproc)
+# make
+# look, i dont know why, but i had to run it twice?
+# sudo make install
+
+# if i686-w64-mingw32-g++ -v isnt 16, make sure to blow your shit smooth off, or just disable gcodeview. but ill know. and ill be disappointed
+
+# dear god, after 4 hours of wanting to explode
+# https://github.com/brechtsanders/winlibs_mingw/releases/tag/14.2.0win32-12.0.0-msvcrt-r1
+# its 14, and has win32 threads, like i need
+# and seh? apparently
+# get winlibs-x86_64-win32-seh-gcc-14.2.0-mingw-w64msvcrt-12.0.0-r1.7z
+# nope im dumb thats for windows
+
+CC_FLAGS += -gcodeview 
+#INCLUDES += 
 
 # Linker flags
 LD_FLAGS = -m32 -static -lws2_32 -lpsapi -lwinpthread -lwinmm -lole32 -ldinput -lwininet -ldwmapi -lgdi32 -lwinhttp -ldbghelp -Wl,--export-all-symbols
@@ -163,14 +216,14 @@ endif
 
 $(BINARY): $(addprefix $(BUILD_PREFIX)/,$(MAIN_OBJECTS)) res/icon.res
 	rm -f $(filter-out $(BINARY),$(wildcard $(NAME)*.exe))
-	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a -fconcepts $^ $(LD_FLAGS)
+	$(CXX) -o $@ $(CC_FLAGS) -Wall   $^ $(LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
 	@echo
 
 $(FOLDER)/$(DLL): $(addprefix $(BUILD_PREFIX)/,$(DLL_OBJECTS)) res/rollback.o targets/CallDraw.s | $(FOLDER)
-	$(CXX) -o $@ $(CC_FLAGS) -Wall -std=c++2a -fconcepts $^ -shared $(LD_FLAGS) -ld3dx9
+	$(CXX) -o $@ $(CC_FLAGS) -Wall   $^ -shared $(LD_FLAGS) -ld3dx9
 	@echo
 	$(STRIP) $@
 	$(GRANT)
@@ -184,7 +237,7 @@ $(FOLDER)/$(LAUNCHER): tools/Launcher.cpp | $(FOLDER)
 	@echo
 
 $(FOLDER)/$(UPDATER): tools/Updater.cpp lib/StringUtils.cpp | $(FOLDER)
-	$(CXX) -o $@ $^ -m32 -s -Os -O2 -std=c++2a -fconcepts -I$(CURDIR)/lib -Wall -static -lpsapi
+	$(CXX) -o $@ $^ -m32 -s -Os -O2 -std=c++11  -I$(CURDIR)/lib -Wall -static -lpsapi
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -233,7 +286,7 @@ DEBUGGER_LIB_OBJECTS = \
 	$(addprefix $(LOGGING_PREFIX)/,$(filter-out lib/Version.o lib/LoggerLogVersion.o lib/ConsoleUi.o,$(LIB_OBJECTS)))
 
 tools/$(DEBUGGER): tools/Debugger.cpp $(DEBUGGER_LIB_OBJECTS)
-	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a -fconcepts $^ $(LD_FLAGS) \
+	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall   $^ $(LD_FLAGS) \
 	-I$(CURDIR)/3rdparty/distorm3/include -L$(CURDIR)/3rdparty/distorm3 -ldistorm3
 	@echo
 	$(STRIP) $@
@@ -245,7 +298,7 @@ GENERATOR_LIB_OBJECTS = \
 	$(addprefix $(LOGGING_PREFIX)/,$(filter-out lib/Version.o lib/LoggerLogVersion.o lib/ConsoleUi.o,$(LIB_OBJECTS)))
 
 tools/$(GENERATOR): tools/Generator.cpp $(GENERATOR_LIB_OBJECTS)
-	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a -fconcepts $^ $(LD_FLAGS)
+	$(CXX) -o $@ $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -std=c++2a $^ $(LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -277,7 +330,7 @@ FRAMEDISPLAY_LD_FLAGS += -mwindows -static -lmingw32 -lpng -lz -lglfw -lopengl32
 	$(MAKE) --directory=3rdparty/AntTweakBar/src
 
 $(PALETTES): $(PALETTES_SRC) $(FRAMEDISPLAY_OBJECTS) res/palettes.res 3rdparty/AntTweakBar/lib/libAntTweakBar.a
-	$(CXX) $(FRAMEDISPLAY_CC_FLAGS) -o $@ $(FRAMEDISPLAY_INCLUDES) -Wall -std=c++2a -fconcepts -C $^ $(FRAMEDISPLAY_LD_FLAGS)
+	$(CXX) $(FRAMEDISPLAY_CC_FLAGS) -o $@ $(FRAMEDISPLAY_INCLUDES) -Wall  -std=c++2a  -C $^ $(FRAMEDISPLAY_LD_FLAGS)
 	@echo
 	$(STRIP) $@
 	$(CHMOD_X)
@@ -457,7 +510,7 @@ build_debug_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_debug_$(BRANCH)/%.o: %.cpp | build_debug_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -Wall -Wempty-body -std=c++2a -fconcepts -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -Wall -Wempty-body   -o $@ -c $<
 
 build_debug_$(BRANCH)/%.o: %.cc | build_debug_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(DEBUG_FLAGS) -o $@ -c $<
@@ -470,7 +523,7 @@ build_logging_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_logging_$(BRANCH)/%.o: %.cpp | build_logging_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -Wempty-body -std=c++2a -fconcepts -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -Wall -Wempty-body   -o $@ -c $<
 
 build_logging_$(BRANCH)/%.o: %.cc | build_logging_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(LOGGING_FLAGS) -o $@ -c $<
@@ -483,7 +536,7 @@ build_release_$(BRANCH):
 	rsync -a -f"- .git/" -f"- build_*/" -f"+ */" -f"- *" --exclude=".*" . $@
 
 build_release_$(BRANCH)/%.o: %.cpp | build_release_$(BRANCH)
-	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS) -std=c++2a -fconcepts -o $@ -c $<
+	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS)   -o $@ -c $<
 
 build_release_$(BRANCH)/%.o: %.cc | build_release_$(BRANCH)
 	$(CXX) $(CC_FLAGS) $(RELEASE_FLAGS) -o $@ -c $<
