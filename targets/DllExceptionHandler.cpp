@@ -468,8 +468,8 @@ namespace ExceptionHandler {
     
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
-       	int* i = NULL;
-        *i = 0;
+       	//int* i = NULL;
+        //*i = 0;
     }
 
 }

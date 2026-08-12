@@ -879,6 +879,7 @@ struct MainApp
             return;
         }
 
+		log("```HELLO FROM CASTER, STARTING MODE '%s'", getGameModeString());
         ui.display ( format ( "Starting %s mode...", getGameModeString() ),
                      clientMode.isNetplay() ); // Only replace last message if netplaying
 
