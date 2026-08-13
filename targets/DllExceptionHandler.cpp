@@ -518,7 +518,7 @@ namespace ExceptionHandler {
 
         // todo, submit this to some aws thing. ugh
 
-        //sendDump(filename);
+        sendDump(filename);
 
     }
 
