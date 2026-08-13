@@ -283,30 +283,12 @@ namespace ExceptionHandler {
 		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
 		SymSetOptions(SymGetOptions() & ~SYMOPT_DEFERRED_LOADS);
 
-
 		wchar_t tempPath[MAX_PATH];
 		DWORD len = GetTempPathW(MAX_PATH, tempPath);
 		
-
 		resSymInitialize = SymInitializeW(GetCurrentProcess(), tempPath, TRUE);
 		
 		SymSetSearchPathW(GetCurrentProcess(), tempPath);
-		
-		/*
-		if(j["moduleInfo"]["foundCrash"]) {
-			std::string crashModule = j["moduleInfo"]["crashInfo"]["path"];
-
-			int lastPathIndex = crashModule.find_last_of("\\");
-			std::string crashPath = crashModule.substr(0, lastPathIndex);
-			std::string crashFile = crashModule.substr(lastPathIndex + 1);
-			
-			if(crashFile == "Extended-Training-Mode-DLL.dll") { // the dll is loaded, but, due to the woke left, the pdb fucking isnt, except when it is. i really dont know how this shit works. 
-				DWORD64 result = SymLoadModuleEx(GetCurrentProcess(), nullptr, crashModule.c_str(), "Extended-Training-Mode-DLL", 0, 0, nullptr, 0);
-
-				log("SymLoadModuleExW was %08X", result);
-			}
-
-		}*/
 
 		DWORD moduleBase = SymGetModuleBase(GetCurrentProcess(), (DWORD)address);
 
@@ -353,15 +335,9 @@ namespace ExceptionHandler {
 		char path[MAX_PATH] = {};
 		GetModuleFileNameA(dbghelp, path, MAX_PATH);
 
-		// git: ugh 'C:\WINDOWS\SYSTEM32\dbghelp.dll' err 126 on both, using etm crash
-		// and now i get 126 in the other version too? why?????
-		// if i call syminit in the init func it doesnt give me results, even on the local version
-
 		j["funcInfo"]["SymFromAddr"] = logSymFromAddr(address);
 
 		j["funcInfo"]["SymGetLineFromAddr"] = logSymGetLineFromAddr(address);
-	
-		//j["funcInfo"]["UnDecorateSymbolName"] = logUnDecorateSymbolName(address);
 
 	}
 
@@ -561,14 +537,8 @@ namespace ExceptionHandler {
 		//	return;
 		//}
 		//wasInitCalled = true;
+		// not sure why i dont call the above. paranoia
 
-		// why call this above instead of here?
-		// why have this call repeated? 
-		// dont know, but it doesnt work 
-		// its also now just not working. at all???
-
-		//SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS);
-		//resSymInitialize = SymInitialize(GetCurrentProcess(), nullptr, TRUE);
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
        	//int* i = NULL;
