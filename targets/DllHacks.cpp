@@ -74,7 +74,7 @@ void initializePreLoad()
 // Note: this is called on the SAME thread as the main application thread
 MH_WINAPI_HOOK ( LRESULT, CALLBACK, WindowProc, HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
-    ExceptionHandler::init(); // this needs to be called here sice this is ran in main thread, dll thread aint it
+    ExceptionHandler::init(); // this needs to be called here sice this is ran in main thread, dll thread aint it, this IS NOT A GOOD PLACE TO PUT THIS?
 
     switch ( msg )
     {

@@ -22,7 +22,26 @@ using json = nlohmann::json;
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "dbghelp.lib")
 
+BOOL CALLBACK symCallback( HANDLE hProcess, ULONG actionCode, void* callbackData, void* userContext) {
+	
+	log("```actionCode: %08X", actionCode);
+
+	static char buffer[4096];
+	if (actionCode == CBA_DEBUG_INFO) {
+	
+		const char* msg = reinterpret_cast<const char*>(callbackData);
+		snprintf(buffer, sizeof(buffer), "`%s", msg);
+		log(buffer);
+	}
+
+	return TRUE;
+}
+
 namespace ExceptionHandler {
+
+	int resSymInitialize = 0;
+
+	bool wasInitCalled = false;
 
 	std::string numToHex(DWORD v) {
 		// i could avoid using this to compress shit further but... who cares
@@ -260,14 +279,83 @@ namespace ExceptionHandler {
 
 		// this is hell. trying to get this to run between code running on 3 different compilers is hell.
 
-		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS);
-		int res = SymInitialize(GetCurrentProcess(), nullptr, TRUE);
 		
-		if(!res) {
+		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
+		SymSetOptions(SymGetOptions() & ~SYMOPT_DEFERRED_LOADS);
+
+
+		wchar_t tempPath[MAX_PATH];
+		DWORD len = GetTempPathW(MAX_PATH, tempPath);
+		
+
+		resSymInitialize = SymInitializeW(GetCurrentProcess(), tempPath, TRUE);
+		
+		SymSetSearchPathW(GetCurrentProcess(), tempPath);
+		
+		/*
+		if(j["moduleInfo"]["foundCrash"]) {
+			std::string crashModule = j["moduleInfo"]["crashInfo"]["path"];
+
+			int lastPathIndex = crashModule.find_last_of("\\");
+			std::string crashPath = crashModule.substr(0, lastPathIndex);
+			std::string crashFile = crashModule.substr(lastPathIndex + 1);
+			
+			if(crashFile == "Extended-Training-Mode-DLL.dll") { // the dll is loaded, but, due to the woke left, the pdb fucking isnt, except when it is. i really dont know how this shit works. 
+				DWORD64 result = SymLoadModuleEx(GetCurrentProcess(), nullptr, crashModule.c_str(), "Extended-Training-Mode-DLL", 0, 0, nullptr, 0);
+
+				log("SymLoadModuleExW was %08X", result);
+			}
+
+		}*/
+
+		DWORD moduleBase = SymGetModuleBase(GetCurrentProcess(), (DWORD)address);
+
+		IMAGEHLP_MODULE64  moduleInfo{};
+		moduleInfo.SizeOfStruct = sizeof(moduleInfo);
+
+		char cwd[MAX_PATH];
+		GetCurrentDirectoryA(MAX_PATH, cwd);
+
+		if (SymGetModuleInfo64(GetCurrentProcess(), moduleBase, &moduleInfo)) {
+			j["symInfo"] = {
+				{"SymType", std::to_string(moduleInfo.SymType)},
+				{"LoadedImageName", moduleInfo.LoadedImageName},
+				{"ImageName", moduleInfo.ImageName},
+				{"ModuleName", moduleInfo.ModuleName},
+				{"LoadedPdbName", moduleInfo.LoadedPdbName},
+				{"PdbSig", moduleInfo.PdbSig},
+				{"PdbAge", moduleInfo.PdbAge},
+				{"PdbUnmatched", moduleInfo.PdbUnmatched},
+				{"DbgUnmatched", moduleInfo.DbgUnmatched},
+				{"GlobalSymbols", moduleInfo.GlobalSymbols},
+				{"TypeInfo", moduleInfo.TypeInfo},
+				{"Publics", moduleInfo.Publics},
+				{"LineNumbers", moduleInfo.LineNumbers},
+				{"CWD", cwd},
+			};
+		} else {
+			j["symInfo"]["error"] = GetLastError();
+		}
+
+		char searchPath[MAX_PATH];
+		bool idrk = SymGetSearchPath(GetCurrentProcess(), searchPath, MAX_PATH);
+
+		j["funcInfo"]["SymGetSearchPath"] = std::string(searchPath);
+
+		j["funcInfo"]["SymInitialize"]["resCode"] = resSymInitialize;
+		if(!resSymInitialize) {
 			log("SymInitialize failed!");
-			j["funcInfo"]["SymInitialize"]["resCode"] = res;
 			j["funcInfo"]["SymInitialize"]["error"] = GetLastError();
 		}
+
+		HMODULE dbghelp = GetModuleHandleA("dbghelp.dll");
+
+		char path[MAX_PATH] = {};
+		GetModuleFileNameA(dbghelp, path, MAX_PATH);
+
+		// git: ugh 'C:\WINDOWS\SYSTEM32\dbghelp.dll' err 126 on both, using etm crash
+		// and now i get 126 in the other version too? why?????
+		// if i call syminit in the init func it doesnt give me results, even on the local version
 
 		j["funcInfo"]["SymFromAddr"] = logSymFromAddr(address);
 
@@ -374,6 +462,7 @@ namespace ExceptionHandler {
 
 		logPCInfo(j);
 
+		// if etm is attached, i should grab that version if possible.
 		j["version"] = {
 			{"code", LocalVersion.code.c_str()},
 			{"revision", LocalVersion.revision.c_str()},
@@ -459,13 +548,27 @@ namespace ExceptionHandler {
 
     LONG WINAPI unhandledExceptionFilter(PEXCEPTION_POINTERS ep) {
 
+		log("`unhandledExceptionFilter called");
         exceptionFilter(ep);
+		log("`unhandledExceptionFilter exited gracefully");
 
         return EXCEPTION_CONTINUE_SEARCH;
     }
 
     void init() {
-    
+
+		//if(wasInitCalled) {
+		//	return;
+		//}
+		//wasInitCalled = true;
+
+		// why call this above instead of here?
+		// why have this call repeated? 
+		// dont know, but it doesnt work 
+		// its also now just not working. at all???
+
+		//SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS);
+		//resSymInitialize = SymInitialize(GetCurrentProcess(), nullptr, TRUE);
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
        	//int* i = NULL;
