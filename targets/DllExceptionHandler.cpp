@@ -50,6 +50,11 @@ namespace ExceptionHandler {
 		return std::string(buffer);
 	}
 
+	std::string toUTF8(const std::wstring& wide_string) { //https://json.nlohmann.me/home/faq/#parse-errors-reading-non-ascii-characters
+		static std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
+		return utf8_conv.to_bytes(wide_string);
+	}
+
     void sendDump(const std::string& filename) {
 
         // scrapers will try and take urls here, so forgive the bs 
@@ -284,23 +289,32 @@ namespace ExceptionHandler {
 		SymSetOptions(SymGetOptions() & ~SYMOPT_DEFERRED_LOADS);
 
 		wchar_t tempPath[MAX_PATH];
-		DWORD len = GetTempPathW(MAX_PATH, tempPath);
+		DWORD tempLen = GetTempPathW(MAX_PATH, tempPath);
+		wchar_t cwd[MAX_PATH];
+		DWORD cwdLen = GetCurrentDirectoryW(MAX_PATH, cwd);
+		wchar_t casterDir[MAX_PATH];
+		_snwprintf_s(casterDir, sizeof(casterDir), L"%s\\cccaster", cwd);
+
+		wchar_t symSearchPath[MAX_PATH * 2];
+		// why did snwprintf not work but _snwprintf_s work?? who fucking knows
+		_snwprintf_s(symSearchPath, sizeof(symSearchPath), L"%s;%s;%s", tempPath, cwd, casterDir);
+
+		resSymInitialize = SymInitializeW(GetCurrentProcess(), symSearchPath, TRUE);
 		
-		resSymInitialize = SymInitializeW(GetCurrentProcess(), tempPath, TRUE);
-		
-		SymSetSearchPathW(GetCurrentProcess(), tempPath);
+		bool symSetPathRes = SymSetSearchPathW(GetCurrentProcess(), symSearchPath);
+
+		SymRefreshModuleList(GetCurrentProcess());
+
+		// it would be really fucking nice if hook pdb could load?
 
 		DWORD moduleBase = SymGetModuleBase(GetCurrentProcess(), (DWORD)address);
 
 		IMAGEHLP_MODULE64  moduleInfo{};
 		moduleInfo.SizeOfStruct = sizeof(moduleInfo);
 
-		char cwd[MAX_PATH];
-		GetCurrentDirectoryA(MAX_PATH, cwd);
-
 		if (SymGetModuleInfo64(GetCurrentProcess(), moduleBase, &moduleInfo)) {
 			j["symInfo"] = {
-				{"SymType", std::to_string(moduleInfo.SymType)},
+				{"SymType", moduleInfo.SymType},
 				{"LoadedImageName", moduleInfo.LoadedImageName},
 				{"ImageName", moduleInfo.ImageName},
 				{"ModuleName", moduleInfo.ModuleName},
@@ -313,16 +327,17 @@ namespace ExceptionHandler {
 				{"TypeInfo", moduleInfo.TypeInfo},
 				{"Publics", moduleInfo.Publics},
 				{"LineNumbers", moduleInfo.LineNumbers},
-				{"CWD", cwd},
 			};
 		} else {
 			j["symInfo"]["error"] = GetLastError();
 		}
 
-		char searchPath[MAX_PATH];
-		bool idrk = SymGetSearchPath(GetCurrentProcess(), searchPath, MAX_PATH);
+		wchar_t searchPath[MAX_PATH];
+		bool idrk = SymGetSearchPathW(GetCurrentProcess(), searchPath, MAX_PATH);
 
-		j["funcInfo"]["SymGetSearchPath"] = std::string(searchPath);
+		j["CWD"] = toUTF8(std::wstring(cwd));
+		j["funcInfo"]["SymGetSearchPath"] = toUTF8(std::wstring(searchPath));
+		j["funcInfo"]["symSetPathRes"] = symSetPathRes;
 
 		j["funcInfo"]["SymInitialize"]["resCode"] = resSymInitialize;
 		if(!resSymInitialize) {

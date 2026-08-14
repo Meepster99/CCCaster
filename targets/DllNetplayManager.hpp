@@ -10,6 +10,7 @@
 void __stdcall ___log(const char* msg);
 
 void __stdcall log(const char* format, ...);
+void __stdcall log(const wchar_t* format, ...);
 
 // Class that manages netplay state and inputs
 class NetplayManager

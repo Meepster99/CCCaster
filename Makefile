@@ -170,9 +170,10 @@ ifneq (,$(findstring release,$(MAKECMDGOALS)))
 		$(ZIP) $(ARCHIVE) -j scripts/Add_Handler_Protocol.bat
 		$(ZIP) $(ARCHIVE) -j $(RELAY_LIST)
 		$(ZIP) $(ARCHIVE) -j $(LOBBY_LIST)
+		$(ZIP) $(ARCHIVE) -j hook.pdb
 		cp -r res/GRP GRP
 		$(ZIP) $(ARCHIVE) -r GRP
-		$(ZIP) $(ARCHIVE) -r cccaster/trials
+		$(ZIP) $(ARCHIVE) -r cccaster/trials 
 		rm -rf GRP
 	        $(GRANT)
 endif

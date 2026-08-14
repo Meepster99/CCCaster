@@ -78,6 +78,17 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
     {
         framestepEnabled = true;
     }
+
+	bool a = KeyboardState::isDown(VK_LCONTROL);
+	bool b = KeyboardState::isDown(VK_LSHIFT);
+	bool c = KeyboardState::isDown(VK_NUMPAD0);
+	
+	if(KeyboardState::isDown(VK_LCONTROL) && KeyboardState::isDown(VK_LSHIFT) && KeyboardState::isDown(VK_NUMPAD0)) {
+		log("`ctrl + shift + numpad0 pressed, crashing intentionally");
+
+		int* _temp = NULL;
+		*_temp = 0;
+	}
 	
 	//log("%d", DllOverlayUi::mode);
 
