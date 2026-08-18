@@ -53,7 +53,7 @@ LIB_OBJECTS = $(LIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 MAIN_OBJECTS = $(MAIN_CPP_SRCS:.cpp=.o) $(CONTRIB_CC_SRCS:.cc=.o) $(CONTRIB_CPP_SRCS:.cpp=.o) $(CONTRIB_C_SRCS:.c=.o)
 DLL_OBJECTS = $(DLL_CPP_SRCS:.cpp=.o) $(HOOK_CC_SRCS:.cc=.o) $(HOOK_C_SRCS:.c=.o) $(CONTRIB_C_SRCS:.c=.o) $(CONTRIB_CPP_SRCS:.cpp=.o)
 
-$(info HELLO)
+$(info HELLO FROM MAKEFILE)
 
 # Tool chain sudo apt install clang lld
 # sudo apt-get install libc++-dev
@@ -79,10 +79,12 @@ ifeq ($(OS),Windows_NT)
 else
 	WINDRES = $(PREFIX)windres
 	STRIP = $(PREFIX)strip
+	#STRIP = touch
 	CHMOD_X = chmod +x $@
 	GRANT =
 	ASTYLE = 3rdparty/astyle
 	TOUCH = $(STRIP)
+	#TOUCH = touch
 	OPENGL_HEADERS = /usr/i686-w64-mingw32/include/GL
 endif
 

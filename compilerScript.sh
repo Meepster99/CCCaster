@@ -29,6 +29,10 @@ sudo make install
 
 # not sure if this is needed, but im scared
 export PATH=/opt/mingw-gcc14/bin:$PATH
+sudo export PATH=/opt/mingw-gcc14/bin:$PATH
+# if you get ranlib errors,,, idrek
+# sudo has different path. fuck me
+# you might have to sudo visudo and add it to the defaultpaths arg thing
 
 cd ~/mingw-gcc14/src/mingw-w64/mingw-w64-headers
 ./configure --host=i686-w64-mingw32 --prefix=/opt/mingw-gcc14/i686-w64-mingw32

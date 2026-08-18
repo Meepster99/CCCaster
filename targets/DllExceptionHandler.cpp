@@ -22,24 +22,37 @@ using json = nlohmann::json;
 #pragma comment(lib, "winhttp.lib")
 #pragma comment(lib, "dbghelp.lib")
 
-BOOL CALLBACK symCallback( HANDLE hProcess, ULONG actionCode, void* callbackData, void* userContext) {
-	
-	log("```actionCode: %08X", actionCode);
+BOOL CALLBACK symCallback( HANDLE hProcess, ULONG actionCode, ULONG64 callbackData, ULONG64 userContext) {
 
 	static char buffer[4096];
 	if (actionCode == CBA_DEBUG_INFO) {
-	
 		const char* msg = reinterpret_cast<const char*>(callbackData);
-		snprintf(buffer, sizeof(buffer), "`%s", msg);
+		snprintf(buffer, sizeof(buffer), "``CBA_DEBUG_INFO: %s", msg);
 		log(buffer);
+	} else if(actionCode == CBA_EVENT) {
+		IMAGEHLP_CBA_EVENT* event = reinterpret_cast<IMAGEHLP_CBA_EVENT*>(callbackData);
+		log("`CBA_EVENT:                       severity=%lu code=%lu desc=%s", event->severity, event->code,	event->desc ? event->desc : "");
+	} else if(actionCode == CBA_DEFERRED_SYMBOL_LOAD_CANCEL) {
+		IMAGEHLP_CBA_EVENT* e = reinterpret_cast<IMAGEHLP_CBA_EVENT*>(callbackData);
+		log("`CBA_DEFERRED_SYMBOL_LOAD_CANCEL: severity=%lu code=%lu desc=%s", e->severity, e->code, e->desc ? e->desc : "");
+	} else {
+		log("```unchecked actionCode: %08X", actionCode);
 	}
 
 	return TRUE;
 }
 
+typedef struct CV_INFO_PDB70 {
+    DWORD cvSig;
+    GUID guid;
+    DWORD age;
+    BYTE pdbFilename[];
+} CV_INFO_PDB70;
+
 namespace ExceptionHandler {
 
 	int resSymInitialize = 0;
+	int resSymRegisterCallback = 0;
 
 	bool wasInitCalled = false;
 
@@ -53,6 +66,57 @@ namespace ExceptionHandler {
 	std::string toUTF8(const std::wstring& wide_string) { //https://json.nlohmann.me/home/faq/#parse-errors-reading-non-ascii-characters
 		static std::wstring_convert<std::codecvt_utf8<wchar_t>> utf8_conv;
 		return utf8_conv.to_bytes(wide_string);
+	}
+
+	bool GetPdbInfo(HMODULE module, GUID& guid, DWORD& age, char* pdbName) {
+		auto* base = reinterpret_cast<BYTE*>(module);
+
+		auto* dos = reinterpret_cast<PIMAGE_DOS_HEADER>(base);
+		if (dos->e_magic != IMAGE_DOS_SIGNATURE)
+			return false;
+
+		auto* nt = reinterpret_cast<PIMAGE_NT_HEADERS32>(
+			base + dos->e_lfanew);
+
+		if (nt->Signature != IMAGE_NT_SIGNATURE)
+			return false;
+
+		const auto& debugDir =
+			nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+
+		if (debugDir.VirtualAddress == 0 ||
+			debugDir.Size < sizeof(IMAGE_DEBUG_DIRECTORY))
+			return false;
+
+		auto* debug = reinterpret_cast<PIMAGE_DEBUG_DIRECTORY>(
+			base + debugDir.VirtualAddress);
+
+		size_t count =
+			debugDir.Size / sizeof(IMAGE_DEBUG_DIRECTORY);
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			if (debug[i].Type != IMAGE_DEBUG_TYPE_CODEVIEW)
+				continue;
+
+			auto* cv = base + debug[i].AddressOfRawData;
+
+			// RSDS signature
+			if (*reinterpret_cast<DWORD*>(cv) != 'SDSR') // little-endian "RSDS"
+				continue;
+
+			log("IMA LOSE IT");
+
+			auto* rsds = reinterpret_cast<const CV_INFO_PDB70*>(cv);
+
+			guid = rsds->guid;
+			age = rsds->age;
+			snprintf(pdbName, MAX_PATH, "%s", rsds->pdbFilename);
+
+			return true;
+		}
+
+		return false;
 	}
 
     void sendDump(const std::string& filename) {
@@ -280,13 +344,15 @@ namespace ExceptionHandler {
 		return res;
 	}
 
-	void logFunctionInfo(void* address, json& j) {
+	void initBaseSymInfo() {
+
+		static bool hasInited = false;
+		if(hasInited) {
+			return;
+		}
+		hasInited = true;
 
 		// this is hell. trying to get this to run between code running on 3 different compilers is hell.
-
-		
-		SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
-		SymSetOptions(SymGetOptions() & ~SYMOPT_DEFERRED_LOADS);
 
 		wchar_t tempPath[MAX_PATH];
 		DWORD tempLen = GetTempPathW(MAX_PATH, tempPath);
@@ -294,20 +360,100 @@ namespace ExceptionHandler {
 		DWORD cwdLen = GetCurrentDirectoryW(MAX_PATH, cwd);
 		wchar_t casterDir[MAX_PATH];
 		_snwprintf_s(casterDir, sizeof(casterDir), L"%s\\cccaster", cwd);
+		wchar_t hookPath[MAX_PATH];
+		_snwprintf_s(hookPath, sizeof(hookPath), L"%s\\cccaster\\hook.dll", cwd);
 
 		wchar_t symSearchPath[MAX_PATH * 2];
 		// why did snwprintf not work but _snwprintf_s work?? who fucking knows
 		_snwprintf_s(symSearchPath, sizeof(symSearchPath), L"%s;%s;%s", tempPath, cwd, casterDir);
 
-		resSymInitialize = SymInitializeW(GetCurrentProcess(), symSearchPath, TRUE);
+		//SymSetOptions(SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
+		//SymSetOptions(SymGetOptions() & ~SYMOPT_DEFERRED_LOADS);
 		
+		
+		DWORD symOpts = SYMOPT_UNDNAME | SYMOPT_LOAD_LINES | SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG;
+		symOpts &= ~SYMOPT_DEFERRED_LOADS;
+		symOpts &= ~SYMOPT_IGNORE_CVREC; // im losing it
+		symOpts |= SYMOPT_DEBUG;
+		SymSetOptions(symOpts);
+		
+		resSymInitialize = SymInitializeW(GetCurrentProcess(), symSearchPath, TRUE);
+		//resSymInitialize = SymInitializeW(GetCurrentProcess(), symSearchPath, FALSE);
+		
+		resSymRegisterCallback = SymRegisterCallback64(GetCurrentProcess(), symCallback, 0);
+		
+		
+		//HMODULE hHook = GetModuleHandleW(L"hook.dll");
+		//DWORD64 hookModuleBase = (DWORD64)(uintptr_t)hHook;
+		//DWORD64 hookDllBase = SymLoadModuleExW(GetCurrentProcess(), nullptr, hookPath, nullptr, hookModuleBase, 0, nullptr, 0);
+
 		bool symSetPathRes = SymSetSearchPathW(GetCurrentProcess(), symSearchPath);
 
 		SymRefreshModuleList(GetCurrentProcess());
 
+		/*
+		HMODULE hHook = GetModuleHandleW(L"hook.dll");
+		DWORD64 base = (DWORD64)(uintptr_t)hHook;
+
+		PIMAGE_NT_HEADERS32 ntHeaders = reinterpret_cast<PIMAGE_NT_HEADERS32>(reinterpret_cast<BYTE*>(hHook) + reinterpret_cast<PIMAGE_DOS_HEADER>(hHook)->e_lfanew);
+		DWORD imageSize = ntHeaders->OptionalHeader.SizeOfImage;
+
+		DWORD resSymLoadModuleExW = SymLoadModuleExW(GetCurrentProcess(), nullptr, hookPath, nullptr, base, imageSize, nullptr, 0);
+		DWORD resSymLoadModuleExWErr = GetLastError();
+
+		log("symloadmodres : %08X symloadmoderr : %d", resSymLoadModuleExW, resSymLoadModuleExWErr);
+
+	
+
+		GUID guid;
+		DWORD age;
+		char pdbName[MAX_PATH];
+		GetPdbInfo(GetModuleHandleW(L"hook.dll"), guid, age, pdbName);
+
+		log("PDB: %s", pdbName);
+    	log("Age: %lu", age);
+
+		log("GUID: {%08lX-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X}",
+        guid.Data1,
+        guid.Data2,
+        guid.Data3,
+        guid.Data4[0], guid.Data4[1],
+        guid.Data4[2], guid.Data4[3],
+        guid.Data4[4], guid.Data4[5],
+        guid.Data4[6], guid.Data4[7]);
+
+		wchar_t foundPath[MAX_PATH];
+		DWORD resSymFindFile = SymFindFileInPathW(GetCurrentProcess(), symSearchPath, L"hook.pdb", &guid, age, 0, SSRVOPT_GUIDPTR, (char*)foundPath, nullptr, nullptr);
+		log("resSymFindFile: %08X err: %d", resSymFindFile, GetLastError());
+		log(L"foundpath: %s", foundPath);
+
+		*/
+
+	}
+
+	void initSymStuff(void* address, json& j) {
+		
+
+		initBaseSymInfo();
+
+		wchar_t cwd[MAX_PATH];
+		DWORD cwdLen = GetCurrentDirectoryW(MAX_PATH, cwd);
+
 		// it would be really fucking nice if hook pdb could load?
 
 		DWORD moduleBase = SymGetModuleBase(GetCurrentProcess(), (DWORD)address);
+
+		/*
+		HMODULE hHook = GetModuleHandleW(L"hook.dll");
+		DWORD64 hookBase = (DWORD64)(uintptr_t)hHook;
+		auto* dos = reinterpret_cast<IMAGE_DOS_HEADER*>(hHook);
+		auto* nt = reinterpret_cast<IMAGE_NT_HEADERS*>(reinterpret_cast<BYTE*>(hHook) + dos->e_lfanew);
+		DWORD imageSize = nt->OptionalHeader.SizeOfImage;
+		DWORD symloadmoduleres = SymLoadModuleExW(GetCurrentProcess(), nullptr, hookPath, nullptr, hookBase, imageSize, nullptr, 0);
+		if(!symloadmoduleres) {
+			log("SymLoadModuleExW failed error: %d", GetLastError());
+		}*/
+		
 
 		IMAGEHLP_MODULE64  moduleInfo{};
 		moduleInfo.SizeOfStruct = sizeof(moduleInfo);
@@ -337,9 +483,11 @@ namespace ExceptionHandler {
 
 		j["CWD"] = toUTF8(std::wstring(cwd));
 		j["funcInfo"]["SymGetSearchPath"] = toUTF8(std::wstring(searchPath));
-		j["funcInfo"]["symSetPathRes"] = symSetPathRes;
+		//j["funcInfo"]["symSetPathRes"] = symSetPathRes;
 
 		j["funcInfo"]["SymInitialize"]["resCode"] = resSymInitialize;
+		j["funcInfo"]["SymRegisterCallback"] = resSymRegisterCallback;
+
 		if(!resSymInitialize) {
 			log("SymInitialize failed!");
 			j["funcInfo"]["SymInitialize"]["error"] = GetLastError();
@@ -349,6 +497,11 @@ namespace ExceptionHandler {
 
 		char path[MAX_PATH] = {};
 		GetModuleFileNameA(dbghelp, path, MAX_PATH);
+	}
+
+	void logFunctionInfo(void* address, json& j) {
+
+		initSymStuff(address, j);
 
 		j["funcInfo"]["SymFromAddr"] = logSymFromAddr(address);
 
@@ -553,6 +706,9 @@ namespace ExceptionHandler {
 		//}
 		//wasInitCalled = true;
 		// not sure why i dont call the above. paranoia
+
+		//initBaseSymInfo();
+		
 
         SetUnhandledExceptionFilter(unhandledExceptionFilter);
         
