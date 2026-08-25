@@ -56,6 +56,9 @@ namespace ExceptionHandler {
 
 	bool wasInitCalled = false;
 
+	typedef const char* (*getETMVersionType)();
+	getETMVersionType getETMVersion = NULL;
+
 	std::string numToHex(DWORD v) {
 		// i could avoid using this to compress shit further but... who cares
 		char buffer[32];
@@ -611,7 +614,12 @@ namespace ExceptionHandler {
 			{"code", LocalVersion.code.c_str()},
 			{"revision", LocalVersion.revision.c_str()},
 			{"buildTime", LocalVersion.buildTime.c_str()},
+			{"ETM", false},
 		};
+
+		if(getETMVersion != NULL) {
+			j["version"]["ETM"] = getETMVersion();
+		}
 
 		j["registers"] = {
 			{"EAX", numToHex(ctx->Eax)},
@@ -660,6 +668,12 @@ namespace ExceptionHandler {
         if (!std::filesystem::is_directory("CRASH_DUMPS")) {
             std::filesystem::create_directories("CRASH_DUMPS");
         }
+
+		
+		HMODULE etmHook = GetModuleHandleA("Extended-Training-Mode-DLL.dll");
+		if(etmHook) {
+			getETMVersion = (getETMVersionType)GetProcAddress(etmHook, "getETMVersion");
+		}
 
         time_t timeVal;
         time(&timeVal);
