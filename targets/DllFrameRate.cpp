@@ -238,14 +238,15 @@ void newCasterFrameLimiter() {
 
         HANDLE timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
 	
-        LARGE_INTEGER time;
-        time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
-        SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
-        
-        timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
-        WaitForSingleObject(timer, INFINITE);
-        timeEndPeriod(1);
+        //LARGE_INTEGER time;
+        //time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
+        //SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
+        //
+        //timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
+        //WaitForSingleObject(timer, INFINITE);
+        //timeEndPeriod(1);
 	}
+	
 	
     while(true) { // busywait delay for accuracy
 		QueryPerformanceCounter(&currTime);
