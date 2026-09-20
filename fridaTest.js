@@ -3,6 +3,7 @@
 // ugh god 
 
 
+// cd \\wsl.localhost\Ubuntu-24.04
 // frida -n MBAA.exe -l fridaTest.js
 // just type exit ig. i wish there was a better way
 
@@ -10,19 +11,71 @@
 //let qpcAddr = kernel32.getExportByName('QueryPerformanceCounter');
 //var qpcFunc = new NativeFunction(qpcAddr, 'bool', ['pointer'], {abi: 'stdcall'});
 
-const kernel32 = Process.getModuleByName("kernel32.dll");
-const qpcAddr = kernel32.getExportByName("QueryPerformanceCounter");
-const qpcFunc = qpcAddr; 
+Number.prototype.toHex = function() {
+    return "0x" + this.toString(16);
+};
 
-let counterData = new UInt64(0);
-let counterPointer = new NativePointer(counterData);
+Number.prototype.pad = function(n) {
+    return this.toString().padEnd(n);
+};
+
+Number.prototype.padDec = function(n) {
+    return this.toFixed(4).padStart(n);
+};
+
+String.prototype.pad = function(n) {
+    return this.toString().padEnd(n);
+};
+
+
+
+const kernel32 = Process.getModuleByName("kernel32.dll");
+const addr = kernel32.getExportByName("QueryPerformanceCounter");
+
+const funcAddr = new NativePointer(0x0051b1d4)
+
+function badSleep(ms) {
+	let stop = Date.now() + ms;
+    while(Date.now() < stop) {}
+}
+
+const funcAddr2 = new NativePointer(funcAddr.readU32())
+
+const qpcFunc = new NativeFunction(
+	funcAddr2,
+	"bool",
+	["pointer"],
+	{ abi: "stdcall"}
+);
+
+
+//console.log("funcAddr ", funcAddr);
+//console.log("funcData ", funcAddr2)
+//console.log("func     ", qpcFunc)
+
+//let counterData = Memory.alloc(8);
+//let counterPointer = new NativePointer(counterData);
+//
+//counterData = 1;
 
 function getTime() {
-    console.log("a  ", qpcFunc.toString());
+    //console.log("a  ", qpcFunc.toString());
+	let counterData = Memory.alloc(8);
+	let counterPointer = new NativePointer(counterData);
     qpcFunc(counterPointer);
-    return counterData;
+    return counterPointer.readU64() / 10000.0;
     //return Process.getCurrentTime();
 }
+
+//console.log(counterPointer.readU64())
+//console.log("time:", getTime())
+//console.log(counterPointer.readU64())
+//console.log("time:", getTime())
+//console.log("time:", getTime())
+//console.log(counterPointer.readU64())
+
+let tick = 0;
+let tickLimit = 100;
 
 class Timer {
 
@@ -30,50 +83,144 @@ class Timer {
 
         this.name = name;
         this.addr = addr;
+
         this.count = 0;
-        this.time = 0;
+		this.startTime = 0
+        this.time = 0.0;
+
+		const timer = this; // this pisses me the fuck off
 
         Interceptor.attach(ptr(addr), {
             onEnter() {
-                this.count += 1;
-                this.startTime = getTime();
+                timer.count += 1;
+                timer.startTime = getTime();
             }, 
+
             onLeave() {
-                this.time += getTime() - this.startTime;
+				let temp = getTime();
+				let delta = temp - timer.startTime;
+                timer.time += delta;
             }
         });
 
     }
 
+	display(totalTime) {
+		//console.log(this.count.padEnd(16, " "), this.name.padEnd(16, " "), this.time.padEnd(16, " "));
+
+		let t = this.time / tickLimit;
+	
+		let percent = 100 * this.time / totalTime;
+
+		console.log(this.count.pad(16), this.name.pad(40), t.toFixed(5).pad(16), percent.padDec(16))
+
+		return percent;
+	}
+
+	reset() {
+		this.count = 0;
+		this.time = 0;
+	}
+
 }
 
-
 let timers = [
-    new Timer(0x0048e0a0, "dawgNoClue")
+	//new Timer(0x0040e390, "loop0"),
+	//new Timer(0x0048e0a0, "dawgNoClue"),
+    //new Timer(0x00432c50, "advanceFrame"),
+		//new Timer(0x0043b8d0, "somethingRelatedToAnimSpeed?"),
+		//new Timer(0x00432b40, "GoesToGameLoop2"),
+			//new Timer(0x00433770, "u_GameLoop"),
+				//new Timer(0x004de200, "FUN_004de200"),
+				//new Timer(0x00433ad0, "FUN_00433ad0"),
+				//new Timer(0x004337e0, "UpdateGame"),
+					//new Timer(0x00423570, "BattleMode"),
+						new Timer(0x004235c0, "BattleScene"),
+							new Timer(0x00423630, "UpdateBattleScene"),
+							new Timer(0x00423860, "DrawBattleScene"),
+				//new Timer(0x004bc800, "u_GetSystemTime"),
+		//new Timer(0x0040dae0, "setsRenderTargets"),
+		//new Timer(0x0043b950, "somethingTimeRelated"), 
+			//new Timer(0x00421750, "FUN_00421750"),
+
+	//new Timer(0x0043b8d0, "animSpeedd"),
+
+	//new Timer(0x004330c0, "doesAlot"),
+		//new Timer(0x0040e100, "linkedListSomethingMystery"),
+		//new Timer(0x00432ce0, "callsTakeScreenshot"),
+		//new Timer(0x004c04e0, "callWhichLeadsToPrimDraw2"), 
+		//new Timer(0X0040dc50, "onlyFuncWhichCallsTheDrawPrims_MAYBE"),
+		//new Timer(0x0048e470, "FUN_0048e470"),
+		//new Timer(0x00432d30, "displayFPSVal"),	
+		//new Timer(0x00432e30, "callsImportantDraw8VeryImportant"),
+		//new Timer(0x00414e20, "linkedListAppend"),
+	//new Timer(0x00433490, "callsDraw1"),
+
+	//new Timer(0x00433310, "callsPresent2"),
+		//new Timer(0x0041fd60, "framestepPauseHookFunc"),
+		//new Timer(0x0041fcf0, "doesSomethingRelatingToFps2"),
+		//new Timer(0x004bdbc0, "callsDirectXPresent"),
+	
+		//new Timer(0x0043b950, "somethingTime"),
+	//new Timer(0x004bf970, "unknownFunc"),
+	//new Timer(0x004151f0, "unknownFunc2"),
+	//new Timer(0x00406680, "unknownFunc3"), // some issues with this func?
+	//new Timer(0x004be8b0, "unknownFunc4"),
+	//new Timer(0x0040e220, "unknownFunc5"),
 ]
 
-let tick = 0;
+
+let prevTime = 0;
+let fpsMeasure = 0;
+
+let totalTime = 0;
 
 function actuallyDisplayShit() {
     
     console.log('\u001b[2J')
     console.log('\u001b[H');
 
+	let totalPercent = 0.0
+
     for(const t of timers) {
-        console.log("a ", t.name, t.time)
+        totalPercent += t.display(totalTime)
     }
 
-    
+	console.log("FPS: ", 100000.0/fpsMeasure)
+	console.log("totalPercent: ", totalPercent.toFixed(4).pad(16))
+	
 }
+
+let isInit = true;
+
+
 
 Interceptor.attach(ptr(0x0040e390), {
 
     onEnter(args) {
-        
-        for(let t of timers) {
-            t.count = 0;
-            t.time = 0;
-        }
+
+		let tempTime = getTime()
+		fpsMeasure += tempTime - prevTime
+		prevTime = tempTime
+
+		/*if(isInit == true) {
+			isInit = false;
+			console.log("")
+
+			let start = getTime();
+			badSleep(200)
+			let stop = getTime();
+			console.log("time delta :", stop - start);
+			badSleep(1000)
+		}*/
+
+		if(tick == 0) {
+			fpsMeasure = 0
+			for(let t of timers) {
+				t.reset();
+        	}
+		}
+       
 
         //console.log(sprintf("value = %d, address = %p", 12, 2));  
     },
@@ -81,15 +228,16 @@ Interceptor.attach(ptr(0x0040e390), {
     onLeave() {
 
         tick++;
-        if(tick < 10) {
+        if(tick < tickLimit) {
             return;
         }
         tick = 0;
 
+		totalTime = getTime() - totalTime;
+
         actuallyDisplayShit();
 
-    
-        
+		totalTime = getTime();
     }
 
 

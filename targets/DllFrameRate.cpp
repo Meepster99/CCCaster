@@ -345,7 +345,7 @@ void updateFPSCounter() {
 	avg.QuadPart = sum.QuadPart / bufferSize;
 
 	if(bufferIndex == 0) {
-		log("%7.8lf %7.8lf", temp, 1000.0f/temp);
+		//log("%7.8lf %7.8lf", temp, 1000.0f/temp);
 	
 		*CC_FPS_COUNTER_ADDR = (DWORD)(1000.0f/temp);
 	}

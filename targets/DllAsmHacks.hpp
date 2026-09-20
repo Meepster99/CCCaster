@@ -93,6 +93,8 @@
 
 #define INLINE_FF_12_BYTES { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF }
 
+#define INLINE_NOP { 0x90 }
+
 #define INLINE_NOP_TWO_TIMES { 0x90, 0x90 }
 
 #define INLINE_NOP_THREE_TIMES { 0x90, 0x90, 0x90 }
@@ -113,7 +115,8 @@
 
 #define PATCHCALL(patchAddr, newAddr) PATCHCALL_HELPER(((unsigned)patchAddr), ((unsigned)newAddr))
 
-#define DISABLECALL(patchAddr) { ( void *) (patchAddr), INLINE_NOP_FIVE_TIMES }
+#define DISABLECALL5(patchAddr) { ( void *) (patchAddr), INLINE_NOP_FIVE_TIMES } 
+#define DISABLECALL6(patchAddr) { ( void *) (patchAddr), INLINE_NOP_SIX_TIMES } 
 
 void __stdcall patchMemcpy(auto dst, auto src, size_t n)
 {
@@ -647,7 +650,21 @@ static const AsmList optimizeGameAsm = {
     PATCHJUMP(0x004bdc66, 0x004bdd03), // as for if this saves time, it seems to. hopefully i dont skip over any 2v2 hooks.
     
     { (void*) 0x0040f4d0, INLINE_NOP_FOUR_TIMES },
+
+	DISABLECALL5(0x0040f3b1),
+
+	{ (void*) 0x0041fdff, INLINE_NOP_TWO_TIMES},
+	{ (void*) 0x0041fe03, INLINE_NOP_TWO_TIMES},
+	DISABLECALL6(0x0041fe05), // this sleep is huge. needs to be postload tho?
+
+	PATCHJUMP(0x004bdbd4, 0x004bdd03),
+	DISABLECALL6(0x004bdd74),
     //DISABLECALL(0x0041fe18),
+
+
+	{ (void*) 0x004c4d90, INLINE_NOP_TWO_TIMES}, // im unsure if this is ever called, and if it should be disabled.
+	DISABLECALL6(0x004c4d92),
+
 };
 
 } // namespace AsmHacks
