@@ -649,21 +649,22 @@ static const AsmList loadCustomPalettesAsm = {
 static const AsmList optimizeGameAsm = {
     PATCHJUMP(0x004bdc66, 0x004bdd03), // as for if this saves time, it seems to. hopefully i dont skip over any 2v2 hooks.
     
-    { (void*) 0x0040f4d0, INLINE_NOP_FOUR_TIMES },
+   	{ (void*) 0x0040f4d0, INLINE_NOP_FOUR_TIMES },
 
 	DISABLECALL5(0x0040f3b1),
 
-	{ (void*) 0x0041fdff, INLINE_NOP_TWO_TIMES},
-	{ (void*) 0x0041fe03, INLINE_NOP_TWO_TIMES},
-	DISABLECALL6(0x0041fe05), // this sleep is huge. needs to be postload tho?
+	//{ (void*) 0x0041fdff, INLINE_NOP_TWO_TIMES},
+	//{ (void*) 0x0041fe03, INLINE_NOP_TWO_TIMES},
+	//DISABLECALL6(0x0041fe05), // this sleep is huge. needs to be postload tho?
+
+	// due to the insane way i did early ETM hooks, i cannot patch out the pushes and the sleep here, and instead need to patch in a add esp 4. dont ask. i feel insane
+	{ (void*) 0x0041fe05, {0x83, 0xC4, 0x04, 0x90, 0x90, 0x90}},
 
 	PATCHJUMP(0x004bdbd4, 0x004bdd03),
 	DISABLECALL6(0x004bdd74),
-    //DISABLECALL(0x0041fe18),
-
-
-	{ (void*) 0x004c4d90, INLINE_NOP_TWO_TIMES}, // im unsure if this is ever called, and if it should be disabled.
-	DISABLECALL6(0x004c4d92),
+  
+	//{ (void*) 0x004c4d90, INLINE_NOP_TWO_TIMES}, // im unsure if this is ever called, and if it should be disabled.
+	//DISABLECALL6(0x004c4d92),
 
 };
 

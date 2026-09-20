@@ -8,6 +8,7 @@ v3.1.009 (BLEEDING)
 - Add option to disable the win count hud
 - In game chat.
 - Report crashes
+- Remove a stupid sleep in the original code.
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering

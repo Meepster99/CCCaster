@@ -24,10 +24,15 @@ double actualFps = 60.0;
 
 bool isEnabled = false;
 
+LARGE_INTEGER constBaseFreq = {0};
+
 void enable()
 {
     if ( isEnabled )
         return;
+
+
+	QueryPerformanceFrequency(&constBaseFreq);
 
 	// this runs regardless of the setting in caster. why. 
 
@@ -256,13 +261,13 @@ void newCasterFrameLimiter() {
 
         HANDLE timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
 	
-        //LARGE_INTEGER time;
-        //time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
-        //SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
-        //
-        //timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
-        //WaitForSingleObject(timer, INFINITE);
-        //timeEndPeriod(1);
+        LARGE_INTEGER time;
+        time.QuadPart = -(int)(sleepTime * millisecondDuration.QuadPart); // why does this need to be negative 	
+        SetWaitableTimer(timer, &time, 0, NULL, NULL, 0);
+        
+        timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
+        WaitForSingleObject(timer, INFINITE);
+        timeEndPeriod(1);
 	}
 	
 	
@@ -316,8 +321,44 @@ void newCasterFrameLimiter() {
 
 void newerCasterFrameLimiter() {
 
+	// ideally, if this frame occurs too "fast" i could just let the next frame go forward, and then hold the wait right before present is called??
 
+	static LARGE_INTEGER prevTime;
+	LARGE_INTEGER currTime; 
 
+	LARGE_INTEGER idealTicksPerFrame;
+	idealTicksPerFrame.QuadPart = constBaseFreq.QuadPart / desiredFps;
+
+	QueryPerformanceCounter(&currTime);
+
+	LARGE_INTEGER frameTimeSpent;
+	frameTimeSpent.QuadPart = currTime.QuadPart - prevTime.QuadPart;
+
+	if(currTime.QuadPart - prevTime.QuadPart < idealTicksPerFrame.QuadPart) {
+	
+		LARGE_INTEGER timeRemaining;
+		timeRemaining.QuadPart = idealTicksPerFrame.QuadPart - frameTimeSpent.QuadPart;
+		
+		// its hard to know how accurate this timer is. to be safe, ill div by 2
+		timeRemaining.QuadPart = (int)(timeRemaining.QuadPart / 2); // why does this need to be negative 	
+		
+		if(timeRemaining.QuadPart > (idealTicksPerFrame.QuadPart * 0.1)) { // to be safe, make sure we would sleep for at least a 10th of a frame.
+			timeRemaining.QuadPart = -timeRemaining.QuadPart;
+			HANDLE timer = CreateWaitableTimerExW(NULL, NULL, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+			SetWaitableTimer(timer, &timeRemaining, 0, NULL, NULL, 0);
+			timeBeginPeriod(1);  // this might be better than sleep. when tested, it had a lower max, avg, and stdev to sleep.
+			WaitForSingleObject(timer, INFINITE);
+			timeEndPeriod(1);
+		}
+
+		do {
+			QueryPerformanceCounter(&currTime);
+			frameTimeSpent.QuadPart = currTime.QuadPart - prevTime.QuadPart;
+		} while(frameTimeSpent.QuadPart < idealTicksPerFrame.QuadPart);
+	}
+
+	
+	prevTime.QuadPart = currTime.QuadPart; 
 
 }
 
@@ -347,7 +388,8 @@ void updateFPSCounter() {
 	if(bufferIndex == 0) {
 		//log("%7.8lf %7.8lf", temp, 1000.0f/temp);
 	
-		*CC_FPS_COUNTER_ADDR = (DWORD)(1000.0f/temp);
+		*CC_FPS_COUNTER_ADDR = (DWORD)((1000.0f/temp) + 0.5f);
+		//*CC_FPS_COUNTER_ADDR = (DWORD)(100000.0f/temp);
 	}
 
 	
@@ -366,7 +408,7 @@ void limitFPS() {
 	
 	//newCasterFrameLimiter();
 
-    //newerCasterFrameLimiter();
+    newerCasterFrameLimiter();
 
     updateFPSCounter();
 
