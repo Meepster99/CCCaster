@@ -106,6 +106,24 @@ void oldCasterFrameLimiter() {
     
 }
 
+LARGE_INTEGER getPerfCounter() {
+
+	static LARGE_INTEGER baseFreq;
+	static LARGE_INTEGER millisecondDuration;
+	static bool isFirstRun = true;
+	if(isFirstRun) {
+		isFirstRun = false;
+		QueryPerformanceFrequency(&baseFreq); 
+		millisecondDuration.QuadPart = baseFreq.QuadPart / 1000;
+	}
+
+	LARGE_INTEGER currTime;
+	QueryPerformanceCounter(&currTime);
+	LARGE_INTEGER res;
+	res.QuadPart = currTime.QuadPart / millisecondDuration.QuadPart;
+	return res;
+}
+
 void newCasterFrameLimiter() {
 
     /*
@@ -296,6 +314,49 @@ void newCasterFrameLimiter() {
 	prevFrameTime.QuadPart = currTime.QuadPart;
 }
 
+void newerCasterFrameLimiter() {
+
+
+
+
+}
+
+void updateFPSCounter() {
+
+    static int bufferIndex = 0;
+    const int bufferSize = 100;
+    static LARGE_INTEGER buffer[bufferSize];
+	
+	static LARGE_INTEGER prevTime;
+	LARGE_INTEGER currTime; 
+
+	currTime = getPerfCounter();
+
+	buffer[bufferIndex].QuadPart = currTime.QuadPart - prevTime.QuadPart;
+
+	LARGE_INTEGER sum;
+	sum.QuadPart = 0;
+	for(int i=0; i<bufferSize; i++) {
+		sum.QuadPart += buffer[i].QuadPart;
+	}
+	double temp = ((double)sum.QuadPart) / ((double)bufferSize); 
+
+	LARGE_INTEGER avg;
+	avg.QuadPart = sum.QuadPart / bufferSize;
+
+	if(bufferIndex == 0) {
+		log("%7.8lf %7.8lf", temp, 1000.0f/temp);
+	
+		*CC_FPS_COUNTER_ADDR = (DWORD)(1000.0f/temp);
+	}
+
+	
+	
+	bufferIndex = (bufferIndex + 1) % bufferSize;
+	prevTime = currTime;
+
+}
+
 void limitFPS() {
 
 	if ( !isEnabled || *CC_SKIP_FRAMES_ADDR )
@@ -303,7 +364,11 @@ void limitFPS() {
 
 	//oldCasterFrameLimiter();
 	
-	newCasterFrameLimiter();
+	//newCasterFrameLimiter();
+
+    //newerCasterFrameLimiter();
+
+    updateFPSCounter();
 
 }
 

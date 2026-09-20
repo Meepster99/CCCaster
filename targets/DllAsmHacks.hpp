@@ -97,6 +97,8 @@
 
 #define INLINE_NOP_THREE_TIMES { 0x90, 0x90, 0x90 }
 
+#define INLINE_NOP_FOUR_TIMES { 0x90, 0x90, 0x90, 0x90 }
+
 #define INLINE_NOP_FIVE_TIMES { 0x90, 0x90, 0x90, 0x90, 0x90 }
 
 #define INLINE_NOP_SIX_TIMES { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 }
@@ -639,6 +641,13 @@ extern std::map<int, std::map<int, std::array<DWORD, 256>>> palettes;
 
 static const AsmList loadCustomPalettesAsm = {
     PATCHJUMP(0x0041f87a, _naked_paletteCallback),
+};
+
+static const AsmList optimizeGameAsm = {
+    PATCHJUMP(0x004bdc66, 0x004bdd03), // as for if this saves time, it seems to. hopefully i dont skip over any 2v2 hooks.
+    
+    { (void*) 0x0040f4d0, INLINE_NOP_FOUR_TIMES },
+    //DISABLECALL(0x0041fe18),
 };
 
 } // namespace AsmHacks
