@@ -666,6 +666,8 @@ static const AsmList optimizeGameAsm = {
 	//{ (void*) 0x004c4d90, INLINE_NOP_TWO_TIMES}, // im unsure if this is ever called, and if it should be disabled.
 	//DISABLECALL6(0x004c4d92),
 
+	{ (void*) 0x0040f1c0, INLINE_NOP_TWO_TIMES }, // fix a crash when launching without a sound device
+
 };
 
 } // namespace AsmHacks

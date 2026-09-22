@@ -9,6 +9,7 @@ v3.1.009 (BLEEDING)
 - In game chat.
 - Report crashes
 - Remove a stupid sleep in the original code.
+- Fix a crash when launching without a sound device
 
 v3.1.008
 - Display fps value as a rolling average, no more flickering
