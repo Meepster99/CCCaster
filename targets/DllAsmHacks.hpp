@@ -70,6 +70,8 @@
 
 #define INT3 __asmStart R"( int3; )" __asmEnd
 
+#define ASMNOP __asmStart R"( NOP; )" __asmEnd
+
 #define ASMRET __asmStart R"( ret; )" __asmEnd
 
 #define WRITE_ASM_HACK(ASM_HACK)                                                                                    \

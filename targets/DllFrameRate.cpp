@@ -22,6 +22,8 @@ double desiredFps = 60.0;
 
 double actualFps = 60.0;
 
+int POLL_TIMEOUT = 3;
+
 bool isEnabled = false;
 
 LARGE_INTEGER constBaseFreq = {0};
@@ -423,5 +425,12 @@ void PresentFrameEnd ( IDirect3DDevice9 *device )
 }
 
 void setDesiredFPS(double desiredFps_) {
+
+	if(desiredFps_ < 100.0) {
+		POLL_TIMEOUT = 3;
+	} else {
+		POLL_TIMEOUT = 0;
+	}
+
     desiredFps = desiredFps_;
 }

@@ -3,8 +3,11 @@
 #include <cstdint>
 
 
+
 namespace DllFrameRate
 {
+
+extern int POLL_TIMEOUT;
 
 extern double desiredFps;
 

@@ -5,6 +5,7 @@
 #include "DllTrialManager.hpp"
 #include "KeyboardState.hpp"
 #include "CharacterSelect.hpp"
+#include "DllFrameRate.hpp"
 
 #include <windows.h>
 
@@ -79,11 +80,21 @@ void DllControllerManager::updateControls ( uint16_t *localInputs )
         framestepEnabled = true;
     }
 
-	if(KeyboardState::isDown(VK_LCONTROL) && KeyboardState::isDown(VK_LSHIFT) && KeyboardState::isDown(VK_NUMPAD0)) {
+	if(KeyboardState::isDown(VK_LCONTROL) && KeyboardState::isPressed(VK_LSHIFT) && KeyboardState::isDown(VK_NUMPAD0)) {
 		log("`ctrl + shift + numpad0 pressed, crashing intentionally");
 
 		int* _temp = NULL;
 		*_temp = 0;
+	}
+
+	if(KeyboardState::isDown(VK_MENU) && KeyboardState::isPressed(VK_LSHIFT) && KeyboardState::isDown(VK_NUMPAD1)) {
+		log("`toggling fps limit");
+
+		if(DllFrameRate::desiredFps > 100) {
+			setDesiredFPS(60.0);
+		} else {
+			setDesiredFPS(17474.0);
+		}
 	}
 	
 	if ( !chatManPtr->isTyping 

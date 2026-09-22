@@ -33,7 +33,7 @@ using namespace std;
 #define LOG_FILE                    FOLDER "dll.log"
 
 // The number of milliseconds to poll for events each frame
-#define POLL_TIMEOUT                ( 3 )
+//#define POLL_TIMEOUT                ( 3 ) // moved to DllFrameRate
 
 // The extra number of frames to delay checking round over state during rollback
 #define ROLLBACK_ROUND_OVER_DELAY   ( 5 )
@@ -197,7 +197,7 @@ struct DllMain
     string replayCheckRngHexStr;
 #endif // NOT RELEASE
 
-    void frameStepNormal()
+    void __attribute__ ((noinline)) frameStepNormal()
     {
         switch ( netMan.getState().value )
         {
@@ -219,6 +219,7 @@ struct DllMain
                         --roundOverTimer;
                 }
 
+				// hey future, please note the fallthrough here!
             case NetplayState::CharaSelect:
             case NetplayState::Loading:
             case NetplayState::CharaIntro:
@@ -541,14 +542,16 @@ struct DllMain
                 break;
         }
 
+		// the majority of caster work per frame occurs here (timewise). its 3ms, but optimizations could be helpful
+
         // Clear the last changed frame before we get new inputs
         if ( rollbackTimer == minRollbackSpacing )
             netMan.clearLastChangedFrame();
 
-        for ( ;; )
+       for ( ;; )
         {
             // Poll until we are ready to run
-            if ( ! EventManager::get().poll ( POLL_TIMEOUT ) )
+            if ( ! EventManager::get().poll ( DllFrameRate::POLL_TIMEOUT ) ) // this one poll will take that many ms. this... could this be decreased, or adjusted dynamically?
             {
                 appState = AppState::Stopping;
                 return;
@@ -969,7 +972,7 @@ struct DllMain
         }
     }
 
-    void frameStep()
+    void __attribute__ ((noinline)) frameStep()
     {
         // New frame
         netMan.updateFrame();
@@ -1011,7 +1014,7 @@ struct DllMain
 #endif
     }
 
-    void netplayStateChanged ( NetplayState state )
+    void __attribute__ ((noinline)) netplayStateChanged ( NetplayState state )
     {
         // Catch invalid transitions
         if ( ! netMan.isValidNext ( state ) )
@@ -1124,7 +1127,7 @@ struct DllMain
             dataSocket->send ( new TransitionIndex ( netMan.getIndex() ) );
     }
 
-    void gameModeChanged ( uint32_t previous, uint32_t current )
+    void __attribute__ ((noinline)) gameModeChanged ( uint32_t previous, uint32_t current )
     {
         if ( current == 0
                 || current == CC_GAME_MODE_STARTUP
@@ -1189,7 +1192,7 @@ struct DllMain
         THROW_EXCEPTION ( "gameModeChanged(%u, %u)", ERROR_INVALID_GAME_MODE, previous, current );
     }
 
-    void gameStateChanged ( uint32_t previous, uint32_t current )
+    void __attribute__ ((noinline)) gameStateChanged ( uint32_t previous, uint32_t current )
     {
         if ( current == CC_GAME_STATE_INTRO_DONE )
         {
@@ -1260,8 +1263,9 @@ struct DllMain
     }
 
     // ChangeMonitor callback
-    void changedValue ( Variable var, uint32_t previous, uint32_t current ) override
+    void __attribute__ ((noinline)) changedValue ( Variable var, uint32_t previous, uint32_t current ) override
     {
+		
         switch ( var.value )
         {
             case Variable::WorldTime:
@@ -2041,7 +2045,10 @@ struct DllMain
             return;
 
         // Check if the world timer changed, this calls changedValue if changed, which calls frameStep
+
+		ASMNOP;
         worldTimerMoniter.check();
+		ASMNOP;
     }
 
     // Constructor

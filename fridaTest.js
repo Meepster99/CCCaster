@@ -79,10 +79,11 @@ let tickLimit = 100;
 
 class Timer {
 
-    constructor(addr, name) {
+    constructor(addr, name, depth) {
 
         this.name = name;
         this.addr = addr;
+		this.depth = depth;
 
         this.count = 0;
 		this.startTime = 0
@@ -112,7 +113,18 @@ class Timer {
 	
 		let percent = 100 * this.time / totalTime;
 
-		console.log(this.count.pad(16), this.name.pad(40), t.toFixed(5).pad(16), percent.padDec(16))
+		let offset = this.depth * 4;
+
+		let offsetString = "    ".repeat(this.depth);
+		if(this.depth == 0) {
+			offsetString = "";
+		}
+
+		console.log(offsetString + this.count.pad(16) + this.name.pad(80-offset) + t.toFixed(5).pad(16) + percent.padDec(16))
+
+		if(this.depth != 0) {
+			return 0.0;
+		}
 
 		return percent;
 	}
@@ -124,8 +136,55 @@ class Timer {
 
 }
 
+let doPrint = true;
+const hookModule = Process.getModuleByName("hook.dll");
+
+
+//doPrint = false;
+
+if(!doPrint) {
+	for (const exp of hookModule.enumerateExports()) {
+		console.log(exp.type, exp.name, exp.address);
+	}
+}
+
+
+//while(true) {}
+
 let timers = [
-	//new Timer(0x0040e390, "loop0"),
+
+	new Timer(hookModule.getExportByName("callback"), "casterCallback", 0),
+		//new Timer(hookModule.getExportByName("_ZN12EventManager3getEv"), "_ZN12EventManager3getEv", 1),
+		//new Timer(hookModule.getExportByName("_ZN14ProcessManager14writeGameInputEhtt"), "_ZN14ProcessManager14writeGameInputEhtt", 1),
+		//new Timer(hookModule.getExportByName("_ZN16RefChangeMonitorI8VariablejE5checkEv"), "_ZN16RefChangeMonitorI8VariablejE5checkEv", 1),
+		//	new Timer(hookModule.getExportByName("_ZN14NetplayManager11updateFrameEv"), "_ZN14NetplayManager11updateFrameEv", 2),
+		//	new Timer(hookModule.getExportByName("_ZN14ProcessManager14writeGameInputEhtt"), "_ZN14ProcessManager14writeGameInputEhtt", 2),
+		//	new Timer(hookModule.getExportByName("_ZN13ChangeMonitor3getEv"), "_ZN13ChangeMonitor3getEv", 2),
+		//	new Timer(hookModule.getExportByName("_ZN14NetplayManager8getInputEh"), "_ZN14NetplayManager8getInputEh", 2),
+		new Timer(hookModule.getExportByName("_ZN7DllMain12changedValueE8Variablejj"), "_ZN7DllMain12changedValueE8Variablejj", 1),
+			new Timer(hookModule.getExportByName("_ZN7DllMain9frameStepEv"), "_ZN7DllMain9frameStepEv", 2),
+				new Timer(hookModule.getExportByName("_ZN14NetplayManager11updateFrameEv"), "_ZN14NetplayManager11updateFrameEv", 3),
+				new Timer(hookModule.getExportByName("_ZN14ProcessManager14writeGameInputEhtt"), "_ZN14ProcessManager14writeGameInputEhtt", 3),
+				new Timer(hookModule.getExportByName("_ZN13ChangeMonitor3getEv"), "_ZN13ChangeMonitor3getEv", 3),
+				new Timer(hookModule.getExportByName("_ZN13ChangeMonitor5checkEv"), "_ZN7DllMain12changedValueE8Variablejj", 3),
+				new Timer(hookModule.getExportByName("_ZN14ProcessManager6isWineEv"), "_ZN14ProcessManager6isWineEv", 3),
+				new Timer(hookModule.getExportByName("_ZN18DllRollbackManager15saveRerunSoundsEj"), "_ZN18DllRollbackManager15saveRerunSoundsEj", 3),
+				new Timer(hookModule.getExportByName("_ZN7DllMain15frameStepNormalEv"), "_ZN7DllMain15frameStepNormalEv", 3),
+					//new Timer(hookModule.getExportByName("_ZN7DllMain30frameStepNormalSwitchStatementEv"), "_ZN7DllMain30frameStepNormalSwitchStatementEv", 4),
+					new Timer(hookModule.getExportByName("_ZN14DllChatManager9frameStepERSt10shared_ptrI6SocketE"), "_ZN14DllChatManager9frameStepERSt10shared_ptrI6SocketE", 4),
+					//new Timer(hookModule.getExportByName("_ZN7DllMain16frameStepPollingEv"), "_ZN7DllMain16frameStepPollingEv", 4),
+					
+	
+
+				new Timer(hookModule.getExportByName("_ZN16SpectatorManager19frameStepSpectatorsEv"), "_ZN16SpectatorManager19frameStepSpectatorsEv", 3),
+				new Timer(hookModule.getExportByName("_ZN14NetplayManager8getInputEh"), "_ZN14NetplayManager8getInputEh", 3),
+					
+				//new Timer(hookModule.getExportByName("_ZN13KeyboardState6isDownEj"), "_ZN13KeyboardState6isDownEj", 5),
+				
+				
+			
+	new Timer(0x0040e390, "loop0", 0),
+	
 	//new Timer(0x0048e0a0, "dawgNoClue"),
     //new Timer(0x00432c50, "advanceFrame"),
 		//new Timer(0x0043b8d0, "somethingRelatedToAnimSpeed?"),
@@ -135,9 +194,9 @@ let timers = [
 				//new Timer(0x00433ad0, "FUN_00433ad0"),
 				//new Timer(0x004337e0, "UpdateGame"),
 					//new Timer(0x00423570, "BattleMode"),
-						new Timer(0x004235c0, "BattleScene"),
-							new Timer(0x00423630, "UpdateBattleScene"),
-							new Timer(0x00423860, "DrawBattleScene"),
+						//new Timer(0x004235c0, "BattleScene"),
+						//	new Timer(0x00423630, "UpdateBattleScene"),
+						//	new Timer(0x00423860, "DrawBattleScene"),
 				//new Timer(0x004bc800, "u_GetSystemTime"),
 		//new Timer(0x0040dae0, "setsRenderTargets"),
 		//new Timer(0x0043b950, "somethingTimeRelated"), 
@@ -180,6 +239,7 @@ function actuallyDisplayShit() {
     console.log('\u001b[2J')
     console.log('\u001b[H');
 
+	//console.log(casterCallback)
 	let totalPercent = 0.0
 
     for(const t of timers) {
@@ -194,7 +254,7 @@ function actuallyDisplayShit() {
 let isInit = true;
 
 
-
+/*
 Interceptor.attach(ptr(0x0040e390), {
 
     onEnter(args) {
@@ -202,17 +262,6 @@ Interceptor.attach(ptr(0x0040e390), {
 		let tempTime = getTime()
 		fpsMeasure += tempTime - prevTime
 		prevTime = tempTime
-
-		/*if(isInit == true) {
-			isInit = false;
-			console.log("")
-
-			let start = getTime();
-			badSleep(200)
-			let stop = getTime();
-			console.log("time delta :", stop - start);
-			badSleep(1000)
-		}*/
 
 		if(tick == 0) {
 			fpsMeasure = 0
@@ -242,3 +291,33 @@ Interceptor.attach(ptr(0x0040e390), {
 
 
 });
+*/
+
+Interceptor.attach(ptr(0x0040d330), function () {
+    //console.log("instruction executed");
+
+	let tempTime = getTime()
+	fpsMeasure += tempTime - prevTime
+	prevTime = tempTime
+
+	tick++;
+	if(tick < tickLimit) {
+		return;
+	}
+	tick = 0;
+
+	totalTime = getTime() - totalTime;
+
+	if(doPrint) {
+		actuallyDisplayShit();
+	}
+	
+
+	totalTime = getTime();
+
+	fpsMeasure = 0;
+	for(let t of timers) {
+		t.reset();
+	}
+});
+
