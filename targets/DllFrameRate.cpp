@@ -22,7 +22,9 @@ double desiredFps = 60.0;
 
 double actualFps = 60.0;
 
-int POLL_TIMEOUT = 3;
+#define POLL_TIMEOUT_DEFAULT (10);
+
+int POLL_TIMEOUT = POLL_TIMEOUT_DEFAULT;
 
 bool isEnabled = false;
 
@@ -418,7 +420,7 @@ void limitFPS() {
 
 }
 
-void PresentFrameEnd ( IDirect3DDevice9 *device )
+void __attribute__ ((noinline)) PresentFrameEnd ( IDirect3DDevice9 *device )
 {
 	// comment this out if you uncommented the hookPresentCaller hack
 	//DllFrameRate::limitFPS();
@@ -427,7 +429,7 @@ void PresentFrameEnd ( IDirect3DDevice9 *device )
 void setDesiredFPS(double desiredFps_) {
 
 	if(desiredFps_ < 100.0) {
-		POLL_TIMEOUT = 3;
+		POLL_TIMEOUT = POLL_TIMEOUT_DEFAULT;
 	} else {
 		POLL_TIMEOUT = 0;
 	}

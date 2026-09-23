@@ -61,7 +61,7 @@ void InvalidateDeviceObjects()
 }
 
 // Note: this is called on the SAME thread as the main application thread
-void PresentFrameBegin ( IDirect3DDevice9 *device )
+void __attribute__ ((noinline)) PresentFrameBegin ( IDirect3DDevice9 *device )
 {
     if ( ! initalizedDirectX )
         InitializeDirectX ( device );

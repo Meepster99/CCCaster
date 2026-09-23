@@ -432,7 +432,7 @@ void invalidateOverlayText()
     }
 }
 
-void renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
+void __attribute__ ((noinline)) renderOverlayText ( IDirect3DDevice9 *device, const D3DVIEWPORT9& viewport )
 {
 	_device = device;
 	_viewport = viewport;

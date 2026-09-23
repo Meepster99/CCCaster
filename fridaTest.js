@@ -139,11 +139,12 @@ class Timer {
 let doPrint = true;
 const hookModule = Process.getModuleByName("hook.dll");
 
+const d3Module = Process.getModuleByName("d3d9.dll")
 
 //doPrint = false;
 
 if(!doPrint) {
-	for (const exp of hookModule.enumerateExports()) {
+	for (const exp of d3Module.enumerateExports()) {
 		console.log(exp.type, exp.name, exp.address);
 	}
 }
@@ -179,6 +180,8 @@ let timers = [
 				new Timer(hookModule.getExportByName("_ZN16SpectatorManager19frameStepSpectatorsEv"), "_ZN16SpectatorManager19frameStepSpectatorsEv", 3),
 				new Timer(hookModule.getExportByName("_ZN14NetplayManager8getInputEh"), "_ZN14NetplayManager8getInputEh", 3),
 					
+				
+
 				//new Timer(hookModule.getExportByName("_ZN13KeyboardState6isDownEj"), "_ZN13KeyboardState6isDownEj", 5),
 				
 				
@@ -218,7 +221,20 @@ let timers = [
 	//new Timer(0x00433310, "callsPresent2"),
 		//new Timer(0x0041fd60, "framestepPauseHookFunc"),
 		//new Timer(0x0041fcf0, "doesSomethingRelatingToFps2"),
-		//new Timer(0x004bdbc0, "callsDirectXPresent"),
+		new Timer(0x004bdbc0, "callsDirectXPresent", 2),
+			new Timer(hookModule.getExportByName("DX9_Present@20"), "DX9_Present@20", 3),
+				//new Timer(hookModule.getExportByName("SwapOld"), "SwapOld", 4),
+				new Timer(hookModule.getExportByName("_Z17PresentFrameBeginP16IDirect3DDevice9"), "_Z17PresentFrameBeginP16IDirect3DDevice9", 4),
+				//new Timer(hookModule.getExportByName("_Z15PresentFrameEndP16IDirect3DDevice9"), "_Z15PresentFrameEndP16IDirect3DDevice9", 4),
+
+				new Timer(hookModule.getExportByName("_Z15DX9_HooksVerifyP16IDirect3DDevice9"), "_Z15DX9_HooksVerifyP16IDirect3DDevice9", 4),
+
+				new Timer(hookModule.getExportByName("_Z17actuallyDoPresentP16IDirect3DDevice9PK7tagRECTS3_P6HWND__Pv"), "_Z17actuallyDoPresentP16IDirect3DDevice9PK7tagRECTS3_P6HWND__Pv", 4),
+				
+				new Timer(hookModule.getExportByName("_Z17renderOverlayTextP16IDirect3DDevice9RK13_D3DVIEWPORT9"), "_Z17renderOverlayTextP16IDirect3DDevice9RK13_D3DVIEWPORT9", 4),
+				
+				
+			
 	
 		//new Timer(0x0043b950, "somethingTime"),
 	//new Timer(0x004bf970, "unknownFunc"),
